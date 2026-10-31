@@ -1,22 +1,21 @@
-import { motion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
-import { FolderOpen, KeyRound, Plug, Power, X } from 'lucide-react'
-import { SURFACE_INFO, SURFACES, type Surface } from '@shared/catalog'
-import type { ReplyLanguage, Settings as SettingsT, SettingsView } from '@shared/types'
+import { ChevronDown, Cpu, FolderOpen, KeyRound, Plug, Power, RefreshCw, X } from 'lucide-react'
+import {
+  FAMILIES,
+  FAMILY_INFO,
+  PROVIDERS,
+  PROVIDER_INFO,
+  surfaceInfo,
+  SURFACES,
+  type FamilyChoice,
+  type ProviderId,
+  type Surface
+} from '@shared/catalog'
+import type { EngineRef, ProviderView, ReplyLanguage, Settings as SettingsT, SettingsView } from '@shared/types'
 import { Segment } from './Pickers'
 
-// Lyrica'da 23 Ekim 2026'da doğrulanan modeller (docs/vertex-ai-gemini-kurulumu.md).
-const GEMINI_MODELS = [
-  'gemini-4-argon',
-  'gemini-3.1-pro-preview',
-  'gemini-3.8-flash',
-  'gemini-3.7-flash',
-  'gemini-3.6-flash',
-  'gemini-3.5-flash',
-  'gemini-3.5-flash-lite'
-]
-
-function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+export function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
     <button className={`toggle ${on ? 'on' : ''}`} onClick={() => onChange(!on)} role="switch" aria-checked={on}>
       <i />
@@ -24,11 +23,142 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
   )
 }
 
+const clean = (e: any) => String(e?.message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+
+function statusOf(p: ProviderView): { color: string; text: string } {
+  const source = p.key.source === 'saved' ? 'kayıtlı' : '.env'
+  if (!p.key.present) return { color: 'var(--muted)', text: 'Key yok' }
+  if (!p.ready) return { color: 'var(--danger)', text: `${p.key.hint} · proje ID eksik` }
+  if (!p.status) return { color: '#ffd36e', text: `${p.key.hint} · ${source} · doğrulanmadı` }
+  if (!p.status.ok) return { color: 'var(--danger)', text: `${p.key.hint} · ${source} · hata` }
+  return { color: 'var(--ok)', text: `${p.key.hint} · ${source} · ${p.status.models.length} model` }
+}
+
+export function ProviderCard({
+  view,
+  settings,
+  onChanged,
+  onSettings
+}: {
+  view: ProviderView
+  settings: SettingsView
+  onChanged: (v: SettingsView) => void
+  onSettings: (patch: Partial<SettingsT>) => void
+}) {
+  const info = PROVIDER_INFO[view.id]
+  const [key, setKey] = useState('')
+  const [busy, setBusy] = useState<'save' | 'verify' | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
+  const st = statusOf(view)
+
+  const run = async (kind: 'save' | 'verify', fn: () => Promise<SettingsView>) => {
+    setBusy(kind)
+    setError(null)
+    try {
+      onChanged(await fn())
+      if (kind === 'save') setKey('')
+    } catch (e) {
+      setError(clean(e))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <div className="provider">
+      <div className="provider-head">
+        <b>{info.label}</b>
+        <span className="provider-family">{FAMILY_INFO[info.family].name}</span>
+        <span className="pill-status" style={{ marginLeft: 'auto' }}>
+          <i style={{ background: st.color, boxShadow: `0 0 8px ${st.color}` }} />
+          {st.text}
+        </span>
+      </div>
+
+      {view.id === 'vertex' && (
+        <div className="row">
+          <input
+            className="input mono"
+            style={{ flex: 1 }}
+            placeholder="Proje ID"
+            defaultValue={settings.vertex.project}
+            onBlur={(e) => e.target.value.trim() !== settings.vertex.project && onSettings({ vertex: { ...settings.vertex, project: e.target.value.trim() } })}
+          />
+          <input
+            className="input mono"
+            style={{ width: 110 }}
+            placeholder="global"
+            defaultValue={settings.vertex.location}
+            onBlur={(e) => onSettings({ vertex: { ...settings.vertex, location: e.target.value.trim() || 'global' } })}
+          />
+        </div>
+      )}
+
+      <div className="row">
+        <input
+          className="input mono"
+          style={{ flex: 1 }}
+          type="password"
+          autoComplete="off"
+          placeholder={view.key.present ? 'Yeni key ile değiştir' : `${info.env} (şifreli saklanır)`}
+          value={key}
+          onChange={(e) => setKey(e.target.value)}
+        />
+        <button
+          className="ghost"
+          disabled={!key.trim() || !!busy}
+          onClick={() => run('save', () => window.prompter.providers.saveKey(view.id, key))}
+        >
+          <KeyRound size={14} /> {busy === 'save' ? 'Doğrulanıyor…' : 'Kaydet'}
+        </button>
+      </div>
+
+      {(view.key.present || view.status) && (
+        <div className="row" style={{ flexWrap: 'wrap' }}>
+          {view.ready && (
+            <button className="ghost" disabled={!!busy} onClick={() => run('verify', () => window.prompter.providers.verify(view.id))}>
+              <RefreshCw size={13} /> {busy === 'verify' ? 'Doğrulanıyor…' : 'Doğrula ve modelleri getir'}
+            </button>
+          )}
+          {view.status?.ok && (
+            <button className="link" onClick={() => setOpen((v) => !v)}>
+              <ChevronDown size={12} style={{ transform: open ? 'rotate(180deg)' : undefined }} /> Modeller
+            </button>
+          )}
+          {view.key.source === 'saved' && (
+            <button className="link" style={{ marginLeft: 'auto' }} onClick={() => run('verify', () => window.prompter.providers.clearKey(view.id))}>
+              Kayıtlı key’i sil
+            </button>
+          )}
+        </div>
+      )}
+
+      {view.status && !view.status.ok && <span className="hint bad-text">{view.status.message}</span>}
+      {error && <span className="hint bad-text">{error}</span>}
+
+      <AnimatePresence initial={false}>
+        {open && view.status?.ok && (
+          <motion.div
+            className="provider-models"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            {view.status.models.map((m) => (
+              <span key={m.id}>{m.id}</span>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 export function Settings({ onClose, onChanged }: { onClose: () => void; onChanged: (v: SettingsView) => void }) {
   const [v, setV] = useState<SettingsView | null>(null)
-  const [key, setKey] = useState('')
   const [hotkey, setHotkey] = useState('')
-  const [test, setTest] = useState<{ ok: boolean; ms: number; message?: string } | 'running' | null>(null)
+  const [test, setTest] = useState<{ ok: boolean; ms: number; message?: string; engine?: EngineRef } | 'running' | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -41,19 +171,28 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
     return () => window.removeEventListener('keydown', esc)
   }, [onClose])
 
+  const changed = (next: SettingsView) => {
+    setV(next)
+    onChanged(next)
+  }
+
   const apply = async (patch: Partial<SettingsT>) => {
     setError(null)
     try {
-      const next = await window.prompter.settings.set(patch)
-      setV(next)
-      onChanged(next)
-    } catch (e: any) {
-      setError(String(e?.message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))
+      changed(await window.prompter.settings.set(patch))
+    } catch (e) {
+      setError(clean(e))
     }
   }
 
-  const keyLabel = !v ? '' : v.key.source === 'saved' ? 'Kayıtlı (şifreli)' : v.key.source === 'env' ? '.env dosyasından' : 'Key yok'
-  const keyColor = !v ? '' : v.key.present ? 'var(--ok)' : 'var(--danger)'
+  const ready = v?.providers.filter((p) => p.ready) ?? []
+  const engine = v?.engine
+  const engineModels = v?.providers.find((p) => p.id === engine?.provider)?.status?.models ?? []
+  const setEngineModel = (role: 'analysis' | 'generation', model: string) => {
+    if (!v || !engine || !model) return
+    const cur = v.engineModels[engine.provider] ?? { analysis: engine.analysis, generation: engine.generation }
+    apply({ engineModels: { [engine.provider]: { ...cur, [role]: model } } as SettingsT['engineModels'] })
+  }
 
   return (
     <>
@@ -74,81 +213,119 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
         {v && (
           <div className="content">
             <div className="group">
-              <span className="label">Vertex AI</span>
-              <span className="pill-status">
-                <i style={{ background: keyColor, boxShadow: `0 0 8px ${keyColor}` }} />
-                {keyLabel} · {v.project} · {v.location}
+              <span className="label">Sağlayıcılar</span>
+              <span className="hint">
+                Key’ler bu bilgisayarda işletim sisteminin şifrelemesiyle saklanır, arayüze inmez. Kaydedince bağlantı ve erişilen
+                modeller doğrulanır.
               </span>
-              <div className="row">
-                <input
-                  className="input mono"
-                  style={{ flex: 1 }}
-                  type="password"
-                  placeholder="Yeni API key (şifreli saklanır)"
-                  value={key}
-                  onChange={(e) => setKey(e.target.value)}
+              {PROVIDERS.map((id) => (
+                <ProviderCard
+                  key={id}
+                  view={v.providers.find((p) => p.id === id)!}
+                  settings={v}
+                  onChanged={changed}
+                  onSettings={apply}
                 />
-                <button
-                  className="ghost"
-                  disabled={!key.trim()}
-                  onClick={async () => {
-                    const next = await window.prompter.settings.saveKey(key)
-                    setKey('')
-                    setV(next)
-                  }}
+              ))}
+            </div>
+
+            <div className="group">
+              <span className="label">Prompter motoru</span>
+              <span className="hint">Analiz, öneri ve yazımı yapan model. Yalnızca key’i tanımlı sağlayıcılar seçilebilir.</span>
+              <label className="field">
+                <span>Sağlayıcı</span>
+                <select
+                  className="input"
+                  value={v.engineProvider}
+                  onChange={(e) => apply({ engineProvider: e.target.value as ProviderId | 'auto' })}
                 >
-                  <KeyRound size={14} /> Kaydet
-                </button>
-              </div>
-              <div className="row">
-                <button
-                  className="ghost"
-                  onClick={async () => {
-                    setTest('running')
-                    setTest(await window.prompter.settings.test())
-                  }}
-                >
-                  <Plug size={14} /> {test === 'running' ? 'Deneniyor…' : 'Bağlantıyı test et'}
-                </button>
-                {v.key.source === 'saved' && (
-                  <button className="link" onClick={async () => setV(await window.prompter.settings.clearKey())}>
-                    Kayıtlı key’i sil
-                  </button>
-                )}
-              </div>
-              {test && test !== 'running' && (
-                <span className={`hint ${test.ok ? 'ok-text' : 'bad-text'}`}>
-                  {test.ok ? `Çalışıyor · ${(test.ms / 1000).toFixed(1)} sn` : test.message}
+                  <option value="auto">Otomatik{engine ? ` (${PROVIDER_INFO[engine.provider].label})` : ''}</option>
+                  {ready.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {PROVIDER_INFO[p.id].label}
+                      {p.status?.ok ? '' : ' (doğrulanmadı)'}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {engine ? (
+                <>
+                  <label className="field">
+                    <span>Analiz (öneri + sorular)</span>
+                    <input
+                      key={`a-${engine.provider}`}
+                      className="input mono"
+                      list="engine-models"
+                      defaultValue={engine.analysis}
+                      onBlur={(e) => e.target.value.trim() !== engine.analysis && setEngineModel('analysis', e.target.value.trim())}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Yazım (prompt üretimi)</span>
+                    <input
+                      key={`g-${engine.provider}`}
+                      className="input mono"
+                      list="engine-models"
+                      defaultValue={engine.generation}
+                      onBlur={(e) => e.target.value.trim() !== engine.generation && setEngineModel('generation', e.target.value.trim())}
+                    />
+                  </label>
+                  <datalist id="engine-models">
+                    {engineModels.map((m) => (
+                      <option key={m.id} value={m.id} />
+                    ))}
+                  </datalist>
+                  <div className="row">
+                    <button
+                      className="ghost"
+                      onClick={async () => {
+                        setTest('running')
+                        setTest(await window.prompter.settings.test())
+                      }}
+                    >
+                      <Plug size={14} /> {test === 'running' ? 'Deneniyor…' : 'Motoru test et'}
+                    </button>
+                  </div>
+                  {test && test !== 'running' && (
+                    <span className={`hint ${test.ok ? 'ok-text' : 'bad-text'}`}>
+                      {test.ok
+                        ? `Çalışıyor · ${test.engine ? `${PROVIDER_INFO[test.engine.provider].label} ${test.engine.model} · ` : ''}${(test.ms / 1000).toFixed(1)} sn`
+                        : test.message}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="hint bad-text">
+                  <Cpu size={12} style={{ verticalAlign: -2 }} /> Motor için en az bir sağlayıcıya key ekle.
                 </span>
               )}
             </div>
 
             <div className="group">
-              <span className="label">Optimizer modelleri</span>
-              <label className="field">
-                <span>Analiz (öneri + sorular)</span>
-                <input
-                  className="input mono"
-                  list="gemini-models"
-                  defaultValue={v.analysisModel}
-                  onBlur={(e) => e.target.value.trim() && apply({ analysisModel: e.target.value.trim() })}
-                />
-              </label>
-              <label className="field">
-                <span>Yazım (prompt üretimi)</span>
-                <input
-                  className="input mono"
-                  list="gemini-models"
-                  defaultValue={v.generationModel}
-                  onBlur={(e) => e.target.value.trim() && apply({ generationModel: e.target.value.trim() })}
-                />
-              </label>
-              <datalist id="gemini-models">
-                {GEMINI_MODELS.map((m) => (
-                  <option key={m} value={m} />
-                ))}
-              </datalist>
-              <span className="hint">Daha hızlı analiz için gemini-3.5-flash-lite denenebilir.</span>
+              <span className="label">Hedef ekosistem</span>
+              <Segment<FamilyChoice>
+                id="def-family"
+                value={v.defaultFamily}
+                options={[
+                  { value: 'auto', label: '✦ Çapraz' },
+                  ...FAMILIES.map((f) => ({ value: f, label: f === 'openai' ? 'GPT' : FAMILY_INFO[f].name }))
+                ]}
+                onChange={(defaultFamily) => apply({ defaultFamily })}
+              />
+              <span className="hint">
+                Çapraz öneri, doğrulanmış key’lerin modelleri ile aşağıda işaretlediğin uygulamalar arasından seçer.
+              </span>
+              {FAMILIES.map((f) => (
+                <div key={f} className="toggle-row">
+                  {FAMILY_INFO[f].name} uygulamasını key olmadan kullanıyorum
+                  <Toggle
+                    on={v.appFamilies.includes(f)}
+                    onChange={(on) =>
+                      apply({ appFamilies: on ? [...v.appFamilies, f] : v.appFamilies.filter((x) => x !== f) })
+                    }
+                  />
+                </div>
+              ))}
             </div>
 
             <div className="group">
@@ -167,11 +344,11 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
             </div>
 
             <div className="group">
-              <span className="label">Varsayılan hedef</span>
+              <span className="label">Varsayılan yüzey</span>
               <Segment<Surface>
                 id="def-surface"
                 value={v.defaultSurface}
-                options={SURFACES.map((s) => ({ value: s, label: SURFACE_INFO[s].label }))}
+                options={SURFACES.map((s) => ({ value: s, label: surfaceInfo(v.defaultFamily, s).label }))}
                 onChange={(defaultSurface) => apply({ defaultSurface })}
               />
             </div>
@@ -183,8 +360,12 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
                 <Toggle on={v.alwaysOnTop} onChange={(alwaysOnTop) => apply({ alwaysOnTop })} />
               </div>
               <div className="toggle-row">
-                Oturum açılışında başlat
+                Oturum açılışında başlat (tray’de gizli)
                 <Toggle on={v.launchAtLogin} onChange={(launchAtLogin) => apply({ launchAtLogin })} />
+              </div>
+              <div className="toggle-row">
+                Pencere gizliyken prompt hazır olunca bildir
+                <Toggle on={v.notifyWhenHidden} onChange={(notifyWhenHidden) => apply({ notifyWhenHidden })} />
               </div>
               <label className="field">
                 <span>Göster / gizle kısayolu</span>

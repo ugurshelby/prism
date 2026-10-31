@@ -1,14 +1,14 @@
-import { MODELS, SURFACE_INFO } from '@shared/catalog'
+import { FAMILY_INFO, MODELS } from '@shared/catalog'
 import { parseGenerated } from '@shared/parse'
 import type { GenerateRequest, GenerateResult, ReplyLanguage } from '@shared/types'
 import { getSettings } from '../config'
-import { stream } from '../gemini'
-import { card, surfaceCard, targetCard } from './knowledge'
+import { engineStream } from '../providers'
+import { card, familyCard, surfaceCard, targetCard } from './knowledge'
 
 function languageRule(lang: ReplyLanguage, surface: GenerateRequest['surface']): string {
   if (lang === 'none' || surface === 'api') return ''
   if (lang === 'tr') {
-    return surface === 'claude-code'
+    return surface === 'agent'
       ? '- The person wants the agent to talk to them in Turkish. Add one natural line asking it to write its messages in Turkish while keeping code, identifiers and commit messages as the repository already does.'
       : '- The person wants the reply in Turkish. Add one natural line asking for the answer in Turkish.'
   }
@@ -17,26 +17,29 @@ function languageRule(lang: ReplyLanguage, surface: GenerateRequest['surface']):
 
 function systemPrompt(req: GenerateRequest, lang: ReplyLanguage) {
   const model = MODELS[req.model]
-  return `You are the writing stage of Prompter. You write the final prompt the person will paste into ${SURFACE_INFO[req.surface].label} for ${model.name} running at \`${req.effort}\` effort. Write the prompt that a senior engineer who knows this model well would write for this exact intent.
+  const family = FAMILY_INFO[model.family]
+  const surface = family.surfaces[req.surface].label
+  const level = model.efforts.length ? `at \`${req.effort}\` ${family.effortLabel}` : 'with its fixed reasoning level'
+  return `You are the writing stage of Prompter. You write the final prompt the person will paste into ${surface} for ${model.name} running ${level}. Write the prompt that a senior engineer who knows this model well would write for this exact intent.
 
 <vision>
 ${card('vision.md')}
 </vision>
 
 <principles>
-${card('principles.md')}
+${familyCard(model.family, 'principles')}
 </principles>
 
 <target_model name="${model.name}">
 ${targetCard(req.model)}
 </target_model>
 
-<effort selected="${req.effort}">
-${card('effort.md')}
+<effort selected="${model.efforts.length ? req.effort : 'fixed'}">
+${familyCard(model.family, 'effort')}
 </effort>
 
-<surface name="${SURFACE_INFO[req.surface].label}">
-${surfaceCard(req.surface)}
+<surface name="${surface}">
+${surfaceCard(model.family, req.surface)}
 </surface>
 
 Rules:
@@ -65,7 +68,8 @@ function userPrompt(req: GenerateRequest) {
   const analysis = req.analysis
     ? `\n<analysis>\nIntent: ${req.analysis.intent}\nTask type: ${req.analysis.taskType}\nComplexity: ${req.analysis.complexity}\n</analysis>\n`
     : ''
-  return `<target surface="${SURFACE_INFO[req.surface].label}" model="${req.model}" effort="${req.effort}" />
+  const surface = FAMILY_INFO[MODELS[req.model].family].surfaces[req.surface].label
+  return `<target surface="${surface}" model="${req.model}" effort="${req.effort}" />
 ${analysis}
 <raw_prompt>
 ${req.prompt}
@@ -87,9 +91,9 @@ export async function generatePrompt(
 ): Promise<GenerateResult> {
   const started = Date.now()
   const settings = getSettings()
-  const { text, usage } = await stream(
+  const { text, usage, engine } = await engineStream(
+    'generation',
     {
-      model: settings.generationModel,
       system: systemPrompt(req, settings.replyLanguage),
       user: userPrompt(req),
       temperature: 0.6,
@@ -102,5 +106,5 @@ export async function generatePrompt(
   const notes = [...parsed.notes]
   const strange = foreignScript(prompt, req.prompt + req.answers.map((a) => a.answer).join(' '))
   if (strange.length) notes.push(`Uyarı: çıktıda beklenmeyen karakterler var (${strange.join(' ')}). Kopyalamadan önce kontrol et.`)
-  return { prompt, notes, usage, elapsedMs: Date.now() - started }
+  return { prompt, notes, usage, engine, elapsedMs: Date.now() - started }
 }

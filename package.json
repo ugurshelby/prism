@@ -1,13 +1,18 @@
 {
   "name": "prompter",
   "productName": "Prompter",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Ham promptu analiz edip doğru Claude modeli ve effort seviyesi için optimize eden masaüstü widget'ı.",
+  "description": "Ham promptu analiz edip Claude, GPT, Gemini ya da Grok için doğru model ve effort seviyesine göre optimize eden masaüstü widget'ı.",
   "author": "ts",
   "main": "out/main/index.js",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "electron-vite dev",
+    "setup": "node scripts/setup.mjs",
+    "mock": "vite --config vite.mock.config.ts",
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "selftest": "electron-vite build && electron . --selftest",

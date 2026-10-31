@@ -1,4 +1,4 @@
-import type { Effort, ModelId, Surface } from './catalog'
+import type { Effort, Family, FamilyChoice, ModelId, ProviderId, Surface } from './catalog'
 
 export interface Question {
   id: string
@@ -14,6 +14,12 @@ export interface Alternative {
   tradeoff: string
 }
 
+/** Prompter'ın analiz/yazım için çağırdığı motor. */
+export interface EngineRef {
+  provider: ProviderId
+  model: string
+}
+
 export interface Analysis {
   intent: string
   taskType: string
@@ -27,8 +33,11 @@ export interface Analysis {
   }
   alternatives: Alternative[]
   questions: Question[]
+  /** Önerinin seçildiği aday havuzu. */
+  pool?: ModelId[]
   usage?: Usage
   elapsedMs?: number
+  engine?: EngineRef
   /** Analizin kaydedildiği geçmiş girdisi; yazımlar bu girdiye eklenir. */
   historyId?: string
 }
@@ -42,6 +51,8 @@ export interface Usage {
 export interface AnalyzeRequest {
   prompt: string
   surface: Surface
+  /** Hedef ekosistem; 'auto' ise doğrulanmış key'lerden ve uygulamalardan oluşan havuzdan seçilir. */
+  family: FamilyChoice
   /** Elle seçim yapıldıysa analiz yalnızca soruları üretir, öneri bilgi amaçlı kalır. */
   manual?: { model: ModelId; effort: Effort }
 }
@@ -60,6 +71,7 @@ export interface GenerateRequest {
   answers: Answer[]
   analysis?: Pick<Analysis, 'intent' | 'taskType' | 'complexity'>
   historyId?: string
+  family?: FamilyChoice
 }
 
 export interface GenerateResult {
@@ -67,6 +79,7 @@ export interface GenerateResult {
   notes: string[]
   usage?: Usage
   elapsedMs: number
+  engine?: EngineRef
 }
 
 export interface HistoryOutput extends GenerateResult {
@@ -82,6 +95,8 @@ export interface HistoryEntry {
   updatedAt: number
   prompt: string
   surface: Surface
+  /** Analiz sırasında seçili ekosistem (eski kayıtlarda yok). */
+  family?: FamilyChoice
   analysis: Analysis
   answers: Answer[]
   /** Eskiden yeniye; sonuncusu en güncel yazım. */
@@ -90,20 +105,58 @@ export interface HistoryEntry {
 
 export type ReplyLanguage = 'tr' | 'en' | 'none'
 
+export interface EngineModels {
+  analysis: string
+  generation: string
+}
+
 export interface Settings {
-  analysisModel: string
-  generationModel: string
+  version: number
+  /** 'auto': Vertex tanımlıysa Vertex, değilse ilk tanımlı sağlayıcı. */
+  engineProvider: ProviderId | 'auto'
+  engineModels: Partial<Record<ProviderId, EngineModels>>
+  vertex: { project: string; location: string }
+  defaultFamily: FamilyChoice
+  /** Key olmadan (abonelik / uygulama ile) kullanılan hedef aileler; çapraz öneri havuzuna girer. */
+  appFamilies: Family[]
   replyLanguage: ReplyLanguage
   defaultSurface: Surface
   alwaysOnTop: boolean
   hotkey: string
   launchAtLogin: boolean
+  /** Pencere gizliyken biten yazım için sistem bildirimi. */
+  notifyWhenHidden: boolean
 }
 
+export interface DiscoveredModel {
+  id: string
+  label?: string
+}
+
+export interface ProviderStatus {
+  ok: boolean
+  checkedAt: number
+  message?: string
+  models: DiscoveredModel[]
+}
+
+export interface ProviderView {
+  id: ProviderId
+  /** hint: maskeli gösterim (son 4 karakter); key'in kendisi arayüze inmez. */
+  key: { present: boolean; source: 'saved' | 'env' | 'none'; hint: string }
+  /** Vertex için proje ve konum tanımlı mı. */
+  ready: boolean
+  status: ProviderStatus | null
+}
+
+export type TargetAccess = 'key' | 'app'
+
 export interface SettingsView extends Settings {
-  key: { present: boolean; source: 'saved' | 'env' | 'none' }
-  project: string
-  location: string
+  providers: ProviderView[]
+  /** Çözümlenmiş motor; hiç sağlayıcı yoksa null. */
+  engine: { provider: ProviderId; analysis: string; generation: string } | null
+  /** Hangi hedef modeller key ya da uygulama ile kullanılabilir. */
+  targets: Partial<Record<ModelId, TargetAccess>>
 }
 
 export type WindowMode = 'pill' | 'panel'

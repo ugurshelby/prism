@@ -1,7 +1,7 @@
 // Electron dışında, tarayıcıda arayüz geliştirmek için sahte köprü. Üretimde kullanılmaz.
 import type { PrompterApi } from '../../preload/api'
-import type { Effort, ModelId } from '@shared/catalog'
-import type { Analysis, HistoryEntry, SettingsView, StreamEvent, WindowMode } from '@shared/types'
+import { PROVIDERS, type Effort, type ModelId } from '@shared/catalog'
+import type { Analysis, HistoryEntry, ProviderView, SettingsView, StreamEvent, WindowMode } from '@shared/types'
 
 const SAMPLE = `<prompt>
 I'm building Prompter, an Electron desktop widget that rewrites raw prompts for Claude models. The settings sheet needs a connection test that tells the user, within a few seconds, whether their Vertex AI key works.
@@ -46,20 +46,45 @@ const ANALYSIS: Analysis = {
     },
     { id: 'q2', question: 'Hata olursa ne olsun?', why: 'Hata akışı', options: ['Mesajı göster', 'Tekrar dene butonu'] }
   ],
-  elapsedMs: 2400
+  elapsedMs: 2400,
+  pool: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-1', 'gemini-4-argon', 'gemini-3.8-flash', 'gemini-3.5-flash-lite'],
+  engine: { provider: 'vertex', model: 'gemini-4-argon' }
 }
 
+const provider = (id: ProviderView['id']): ProviderView =>
+  id === 'vertex'
+    ? {
+        id,
+        key: { present: true, source: 'env', hint: '••••a1b2' },
+        ready: true,
+        status: { ok: true, checkedAt: Date.now(), models: [{ id: 'gemini-4-argon' }, { id: 'gemini-3.8-flash' }, { id: 'gemini-3.5-flash-lite' }] }
+      }
+    : { id, key: { present: false, source: 'none', hint: '' }, ready: false, status: null }
+
 let settings: SettingsView = {
-  analysisModel: 'gemini-4-argon',
-  generationModel: 'gemini-4-argon',
+  version: 2,
+  engineProvider: 'auto',
+  engineModels: {},
+  vertex: { project: 'my-gcp-project', location: 'global' },
+  defaultFamily: 'claude',
+  appFamilies: ['claude'],
   replyLanguage: 'tr',
-  defaultSurface: 'claude-code',
+  defaultSurface: 'agent',
   alwaysOnTop: true,
   hotkey: 'CommandOrControl+Shift+Space',
   launchAtLogin: false,
-  key: { present: true, source: 'env' },
-  project: 'my-gcp-project',
-  location: 'global'
+  notifyWhenHidden: true,
+  providers: PROVIDERS.map(provider),
+  engine: { provider: 'vertex', analysis: 'gemini-4-argon', generation: 'gemini-4-argon' },
+  targets: {
+    'claude-opus-5-5': 'app',
+    'claude-sonnet-5-5': 'app',
+    'claude-haiku-5-5': 'app',
+    'claude-fable-5-1': 'app',
+    'gemini-4-argon': 'key',
+    'gemini-3.8-flash': 'key',
+    'gemini-3.5-flash-lite': 'key'
+  }
 }
 
 const SAMPLE_PROMPT = SAMPLE.split('<prompt>')[1].split('</prompt>')[0].trim()
@@ -74,7 +99,8 @@ function seedHistory(): HistoryEntry[] {
     createdAt: now - minutesAgo * 60_000,
     prompt: SAMPLE_PROMPT,
     notes: SAMPLE_NOTES,
-    elapsedMs: 9100
+    elapsedMs: 9100,
+    engine: { provider: 'vertex' as const, model: 'gemini-4-argon' }
   })
   return [
     {
@@ -82,7 +108,7 @@ function seedHistory(): HistoryEntry[] {
       createdAt: now - 6 * 60_000,
       updatedAt: now - 5 * 60_000,
       prompt: 'ayarlar paneline vertex bağlantısını test eden bir buton ekle, key arayüze inmesin, hata olursa mesajı göster',
-      surface: 'claude-code',
+      surface: 'agent',
       analysis: ANALYSIS,
       answers: [{ question: ANALYSIS.questions[0].question, answer: 'Butonun altında' }],
       outputs: [output('claude-sonnet-5-5', 'medium', 6), output('claude-opus-5-5', 'medium', 5)]
@@ -93,16 +119,17 @@ function seedHistory(): HistoryEntry[] {
       updatedAt: now - 3 * 3600_000,
       prompt: 'müşteri destek e-postalarını iade, kargo, teknik sorun ve diğer olarak sınıflandıran system prompt',
       surface: 'api',
-      analysis: { ...ANALYSIS, recommendation: { ...ANALYSIS.recommendation, model: 'claude-haiku-5-5', effort: 'low' } },
+      family: 'auto',
+      analysis: { ...ANALYSIS, recommendation: { ...ANALYSIS.recommendation, model: 'gemini-3.5-flash-lite', effort: 'minimal' } },
       answers: [],
-      outputs: [output('claude-haiku-5-5', 'low', 180)]
+      outputs: [output('gemini-3.5-flash-lite', 'minimal', 180)]
     },
     {
       id: 'h3',
       createdAt: now - 26 * 3600_000,
       updatedAt: now - 26 * 3600_000,
       prompt: 'bu repo için mimari bir inceleme yap, zayıf noktaları ve önceliklendirilmiş bir iyileştirme planı çıkar',
-      surface: 'claude-code',
+      surface: 'agent',
       analysis: { ...ANALYSIS, recommendation: { ...ANALYSIS.recommendation, model: 'claude-opus-5-5', effort: 'high' } },
       answers: [],
       outputs: []
@@ -111,6 +138,16 @@ function seedHistory(): HistoryEntry[] {
 }
 
 export function installMock() {
+  // #setup: hiç sağlayıcı yokken ilk kurulum ekranı.
+  if (location.hash.includes('setup')) {
+    settings = {
+      ...settings,
+      engine: null,
+      targets: {},
+      appFamilies: [],
+      providers: PROVIDERS.map((id) => ({ id, key: { present: false, source: 'none', hint: '' }, ready: false, status: null }))
+    }
+  }
   let history = location.hash.includes('empty') ? [] : seedHistory()
   const streamListeners = new Set<(ev: StreamEvent) => void>()
   const modeListeners = new Set<(m: WindowMode) => void>()
@@ -121,17 +158,34 @@ export function installMock() {
     settings: {
       get: async () => settings,
       set: async (patch) => (settings = { ...settings, ...patch }),
-      saveKey: async () => (settings = { ...settings, key: { present: true, source: 'saved' } }),
-      clearKey: async () => (settings = { ...settings, key: { present: true, source: 'env' } }),
-      test: async () => (await wait(900), { ok: true, ms: 900 }),
-      openKnowledge: async () => ''
+      test: async () => (await wait(900), { ok: true, ms: 900, engine: { provider: 'vertex', model: 'gemini-4-argon' } }),
+      openKnowledge: async () => '',
+      onChanged: () => () => {}
+    },
+    providers: {
+      saveKey: async (id) => {
+        await wait(1200)
+        const view: ProviderView = {
+          id,
+          key: { present: true, source: 'saved', hint: '••••9z8y' },
+          ready: true,
+          status: { ok: true, checkedAt: Date.now(), models: [{ id: 'example-model' }] }
+        }
+        return (settings = {
+          ...settings,
+          engine: settings.engine ?? { provider: id, analysis: 'example-model', generation: 'example-model' },
+          providers: settings.providers.map((p) => (p.id === id ? view : p))
+        })
+      },
+      clearKey: async (id) => (settings = { ...settings, providers: settings.providers.map((p) => (p.id === id ? { id, key: { present: false, source: 'none', hint: '' }, ready: false, status: null } : p)) }),
+      verify: async () => (await wait(900), settings)
     },
     engine: {
       analyze: async (req) => {
         await wait(location.hash.includes('slow') ? 60000 : 2600)
         const id = crypto.randomUUID()
         const now = Date.now()
-        history.unshift({ id, createdAt: now, updatedAt: now, prompt: req.prompt, surface: req.surface, analysis: ANALYSIS, answers: [], outputs: [] })
+        history.unshift({ id, createdAt: now, updatedAt: now, prompt: req.prompt, surface: req.surface, family: req.family, analysis: ANALYSIS, answers: [], outputs: [] })
         return { ...ANALYSIS, historyId: id }
       },
       generate: async (req) => {
@@ -176,6 +230,7 @@ export function installMock() {
       onPinned: () => () => {}
     },
     clipboard: { write: async (t) => navigator.clipboard?.writeText(t).catch(() => {}) },
+    ui: { onOpen: () => () => {} },
     platform: 'win32'
   }
   ;(window as any).prompter = api

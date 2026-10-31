@@ -1,12 +1,13 @@
-import { app, clipboard, globalShortcut, ipcMain, Menu, nativeImage, shell, Tray } from 'electron'
-import { writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { app, clipboard, globalShortcut, ipcMain, Menu, nativeImage, Notification, shell, Tray } from 'electron'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
+import { FAMILY_INFO, MODELS, PROVIDERS, PROVIDER_INFO, type ProviderId } from '@shared/catalog'
 import type { AnalyzeRequest, GenerateRequest, Settings, StreamEvent, WindowMode } from '@shared/types'
-import { clearSavedKey, getSettings, knowledgeDir, saveApiKey, settingsView, updateSettings } from './config'
+import { getSettings, knowledgeDir, updateSettings } from './config'
 import { analyze } from './engine/analyze'
 import { generatePrompt } from './engine/generate'
-import { generate } from './gemini'
 import { clearHistory, deleteHistory, listHistory, recordAnalysis, recordOutput } from './history'
+import { clearKey, engineGenerate, resolveEngine, saveKey, settingsView, verify, verifyPending } from './providers'
 import { selftest } from './selftest'
 import {
   applyPin,
@@ -20,11 +21,23 @@ import {
   toggleVisible
 } from './window'
 
+// Geliştirme ve testte gerçek ayar/geçmiş klasörüne dokunmamak için ayrı bir userData klasörü kullanılabilir.
+if (process.env.PROMPTER_USER_DATA) {
+  const dir = resolve(process.env.PROMPTER_USER_DATA)
+  mkdirSync(dir, { recursive: true })
+  app.setPath('userData', dir)
+}
+
 const SELFTEST = process.argv.includes('--selftest')
 if (!SELFTEST && !app.requestSingleInstanceLock()) app.quit()
 
 let tray: Tray | null = null
 const running = new Map<string, AbortController>()
+let active = 0
+
+// Oturum açılışında başlatıldıysa pencere gösterilmez, tray'de bekler.
+const START_HIDDEN =
+  process.argv.includes('--hidden') || (process.platform === 'darwin' && app.getLoginItemSettings().wasOpenedAtLogin)
 
 function resource(name: string) {
   return app.isPackaged ? join(process.resourcesPath, name) : join(app.getAppPath(), 'resources', name)
@@ -39,11 +52,29 @@ function registerHotkey(accelerator: string) {
   }
 }
 
+/** Pencereyi panel olarak öne getirir; istenirse arayüzde geçmişi ya da ayarları açar. */
+function showPanel(open?: 'settings' | 'history') {
+  const win = getWindow()
+  if (!win) return
+  if (getMode() === 'pill' && open) setMode('panel')
+  win.show()
+  win.focus()
+  if (open) win.webContents.send('ui:open', open)
+}
+
 function buildTrayMenu() {
   const s = getSettings()
+  const engine = resolveEngine()
   return Menu.buildFromTemplate([
     { label: 'Göster / Gizle', click: toggleVisible },
     { label: getMode() === 'pill' ? 'Paneli aç' : 'Küçült', click: () => setMode(getMode() === 'pill' ? 'panel' : 'pill') },
+    { label: 'Geçmiş…', click: () => showPanel('history') },
+    { label: 'Ayarlar…', click: () => showPanel('settings') },
+    { type: 'separator' },
+    {
+      label: engine ? `Motor: ${PROVIDER_INFO[engine.provider].label} · ${engine.generation}` : 'Motor: yapılandırılmamış',
+      enabled: false
+    },
     {
       label: 'Her zaman üstte',
       type: 'checkbox',
@@ -53,6 +84,38 @@ function buildTrayMenu() {
     { type: 'separator' },
     { label: 'Çıkış', click: () => app.quit() }
   ])
+}
+
+function refreshTray() {
+  tray?.setContextMenu(buildTrayMenu())
+  tray?.setToolTip(active > 0 ? 'Prompter — çalışıyor…' : 'Prompter')
+}
+
+/** Uzun süren analiz/yazım sırasında tray ipucunu günceller. */
+async function tracked<T>(work: () => Promise<T>): Promise<T> {
+  active++
+  refreshTray()
+  try {
+    return await work()
+  } finally {
+    active--
+    refreshTray()
+  }
+}
+
+// Panel gizliyken ya da arkadayken bitmiş yazımı bildir; küre modunda rozet yeterli.
+function notifyDone(req: GenerateRequest) {
+  const win = getWindow()
+  if (!getSettings().notifyWhenHidden || !Notification.isSupported() || !win) return
+  if (win.isVisible() && !win.isMinimized() && (win.isFocused() || getMode() === 'pill')) return
+  const m = MODELS[req.model]
+  const n = new Notification({
+    title: 'Prompt hazır',
+    body: `${m.name} · ${FAMILY_INFO[m.family].surfaces[req.surface].label}`,
+    silent: true
+  })
+  n.on('click', () => showPanel())
+  n.show()
 }
 
 function createTray() {
@@ -67,7 +130,9 @@ function createTray() {
 // Windows'ta kayıt adı AppUserModelId olduğu için ikisi aynı kaydı günceller.
 function setLaunchAtLogin(on: boolean) {
   app.setLoginItemSettings(
-    app.isPackaged ? { openAtLogin: on } : { openAtLogin: on, path: process.execPath, args: [app.getAppPath()] }
+    app.isPackaged
+      ? { openAtLogin: on, args: ['--hidden'] }
+      : { openAtLogin: on, path: process.execPath, args: [app.getAppPath(), '--hidden'] }
   )
 }
 
@@ -81,42 +146,57 @@ function applySettings(patch: Partial<Settings>) {
     throw new Error(`Kısayol kaydedilemedi: ${patch.hotkey}`)
   }
   if (patch.launchAtLogin !== undefined) setLaunchAtLogin(next.launchAtLogin)
-  tray?.setContextMenu(buildTrayMenu())
+  refreshTray()
   return settingsView()
 }
 
 function registerIpc() {
   ipcMain.handle('settings:get', () => settingsView())
   ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => applySettings(patch))
-  ipcMain.handle('settings:saveKey', (_e, key: string) => {
-    saveApiKey(key)
-    return settingsView()
-  })
-  ipcMain.handle('settings:clearKey', () => {
-    clearSavedKey()
-    return settingsView()
-  })
   ipcMain.handle('settings:test', async () => {
     const started = Date.now()
     try {
-      await generate({
-        model: getSettings().analysisModel,
+      const { engine } = await engineGenerate('analysis', {
         system: 'Reply with the single word: ok',
         user: 'ping',
         temperature: 0,
         timeoutMs: 60_000
       })
-      return { ok: true, ms: Date.now() - started }
+      return { ok: true, ms: Date.now() - started, engine }
     } catch (e: any) {
       return { ok: false, ms: Date.now() - started, message: e?.message ?? String(e) }
     }
   })
   ipcMain.handle('settings:openKnowledge', () => shell.openPath(knowledgeDir()))
 
-  ipcMain.handle('engine:analyze', async (_e, req: AnalyzeRequest) => {
-    const analysis = await analyze(req)
-    return { ...analysis, historyId: recordAnalysis(req, analysis) }
+  // Key arayüzden yalnızca kaydetmek için gelir; geri gönderilmez. Kaydedilince bağlantı ve modeller doğrulanır.
+  const provider = (id: unknown): ProviderId => {
+    if (!(PROVIDERS as readonly unknown[]).includes(id)) throw new Error(`Bilinmeyen sağlayıcı: ${id}`)
+    return id as ProviderId
+  }
+  ipcMain.handle('providers:saveKey', async (_e, id: ProviderId, key: string) => {
+    saveKey(provider(id), key)
+    await verify(provider(id))
+    refreshTray()
+    return settingsView()
   })
+  ipcMain.handle('providers:clearKey', (_e, id: ProviderId) => {
+    clearKey(provider(id))
+    refreshTray()
+    return settingsView()
+  })
+  ipcMain.handle('providers:verify', async (_e, id: ProviderId) => {
+    await verify(provider(id))
+    refreshTray()
+    return settingsView()
+  })
+
+  ipcMain.handle('engine:analyze', (_e, req: AnalyzeRequest) =>
+    tracked(async () => {
+      const analysis = await analyze(req)
+      return { ...analysis, historyId: recordAnalysis(req, analysis) }
+    })
+  )
   ipcMain.handle('engine:generate', async (e, req: GenerateRequest) => {
     const controller = new AbortController()
     running.set(req.id, controller)
@@ -124,9 +204,12 @@ function registerIpc() {
       if (!e.sender.isDestroyed()) e.sender.send('engine:stream', ev)
     }
     try {
-      const result = await generatePrompt(req, (text) => send({ id: req.id, type: 'chunk', text }), controller.signal)
+      const result = await tracked(() =>
+        generatePrompt(req, (text) => send({ id: req.id, type: 'chunk', text }), controller.signal)
+      )
       recordOutput(req, result)
       send({ id: req.id, type: 'done', result })
+      notifyDone(req)
     } catch (err: any) {
       send({ id: req.id, type: 'error', message: err?.message ?? String(err) })
     } finally {
@@ -141,7 +224,7 @@ function registerIpc() {
 
   ipcMain.handle('window:setMode', (_e, mode: WindowMode) => {
     setMode(mode)
-    tray?.setContextMenu(buildTrayMenu())
+    refreshTray()
   })
   ipcMain.handle('window:getState', () => ({ mode: getMode(), pinned: getSettings().alwaysOnTop }))
   ipcMain.handle('window:togglePin', () => applySettings({ alwaysOnTop: !getSettings().alwaysOnTop }).alwaysOnTop)
@@ -168,9 +251,16 @@ app.whenReady().then(() => {
   registerIpc()
   // Ayar açıksa kaydı bu kopyanın yoluna göre tazele (ör. geliştirmeden kurulu sürüme geçince).
   if (getSettings().launchAtLogin) setLaunchAtLogin(true)
-  const win = createWindow()
+  const win = createWindow({ hidden: START_HIDDEN && !process.env.PROMPTER_CAPTURE })
   createTray()
   registerHotkey(getSettings().hotkey)
+  // Key'i olup hiç doğrulanmamış sağlayıcıların modellerini arka planda getir.
+  verifyPending()
+    .then(() => {
+      refreshTray()
+      win.webContents.send('settings:changed')
+    })
+    .catch(() => {})
   if (process.env.PROMPTER_CAPTURE) captureStates(win, process.env.PROMPTER_CAPTURE)
 })
 

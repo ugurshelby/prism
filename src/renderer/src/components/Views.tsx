@@ -13,7 +13,26 @@ import {
   Wand2,
   X
 } from 'lucide-react'
-import { MODELS, SURFACE_INFO, SURFACES, defaultEffortFor, setupNote, type Surface } from '@shared/catalog'
+import {
+  FAMILIES,
+  FAMILY_DEFAULT_MODEL,
+  FAMILY_INFO,
+  FAMILY_SHORT,
+  MODELS,
+  PROVIDER_INFO,
+  SURFACES,
+  candidatePool,
+  clampEffort,
+  defaultEffortFor,
+  effortText,
+  modelsOf,
+  setupNote,
+  surfaceInfo,
+  type FamilyChoice,
+  type ModelId,
+  type Surface
+} from '@shared/catalog'
+import type { SettingsView, TargetAccess } from '@shared/types'
 import { parseGenerated } from '@shared/parse'
 import type { Choice, FlowState, useFlow } from '../flow'
 import { EffortPicker, Meter, ModelPicker, Segment } from './Pickers'
@@ -60,19 +79,72 @@ function useCtrlEnter(fn: () => void, enabled = true) {
   }, [fn, enabled])
 }
 
-const surfaceOptions = SURFACES.map((v) => ({ value: v, label: SURFACE_INFO[v].label }))
+const surfaceOptions = (family: FamilyChoice) => SURFACES.map((v) => ({ value: v, label: surfaceInfo(family, v).label }))
+
+const familyOptions = (['auto', ...FAMILIES] as FamilyChoice[]).map((f) => ({
+  value: f,
+  label: FAMILY_SHORT[f],
+  hue: f === 'auto' ? undefined : FAMILY_INFO[f].hue
+}))
+
+const preferred = (pool: ModelId[]) =>
+  pool.find((m) => (Object.values(FAMILY_DEFAULT_MODEL) as ModelId[]).includes(m)) ?? pool[0]
+
+const ACCESS_TEXT: Record<TargetAccess, string> = { key: 'API', app: 'uygulama' }
+
+/** Seçili ekosistemde hangi modellere nasıl erişildiğini tek satırda özetler. */
+function PoolHint({ family, targets }: { family: FamilyChoice; targets: SettingsView['targets'] }) {
+  const families = FAMILIES.filter((f) => family === 'auto' || f === family)
+  const parts = families
+    .map((f) => {
+      const ids = modelsOf(f).filter((id) => targets[id])
+      const kinds = [...new Set(ids.map((id) => ACCESS_TEXT[targets[id]!]))].join(' + ')
+      return ids.length ? { f, text: `${FAMILY_INFO[f].name} ${ids.length} · ${kinds}` } : null
+    })
+    .filter((p) => p !== null)
+  const text =
+    family === 'auto'
+      ? parts.length
+        ? null
+        : 'Erişim tanımlı değil; tüm modeller arasından önerilir. Ayarlar’dan key ekle ya da kullandığın uygulamaları işaretle.'
+      : parts.length
+        ? null
+        : `${FAMILY_INFO[family].name} için doğrulanmış key ya da işaretli uygulama yok; prompt yine de yazılır.`
+  return (
+    <motion.div key={family} className="pool-hint" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}>
+      {text ??
+        parts.map((p) => (
+          <span key={p.f}>
+            <i style={{ background: FAMILY_INFO[p.f].hue }} />
+            {p.text}
+          </span>
+        ))}
+    </motion.div>
+  )
+}
 
 // ---------------------------------------------------------------- Compose
 
-export function Compose({ flow }: { flow: Flow }) {
+export function Compose({ flow, targets = {} }: { flow: Flow; targets?: SettingsView['targets'] }) {
   const { s, patch, start } = flow
   const words = s.prompt.trim() ? s.prompt.trim().split(/\s+/).length : 0
+  const pool = candidatePool(s.family, targets)
   useCtrlEnter(start, !!s.prompt.trim())
+
+  // Ekosistem değişince elle seçilen model yeni havuzda yoksa havuzun önerilen modeline geçer.
+  const setFamily = (family: FamilyChoice) => {
+    const next = candidatePool(family, targets)
+    const keep = next.includes(s.manual.model)
+    const model = keep ? s.manual.model : family === 'auto' ? preferred(next) : FAMILY_DEFAULT_MODEL[family]
+    patch({ family, manual: { model, effort: keep ? s.manual.effort : defaultEffortFor(model, s.surface) } })
+  }
 
   return (
     <motion.div className="view" {...viewMotion}>
-      <motion.div {...stagger(0)}>
-        <Segment<Surface> id="surface" value={s.surface} options={surfaceOptions} onChange={(v) => patch({ surface: v })} />
+      <motion.div style={{ display: 'flex', flexDirection: 'column', gap: 8 }} {...stagger(0)}>
+        <Segment<FamilyChoice> id="family" value={s.family} options={familyOptions} onChange={setFamily} />
+        <PoolHint family={s.family} targets={targets} />
+        <Segment<Surface> id="surface" value={s.surface} options={surfaceOptions(s.family)} onChange={(v) => patch({ surface: v })} />
       </motion.div>
 
       <motion.div className="composer" {...stagger(1)}>
@@ -82,7 +154,7 @@ export function Compose({ flow }: { flow: Flow }) {
           onChange={(e) => patch({ prompt: e.target.value })}
           placeholder={'Ne yaptırmak istiyorsun? Aklındakini olduğu gibi yaz.\nSıralı olması, İngilizce olması gerekmiyor.'}
         />
-        <span className="meta">{words ? `${words} kelime` : SURFACE_INFO[s.surface].hint}</span>
+        <span className="meta">{words ? `${words} kelime` : surfaceInfo(s.family, s.surface).hint}</span>
       </motion.div>
 
       <motion.div className="row between" {...stagger(2)}>
@@ -110,8 +182,14 @@ export function Compose({ flow }: { flow: Flow }) {
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             style={{ display: 'flex', flexDirection: 'column', gap: 12, overflow: 'hidden', flex: 'none' }}
           >
-            <ModelPicker value={s.manual.model} onChange={(model) => patch({ manual: { ...s.manual, model } })} />
+            <ModelPicker
+              models={pool}
+              access={targets}
+              value={s.manual.model}
+              onChange={(model) => patch({ manual: { model, effort: clampEffort(model, s.manual.effort) } })}
+            />
             <EffortPicker
+              model={s.manual.model}
               value={s.manual.effort}
               defaultEffort={defaultEffortFor(s.manual.model, s.surface)}
               onChange={(effort) => patch({ manual: { ...s.manual, effort } })}
@@ -133,10 +211,10 @@ export function Compose({ flow }: { flow: Flow }) {
 
 // ---------------------------------------------------------------- Analyzing
 
-const STATUS = [
+const STATUS = (cross: boolean) => [
   'Niyetini çözümlüyorum…',
   'Görevin zorluğunu tartıyorum…',
-  'Model kartlarını karşılaştırıyorum…',
+  cross ? 'Ekosistemleri karşılaştırıyorum…' : 'Model kartlarını karşılaştırıyorum…',
   'Effort dengesini hesaplıyorum…',
   'Belirsiz noktaları ayıklıyorum…',
   'Son kontrol…'
@@ -151,10 +229,11 @@ function useElapsed(since: number) {
   return Math.max(0, Math.floor((now - since) / 1000))
 }
 
-export function Analyzing({ flow }: { flow: Flow }) {
+export function Analyzing({ flow, engine }: { flow: Flow; engine: SettingsView['engine'] }) {
   const { s, cancel } = flow
   const elapsed = useElapsed(s.startedAt)
-  const status = STATUS[Math.min(STATUS.length - 1, Math.floor(elapsed / 3))]
+  const lines = STATUS(s.family === 'auto')
+  const status = lines[Math.min(lines.length - 1, Math.floor(elapsed / 3))]
 
   return (
     <motion.div className="view centered" {...viewMotion} style={{ gap: 18 }}>
@@ -173,7 +252,9 @@ export function Analyzing({ flow }: { flow: Flow }) {
           </motion.div>
         </AnimatePresence>
       </div>
-      <div className="elapsed">{elapsed} sn</div>
+      <div className="elapsed">
+        {elapsed} sn{engine && ` · ${PROVIDER_INFO[engine.provider].label} · ${engine.analysis}`}
+      </div>
       <button className="ghost" onClick={cancel}>
         <X size={15} /> Vazgeç
       </button>
@@ -202,7 +283,7 @@ const TASK_LABEL: Record<string, string> = {
 }
 const COMPLEXITY_LABEL = { trivial: 'Basit', moderate: 'Orta', complex: 'Karmaşık', frontier: 'Sınırda' }
 
-export function Review({ flow }: { flow: Flow }) {
+export function Review({ flow, targets }: { flow: Flow; targets?: SettingsView['targets'] }) {
   const { s, patch, write, answer, reset } = flow
   const a = s.analysis!
   const choice = s.choice ?? { model: a.recommendation.model, effort: a.recommendation.effort }
@@ -211,7 +292,11 @@ export function Review({ flow }: { flow: Flow }) {
   const manual = s.selectMode === 'manual'
   const [editing, setEditing] = useState(false)
   const m = MODELS[choice.model]
-  const choose = (c: Choice) => patch({ choice: c })
+  const choose = (c: Choice) => patch({ choice: { model: c.model, effort: clampEffort(c.model, c.effort) } })
+  const pickable = a.pool?.length ? a.pool : modelsOf(s.family)
+  const cross = new Set(pickable.map((id) => MODELS[id].family)).size > 1
+  // Başka aileden bir modelin kısa adı ("Sol", "Argon") tek başına belirsiz; tam adı göster.
+  const nameOf = (id: Choice['model']) => (MODELS[id].family === m.family ? MODELS[id].short : MODELS[id].name)
   useCtrlEnter(() => write())
 
   return (
@@ -222,7 +307,8 @@ export function Review({ flow }: { flow: Flow }) {
       <motion.div className="chips" {...stagger(1)}>
         <span className="chip">{TASK_LABEL[a.taskType] ?? a.taskType}</span>
         <span className="chip">{COMPLEXITY_LABEL[a.complexity]}</span>
-        <span className="chip">{SURFACE_INFO[s.surface].label}</span>
+        {cross && <span className="chip">{FAMILY_INFO[m.family].name}</span>}
+        <span className="chip">{surfaceInfo(m.family, s.surface).label}</span>
       </motion.div>
 
       <motion.div className="rec" layout {...stagger(2)}>
@@ -243,9 +329,9 @@ export function Review({ flow }: { flow: Flow }) {
           </motion.div>
         </AnimatePresence>
         <div className="effort-badge">
-          <Meter key={choice.effort} effort={choice.effort} />
+          <Meter key={`${choice.model}-${choice.effort}`} model={choice.model} effort={choice.effort} />
           <span>
-            effort <b style={{ color: 'var(--text)' }}>{choice.effort}</b>
+            {FAMILY_INFO[m.family].effortLabel} <b style={{ color: 'var(--text)' }}>{effortText(choice.model, choice.effort)}</b>
           </span>
         </div>
         {isRec && (
@@ -265,7 +351,7 @@ export function Review({ flow }: { flow: Flow }) {
         )}
         {!isRec && (
           <p className="reason">
-            {manual ? 'Benim önerim' : 'Önerim'}: {MODELS[rec.model].short} · {rec.effort}.{' '}
+            {manual ? 'Benim önerim' : 'Önerim'}: {nameOf(rec.model)} · {effortText(rec.model, rec.effort)}.{' '}
             <button className="link" style={{ display: 'inline' }} onClick={() => choose({ model: rec.model, effort: rec.effort })}>
               <Undo2 size={12} style={{ verticalAlign: -2 }} /> Öneriye geç
             </button>
@@ -289,7 +375,7 @@ export function Review({ flow }: { flow: Flow }) {
                 <span className="dot" />
                 <span>
                   <div className="t">
-                    {alt.label} · {MODELS[alt.model].short} · {alt.effort}
+                    {alt.label} · {nameOf(alt.model)} · {effortText(alt.model, alt.effort)}
                   </div>
                   <div className="d">{alt.tradeoff}</div>
                 </span>
@@ -313,8 +399,9 @@ export function Review({ flow }: { flow: Flow }) {
             exit={{ opacity: 0, height: 0 }}
             style={{ display: 'flex', flexDirection: 'column', gap: 12, overflow: 'hidden', flex: 'none' }}
           >
-            <ModelPicker value={choice.model} onChange={(model) => choose({ ...choice, model })} />
+            <ModelPicker models={pickable} access={targets} value={choice.model} onChange={(model) => choose({ ...choice, model })} />
             <EffortPicker
+              model={choice.model}
               value={choice.effort}
               defaultEffort={defaultEffortFor(choice.model, s.surface)}
               onChange={(effort) => choose({ ...choice, effort })}
@@ -472,10 +559,13 @@ export function Result({ flow }: { flow: Flow }) {
         <div className="target">
           <span className="dot" />
           <b>{m.short}</b>
-          <span>· {choice.effort} ·</span>
-          <span>{SURFACE_INFO[s.surface].label}</span>
+          <span>· {effortText(choice.model, choice.effort)} ·</span>
+          <span>{surfaceInfo(m.family, s.surface).label}</span>
         </div>
-        <span className="stats">
+        <span
+          className="stats"
+          title={s.result?.engine ? `${PROVIDER_INFO[s.result.engine.provider].label} · ${s.result.engine.model} ile yazıldı` : undefined}
+        >
           {generating
             ? `${elapsed} sn`
             : s.result

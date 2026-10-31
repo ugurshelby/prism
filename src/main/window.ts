@@ -46,7 +46,7 @@ export function getWindow() {
   return win
 }
 
-export function createWindow(): BrowserWindow {
+export function createWindow(opts: { hidden?: boolean } = {}): BrowserWindow {
   state = readUserJson<WindowState>('window-state.json', {})
   const panel = onScreen(state.panel ?? defaultPanel())
 
@@ -76,7 +76,7 @@ export function createWindow(): BrowserWindow {
   applyPin(getSettings().alwaysOnTop)
   if (process.platform === 'darwin') win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
-  win.on('ready-to-show', () => win?.show())
+  win.on('ready-to-show', () => !opts.hidden && win?.show())
   win.on('moved', remember)
   win.on('resized', remember)
 
