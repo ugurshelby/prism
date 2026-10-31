@@ -1,11 +1,14 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { Check, Copy, RefreshCw, Search, Trash2, X } from 'lucide-react'
-import { MODELS, SURFACE_INFO } from '@shared/catalog'
+import { FAMILIES, FAMILY_INFO, MODELS, PROVIDER_INFO, effortText, surfaceInfo, type Family } from '@shared/catalog'
 import type { HistoryEntry } from '@shared/types'
 import { Logo } from './Prism'
 
 const rtf = new Intl.RelativeTimeFormat('tr', { numeric: 'auto' })
+
+// Silinmiş ya da eski bir model ID'si kaydı bozmasın.
+const modelOf = (e: HistoryEntry) => MODELS[e.outputs.at(-1)?.model ?? e.analysis.recommendation.model] ?? MODELS['claude-opus-5-5']
 
 function ago(ts: number) {
   const s = Math.round((ts - Date.now()) / 1000)
@@ -41,7 +44,7 @@ function Item({
 }) {
   const [copied, setCopied] = useState(false)
   const last = entry.outputs.at(-1)
-  const model = last ? MODELS[last.model] : MODELS[entry.analysis.recommendation.model]
+  const model = modelOf(entry)
 
   useEffect(() => {
     if (!copied) return
@@ -63,16 +66,20 @@ function Item({
           <span className="dot" />
           {last ? (
             <b>
-              {model.short} · {last.effort}
+              {model.short} · {effortText(model.id, last.effort)}
             </b>
           ) : (
             <span className="h-only">Yalnızca analiz</span>
           )}
-          <span>· {SURFACE_INFO[entry.surface].label}</span>
+          <span>· {surfaceInfo(model.family, entry.surface).label}</span>
           {entry.outputs.length > 1 && <span className="h-count">×{entry.outputs.length}</span>}
           <span className="h-time">{ago(entry.updatedAt)}</span>
         </div>
         <div className="h-text">{entry.prompt}</div>
+        <div className="h-sub">
+          {FAMILY_INFO[model.family].name}
+          {last?.engine && ` · ${PROVIDER_INFO[last.engine.provider]?.label ?? last.engine.provider} · ${last.engine.model}`}
+        </div>
       </button>
       <div className="h-actions">
         {last && (
@@ -111,6 +118,7 @@ export function History({
   const [items, setItems] = useState<HistoryEntry[] | null>(null)
   const [query, setQuery] = useState('')
   const [confirmClear, setConfirmClear] = useState(false)
+  const [family, setFamily] = useState<Family | 'all'>('all')
 
   useEffect(() => {
     window.prompter.history.list().then(setItems)
@@ -119,13 +127,19 @@ export function History({
     return () => window.removeEventListener('keydown', esc)
   }, [onClose])
 
+  const present = useMemo(() => FAMILIES.filter((f) => items?.some((e) => modelOf(e).family === f)), [items])
+
   const shown = useMemo(() => {
     const q = query.trim().toLocaleLowerCase('tr')
-    if (!items || !q) return items ?? []
-    return items.filter((e) =>
-      [e.prompt, e.analysis.intent, e.outputs.at(-1)?.prompt ?? ''].some((t) => t.toLocaleLowerCase('tr').includes(q))
+    return (items ?? []).filter(
+      (e) =>
+        (family === 'all' || modelOf(e).family === family) &&
+        (!q ||
+          [e.prompt, e.analysis.intent, e.outputs.at(-1)?.prompt ?? '', modelOf(e).name].some((t) =>
+            t.toLocaleLowerCase('tr').includes(q)
+          ))
     )
-  }, [items, query])
+  }, [items, query, family])
 
   const remove = async (id: string) => {
     setItems((list) => list?.filter((e) => e.id !== id) ?? null)
@@ -158,6 +172,22 @@ export function History({
           </div>
         )}
 
+        {present.length > 1 && (
+          <div className="h-filter">
+            {(['all', ...present] as const).map((f) => (
+              <button
+                key={f}
+                className={family === f ? 'on' : ''}
+                style={f === 'all' ? undefined : ({ '--hue': FAMILY_INFO[f].hue } as CSSProperties)}
+                onClick={() => setFamily(f)}
+              >
+                {f !== 'all' && <i />}
+                {f === 'all' ? 'Tümü' : FAMILY_INFO[f].name}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="content">
           {items && items.length === 0 && (
             <motion.div className="h-empty" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}>
@@ -166,7 +196,9 @@ export function History({
               <span>Analiz ettiğin ve yazdırdığın promptlar burada birikir.</span>
             </motion.div>
           )}
-          {items && items.length > 0 && shown.length === 0 && <span className="hint">“{query}” için sonuç yok.</span>}
+          {items && items.length > 0 && shown.length === 0 && (
+            <span className="hint">{query ? `“${query}” için sonuç yok.` : 'Bu ekosistemde kayıt yok.'}</span>
+          )}
           <ul className="h-list">
             <AnimatePresence mode="popLayout">
               {shown.map((e, i) => (

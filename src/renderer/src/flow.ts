@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Effort, ModelId, Surface } from '@shared/catalog'
+import { MODELS, type Effort, type FamilyChoice, type ModelId, type Surface } from '@shared/catalog'
 import type { Analysis, GenerateResult, HistoryEntry } from '@shared/types'
 
 export type Stage = 'compose' | 'analyzing' | 'review' | 'generating' | 'result'
@@ -9,6 +9,8 @@ export interface FlowState {
   stage: Stage
   prompt: string
   surface: Surface
+  /** Hedef ekosistem; 'auto' aileler arası öneri. */
+  family: FamilyChoice
   selectMode: 'auto' | 'manual'
   manual: Choice
   analysis: Analysis | null
@@ -23,7 +25,8 @@ export interface FlowState {
 const initial: FlowState = {
   stage: 'compose',
   prompt: '',
-  surface: 'claude-code',
+  surface: 'agent',
+  family: 'auto',
   selectMode: 'auto',
   manual: { model: 'claude-opus-5-5', effort: 'medium' },
   analysis: null,
@@ -84,7 +87,8 @@ export function useFlow(onFinished?: () => void) {
       analysis: cur.analysis
         ? { intent: cur.analysis.intent, taskType: cur.analysis.taskType, complexity: cur.analysis.complexity }
         : undefined,
-      historyId: cur.analysis?.historyId
+      historyId: cur.analysis?.historyId,
+      family: cur.family
     })
   }, [])
 
@@ -95,7 +99,7 @@ export function useFlow(onFinished?: () => void) {
     const manual = cur.selectMode === 'manual' ? cur.manual : undefined
     patch({ stage: 'analyzing', error: null, analysis: null, answers: {}, result: null, startedAt: Date.now() })
     try {
-      const analysis = await window.prompter.engine.analyze({ prompt: cur.prompt, surface: cur.surface, manual })
+      const analysis = await window.prompter.engine.analyze({ prompt: cur.prompt, surface: cur.surface, family: cur.family, manual })
       if (seq !== analyzeSeq.current) return
       const choice = manual ?? { model: analysis.recommendation.model, effort: analysis.recommendation.effort }
       setS((prev) => ({ ...prev, analysis, choice }))
@@ -135,7 +139,7 @@ export function useFlow(onFinished?: () => void) {
 
   const reset = useCallback(() => {
     stopRunning()
-    setS((prev) => ({ ...initial, surface: prev.surface, selectMode: prev.selectMode, manual: prev.manual }))
+    setS((prev) => ({ ...initial, surface: prev.surface, family: prev.family, selectMode: prev.selectMode, manual: prev.manual }))
   }, [])
 
   /** Geçmişteki bir girdiyi açar: yazımı varsa sonuç ekranına, yoksa öneri ekranına. */
@@ -161,6 +165,7 @@ export function useFlow(onFinished?: () => void) {
 function fromEntry(entry: HistoryEntry, prev: FlowState): FlowState {
   const last = entry.outputs.at(-1)
   const rec = entry.analysis.recommendation
+  const model = last?.model ?? rec.model
   // Kaydedilen cevaplar "seçenek — serbest metin" biçiminde; soru kimliklerine geri dağıt.
   const answers: FlowState['answers'] = {}
   for (const q of entry.analysis.questions) {
@@ -174,6 +179,8 @@ function fromEntry(entry: HistoryEntry, prev: FlowState): FlowState {
     stage: last ? 'result' : 'review',
     prompt: entry.prompt,
     surface: entry.surface,
+    // v1 kayıtlarında ekosistem yok; modelin ailesi kullanılır.
+    family: entry.family ?? MODELS[model]?.family ?? prev.family,
     analysis: { ...entry.analysis, historyId: entry.id },
     choice: last ? { model: last.model, effort: last.effort } : { model: rec.model, effort: rec.effort },
     answers,

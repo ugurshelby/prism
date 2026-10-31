@@ -15,7 +15,10 @@ let entries: HistoryEntry[] | null = null
 function load(): HistoryEntry[] {
   if (entries) return entries
   try {
-    entries = JSON.parse(readFileSync(file(), 'utf8'))
+    // v1 kayıtlarında kodlama ajanı yüzeyi 'claude-code' idi.
+    entries = (JSON.parse(readFileSync(file(), 'utf8')) as HistoryEntry[]).map((e) =>
+      (e.surface as string) === 'claude-code' ? { ...e, surface: 'agent' } : e
+    )
   } catch {
     entries = []
   }
@@ -45,6 +48,7 @@ export function recordAnalysis(req: AnalyzeRequest, analysis: Analysis): string 
     updatedAt: now,
     prompt: req.prompt,
     surface: req.surface,
+    family: req.family,
     analysis,
     answers: [],
     outputs: []
@@ -65,6 +69,7 @@ export function recordOutput(req: GenerateRequest, result: GenerateResult) {
       updatedAt: now,
       prompt: req.prompt,
       surface: req.surface,
+      family: req.family,
       analysis: {
         intent: req.analysis?.intent ?? '',
         taskType: req.analysis?.taskType ?? 'other',

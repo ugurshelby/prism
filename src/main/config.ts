@@ -1,25 +1,31 @@
-import { app, safeStorage } from 'electron'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { app } from 'electron'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { Settings, SettingsView } from '@shared/types'
+import { PROVIDERS, PROVIDER_INFO } from '@shared/catalog'
+import type { Settings } from '@shared/types'
 
 const DEFAULTS: Settings = {
-  analysisModel: 'gemini-4-argon',
-  generationModel: 'gemini-4-argon',
+  version: 2,
+  engineProvider: 'auto',
+  engineModels: {},
+  vertex: { project: '', location: 'global' },
+  defaultFamily: 'auto',
+  appFamilies: [],
   replyLanguage: 'tr',
-  defaultSurface: 'claude-code',
+  defaultSurface: 'agent',
   alwaysOnTop: true,
   hotkey: 'CommandOrControl+Shift+Space',
-  launchAtLogin: false
+  launchAtLogin: false,
+  notifyWhenHidden: true
 }
 
-const userFile = (name: string) => join(app.getPath('userData'), name)
+export const userFile = (name: string) => join(app.getPath('userData'), name)
 
-function readJson<T>(path: string, fallback: T): T {
+function readRaw(path: string): any {
   try {
-    return { ...fallback, ...JSON.parse(readFileSync(path, 'utf8')) }
+    return JSON.parse(readFileSync(path, 'utf8'))
   } catch {
-    return fallback
+    return null
   }
 }
 
@@ -29,25 +35,76 @@ export function writeJson(name: string, data: unknown) {
 }
 
 export function readUserJson<T>(name: string, fallback: T): T {
-  return readJson(userFile(name), fallback)
+  const raw = readRaw(userFile(name))
+  return raw && typeof raw === 'object' ? { ...fallback, ...raw } : fallback
+}
+
+/**
+ * v1 ayarları (yalnızca Claude hedefi + Vertex motoru) v2'ye taşınır. Mevcut kullanıcının akışı aynen sürsün diye
+ * varsayılan ekosistem Claude kalır ve Claude, key gerektirmeyen (uygulama ile kullanılan) aile sayılır.
+ */
+function migrate(raw: any): Settings {
+  if (!raw || typeof raw !== 'object') return structuredClone(DEFAULTS)
+  if ((raw.version ?? 1) >= 2) {
+    return { ...DEFAULTS, ...raw, vertex: { ...DEFAULTS.vertex, ...raw.vertex }, engineModels: { ...raw.engineModels } }
+  }
+  const { analysisModel, generationModel, defaultSurface, ...rest } = raw
+  return {
+    ...DEFAULTS,
+    ...rest,
+    version: 2,
+    engineModels:
+      analysisModel || generationModel
+        ? { vertex: { analysis: analysisModel || 'gemini-4-argon', generation: generationModel || 'gemini-4-argon' } }
+        : {},
+    vertex: { ...DEFAULTS.vertex },
+    defaultFamily: 'claude',
+    appFamilies: ['claude'],
+    defaultSurface: !defaultSurface || defaultSurface === 'claude-code' ? 'agent' : defaultSurface
+  }
 }
 
 let settings: Settings | null = null
 
 export function getSettings(): Settings {
-  settings ??= readUserJson('settings.json', DEFAULTS)
+  if (settings) return settings
+  const raw = readRaw(userFile('settings.json'))
+  // v1, ayarlar hiç değiştirilmediyse settings.json yazmazdı. Geçmiş ya da key dosyası olup v2'nin model listesi
+  // yoksa bu kurulum yine v1'den geliyordur; yeni kullanıcı sayılırsa Claude akışı kaybolur.
+  const legacy = raw === null && !existsSync(userFile('models.json')) && ['history.json', 'vertex.key'].some((f) => existsSync(userFile(f)))
+  settings = migrate(legacy ? { version: 1 } : raw)
+  // .env'deki Vertex projesi bir kez ayarlara yazılır; kurulu sürüm geliştirme .env'ini görmez.
+  const envProject = envValues().VERTEX_PROJECT_ID
+  const fromV1 = legacy || (raw !== null && (raw.version ?? 1) < 2)
+  const needsWrite = fromV1 || (raw !== null && !settings.vertex.project && !!envProject)
+  if (fromV1) backupV1()
+  if (!settings.vertex.project && envProject) settings.vertex.project = envProject
+  if (needsWrite) writeJson('settings.json', settings)
   return settings
 }
 
+// v1 dosyaları göçten önce bir kez yedeklenir; eski sürüme dönülürse elle geri konabilir.
+function backupV1() {
+  for (const name of ['settings.json', 'history.json']) {
+    const backup = userFile(name.replace('.json', '.v1.json'))
+    if (existsSync(userFile(name)) && !existsSync(backup)) copyFileSync(userFile(name), backup)
+  }
+}
+
 export function updateSettings(patch: Partial<Settings>): Settings {
-  settings = { ...getSettings(), ...patch }
+  const cur = getSettings()
+  settings = {
+    ...cur,
+    ...patch,
+    vertex: { ...cur.vertex, ...patch.vertex },
+    engineModels: { ...cur.engineModels, ...patch.engineModels }
+  }
   writeJson('settings.json', settings)
   return settings
 }
 
-// --- Vertex kimlik bilgisi ---------------------------------------------------
-// Sıra: arayüzden kaydedilmiş (safeStorage ile şifreli) key → ortam değişkeni → .env dosyası.
-// Key hiçbir zaman arayüze gönderilmez.
+// --- Ortam değişkenleri ---------------------------------------------------------
+// Sıra: süreç ortamı → kullanıcı klasöründeki .env → proje kökündeki .env (yalnızca geliştirmede paketin içinde olur).
 
 function parseEnv(path: string): Record<string, string> {
   if (!existsSync(path)) return {}
@@ -59,66 +116,13 @@ function parseEnv(path: string): Record<string, string> {
   return out
 }
 
-function envValues(): Record<string, string> {
+const ENV_NAMES = [...PROVIDERS.map((p) => PROVIDER_INFO[p].env), 'GOOGLE_API_KEY', 'VERTEX_PROJECT_ID', 'VERTEX_LOCATION']
+
+export function envValues(): Record<string, string> {
   const files = [join(app.getAppPath(), '.env'), userFile('.env')]
   const fromFiles = Object.assign({}, ...files.map(parseEnv))
-  const fromProcess = Object.fromEntries(
-    ['VERTEX_API_KEY', 'VERTEX_PROJECT_ID', 'VERTEX_LOCATION']
-      .filter((k) => process.env[k])
-      .map((k) => [k, process.env[k] as string])
-  )
+  const fromProcess = Object.fromEntries(ENV_NAMES.filter((k) => process.env[k]).map((k) => [k, process.env[k] as string]))
   return { ...fromFiles, ...fromProcess }
-}
-
-const KEY_FILE = 'vertex.key'
-
-function savedKey(): string | null {
-  const path = userFile(KEY_FILE)
-  if (!existsSync(path) || !safeStorage.isEncryptionAvailable()) return null
-  try {
-    return safeStorage.decryptString(readFileSync(path))
-  } catch {
-    return null
-  }
-}
-
-export interface VertexConfig {
-  key: string | null
-  source: 'saved' | 'env' | 'none'
-  project: string
-  location: string
-}
-
-export function getVertexConfig(): VertexConfig {
-  const env = envValues()
-  const saved = savedKey()
-  const key = saved ?? env.VERTEX_API_KEY ?? null
-  return {
-    key,
-    source: saved ? 'saved' : key ? 'env' : 'none',
-    project: env.VERTEX_PROJECT_ID || '',
-    location: env.VERTEX_LOCATION || 'global'
-  }
-}
-
-export function saveApiKey(key: string) {
-  if (!safeStorage.isEncryptionAvailable()) throw new Error('Bu sistemde güvenli depolama kullanılamıyor.')
-  mkdirSync(app.getPath('userData'), { recursive: true })
-  writeFileSync(userFile(KEY_FILE), safeStorage.encryptString(key.trim()))
-}
-
-export function clearSavedKey() {
-  rmSync(userFile(KEY_FILE), { force: true })
-}
-
-export function settingsView(): SettingsView {
-  const v = getVertexConfig()
-  return {
-    ...getSettings(),
-    key: { present: !!v.key, source: v.source },
-    project: v.project,
-    location: v.location
-  }
 }
 
 export function knowledgeDir() {

@@ -5,10 +5,18 @@ const api: PrompterApi = {
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     set: (patch) => ipcRenderer.invoke('settings:set', patch),
-    saveKey: (key) => ipcRenderer.invoke('settings:saveKey', key),
-    clearKey: () => ipcRenderer.invoke('settings:clearKey'),
     test: () => ipcRenderer.invoke('settings:test'),
-    openKnowledge: () => ipcRenderer.invoke('settings:openKnowledge')
+    openKnowledge: () => ipcRenderer.invoke('settings:openKnowledge'),
+    onChanged: (cb) => {
+      const listener = () => cb()
+      ipcRenderer.on('settings:changed', listener)
+      return () => ipcRenderer.off('settings:changed', listener)
+    }
+  },
+  providers: {
+    saveKey: (id, key) => ipcRenderer.invoke('providers:saveKey', id, key),
+    clearKey: (id) => ipcRenderer.invoke('providers:clearKey', id),
+    verify: (id) => ipcRenderer.invoke('providers:verify', id)
   },
   engine: {
     analyze: (req) => ipcRenderer.invoke('engine:analyze', req),
@@ -47,6 +55,13 @@ const api: PrompterApi = {
   },
   clipboard: {
     write: (text) => ipcRenderer.invoke('clipboard:write', text)
+  },
+  ui: {
+    onOpen: (cb) => {
+      const listener = (_e: unknown, target: Parameters<typeof cb>[0]) => cb(target)
+      ipcRenderer.on('ui:open', listener)
+      return () => ipcRenderer.off('ui:open', listener)
+    }
   },
   platform: process.platform
 }

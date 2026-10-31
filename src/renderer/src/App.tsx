@@ -1,13 +1,14 @@
 import { AnimatePresence } from 'motion/react'
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { History as HistoryIcon, Minimize2, Pin, PinOff, Settings2, X } from 'lucide-react'
-import { MODELS } from '@shared/catalog'
+import { FAMILY_INFO, FAMILY_SHORT, MODELS } from '@shared/catalog'
 import type { SettingsView, WindowMode } from '@shared/types'
 import { useFlow } from './flow'
 import { History } from './components/History'
 import { Pill } from './components/Pill'
 import { Logo } from './components/Prism'
 import { Settings } from './components/Settings'
+import { Setup } from './components/Setup'
 import { Analyzing, Compose, Result, Review, stageKey } from './components/Views'
 
 export default function App() {
@@ -16,6 +17,9 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [unseen, setUnseen] = useState(false)
+  const [view, setView] = useState<SettingsView | null>(null)
+  // Açılışta hiç sağlayıcı yoksa kurulum ekranı, kişi "Başla" diyene kadar kalır.
+  const [setup, setSetup] = useState(false)
   const modeRef = useRef(mode)
   modeRef.current = mode
 
@@ -24,13 +28,11 @@ export default function App() {
   })
   const { s, patch } = flow
 
-  const applySettings = useCallback(
-    (v: SettingsView) => {
-      setPinned(v.alwaysOnTop)
-      return v
-    },
-    []
-  )
+  const applySettings = useCallback((v: SettingsView) => {
+    setPinned(v.alwaysOnTop)
+    setView(v)
+    return v
+  }, [])
 
   useEffect(() => {
     const w = window.prompter.window
@@ -40,22 +42,31 @@ export default function App() {
     })
     window.prompter.settings.get().then((v) => {
       applySettings(v)
-      patch({ surface: v.defaultSurface })
+      setSetup(!v.engine)
+      patch({ surface: v.defaultSurface, family: v.defaultFamily })
     })
     const offMode = w.onMode((m) => {
       setMode(m)
       if (m === 'panel') setUnseen(false)
     })
     const offPin = w.onPinned(setPinned)
+    const offOpen = window.prompter.ui.onOpen((target) => {
+      setHistoryOpen(target === 'history')
+      setSettingsOpen(target === 'settings')
+    })
+    const offChanged = window.prompter.settings.onChanged(() => window.prompter.settings.get().then(applySettings))
     return () => {
       offMode()
       offPin()
+      offOpen()
+      offChanged()
     }
   }, [applySettings, patch])
 
   const closeHistory = useCallback(() => setHistoryOpen(false), [])
   const busy = s.stage === 'analyzing' || s.stage === 'generating'
-  const hue = s.choice ? MODELS[s.choice.model].hue : undefined
+  const hue = s.choice ? MODELS[s.choice.model].hue : s.family !== 'auto' ? FAMILY_INFO[s.family].hue : undefined
+  const targets = view?.targets ?? {}
 
   if (mode === 'pill') {
     return <Pill busy={busy} badge={unseen} onOpen={() => window.prompter.window.setMode('panel')} />
@@ -71,7 +82,7 @@ export default function App() {
         <div className="brand">
           <Logo />
           Prompter
-          <small>Claude 5.5</small>
+          <small>{setup ? 'Kurulum' : FAMILY_SHORT[s.family].replace('✦ ', '')}</small>
         </div>
         <div className="spacer" />
         <button
@@ -97,10 +108,11 @@ export default function App() {
 
       <main className="body">
         <AnimatePresence initial={false}>
-          {stageKey(s) === 'compose' && <Compose key="compose" flow={flow} />}
-          {stageKey(s) === 'analyzing' && <Analyzing key="analyzing" flow={flow} />}
-          {stageKey(s) === 'review' && s.analysis && <Review key="review" flow={flow} />}
-          {stageKey(s) === 'result' && s.choice && <Result key="result" flow={flow} />}
+          {setup && view && <Setup key="setup" view={view} onChanged={applySettings} onDone={() => setSetup(false)} />}
+          {!setup && stageKey(s) === 'compose' && <Compose key="compose" flow={flow} targets={targets} />}
+          {!setup && stageKey(s) === 'analyzing' && <Analyzing key="analyzing" flow={flow} engine={view?.engine ?? null} />}
+          {!setup && stageKey(s) === 'review' && s.analysis && <Review key="review" flow={flow} targets={targets} />}
+          {!setup && stageKey(s) === 'result' && s.choice && <Result key="result" flow={flow} />}
         </AnimatePresence>
       </main>
 

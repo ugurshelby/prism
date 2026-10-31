@@ -1,6 +1,8 @@
+import type { ProviderId } from '../shared/catalog'
 import type {
   Analysis,
   AnalyzeRequest,
+  EngineRef,
   GenerateRequest,
   HistoryEntry,
   Settings,
@@ -13,10 +15,15 @@ export interface PrompterApi {
   settings: {
     get(): Promise<SettingsView>
     set(patch: Partial<Settings>): Promise<SettingsView>
-    saveKey(key: string): Promise<SettingsView>
-    clearKey(): Promise<SettingsView>
-    test(): Promise<{ ok: boolean; ms: number; message?: string }>
+    test(): Promise<{ ok: boolean; ms: number; message?: string; engine?: EngineRef }>
     openKnowledge(): Promise<string>
+    /** Ana süreç ayarları kendisi değiştirdiğinde (ör. açılışta key doğrulaması bitince). */
+    onChanged(cb: () => void): () => void
+  }
+  providers: {
+    saveKey(id: ProviderId, key: string): Promise<SettingsView>
+    clearKey(id: ProviderId): Promise<SettingsView>
+    verify(id: ProviderId): Promise<SettingsView>
   }
   engine: {
     analyze(req: AnalyzeRequest): Promise<Analysis>
@@ -43,6 +50,10 @@ export interface PrompterApi {
   }
   clipboard: {
     write(text: string): Promise<void>
+  }
+  ui: {
+    /** Tray menüsünden "Geçmiş…" / "Ayarlar…" seçilince. */
+    onOpen(cb: (target: 'settings' | 'history') => void): () => void
   }
   platform: string
 }

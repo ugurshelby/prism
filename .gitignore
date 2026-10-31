@@ -1,7 +1,17 @@
-# Gizli anahtarlar
+# Gizli anahtarlar (key'ler normalde userData'da şifreli durur; buraya kopyalanmasın)
 .env
 .env.*
 !.env.example
+*.key
+
+# Yerel notlar ve test verisi (PROMPTER_USER_DATA ile)
+docs/local/
+# Anthropic dokümanlarının yerel kopyaları; yeniden dağıtılmaz.
+docs/platform/
+docs/claude-code/
+docs/claude-5-5-prompting-rehberi.md
+tmp-userdata/
+*.log
 
 # Bağımlılıklar ve derleme çıktıları
 node_modules/
