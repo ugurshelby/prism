@@ -114,7 +114,7 @@ export function ProviderCard({
         <button
           className="ghost"
           disabled={!key.trim() || !!busy}
-          onClick={() => run('save', () => window.prompter.providers.saveKey(view.id, key))}
+          onClick={() => run('save', () => window.prism.providers.saveKey(view.id, key))}
         >
           <KeyRound size={14} /> {busy === 'save' ? 'Doğrulanıyor…' : 'Kaydet'}
         </button>
@@ -123,7 +123,7 @@ export function ProviderCard({
       {(view.key.present || view.status) && (
         <div className="row" style={{ flexWrap: 'wrap' }}>
           {view.ready && (
-            <button className="ghost" disabled={!!busy} onClick={() => run('verify', () => window.prompter.providers.verify(view.id))}>
+            <button className="ghost" disabled={!!busy} onClick={() => run('verify', () => window.prism.providers.verify(view.id))}>
               <RefreshCw size={13} /> {busy === 'verify' ? 'Doğrulanıyor…' : 'Doğrula ve modelleri getir'}
             </button>
           )}
@@ -133,7 +133,7 @@ export function ProviderCard({
             </button>
           )}
           {view.key.source === 'saved' && (
-            <button className="link" style={{ marginLeft: 'auto' }} onClick={() => run('verify', () => window.prompter.providers.clearKey(view.id))}>
+            <button className="link" style={{ marginLeft: 'auto' }} onClick={() => run('verify', () => window.prism.providers.clearKey(view.id))}>
               Kayıtlı key’i sil
             </button>
           )}
@@ -168,7 +168,7 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    window.prompter.settings.get().then((view) => {
+    window.prism.settings.get().then((view) => {
       setV(view)
       setHotkey(view.hotkey)
     })
@@ -185,7 +185,7 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
   const apply = async (patch: Partial<SettingsT>) => {
     setError(null)
     try {
-      changed(await window.prompter.settings.set(patch))
+      changed(await window.prism.settings.set(patch))
     } catch (e) {
       setError(clean(e))
     }
@@ -236,7 +236,7 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
             </div>
 
             <div className="group">
-              <span className="label">Prompter motoru</span>
+              <span className="label">Prism motoru</span>
               <span className="hint">Analiz, öneri ve yazımı yapan model. Yalnızca key’i tanımlı sağlayıcılar seçilebilir.</span>
               <label className="field">
                 <span>Sağlayıcı</span>
@@ -286,7 +286,7 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
                       className="ghost"
                       onClick={async () => {
                         setTest('running')
-                        setTest(await window.prompter.settings.test())
+                        setTest(await window.prism.settings.test())
                       }}
                     >
                       <Plug size={14} /> {test === 'running' ? 'Deneniyor…' : 'Motoru test et'}
@@ -391,10 +391,10 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
                 Öneri ve yazım, knowledge/ klasöründeki kartlara dayanır. Düzenlediğin kart bir sonraki istekte kullanılır.
               </span>
               <div className="row">
-                <button className="ghost" onClick={() => window.prompter.settings.openKnowledge()}>
+                <button className="ghost" onClick={() => window.prism.settings.openKnowledge()}>
                   <FolderOpen size={14} /> Klasörü aç
                 </button>
-                <button className="ghost" style={{ marginLeft: 'auto' }} onClick={() => window.prompter.window.quit()}>
+                <button className="ghost" style={{ marginLeft: 'auto' }} onClick={() => window.prism.window.quit()}>
                   <Power size={14} /> Çıkış
                 </button>
               </div>

@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { PrompterApi } from './api'
+import type { PrismApi } from './api'
 
-const api: PrompterApi = {
+const api: PrismApi = {
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     set: (patch) => ipcRenderer.invoke('settings:set', patch),
@@ -66,4 +66,4 @@ const api: PrompterApi = {
   platform: process.platform
 }
 
-contextBridge.exposeInMainWorld('prompter', api)
+contextBridge.exposeInMainWorld('prism', api)

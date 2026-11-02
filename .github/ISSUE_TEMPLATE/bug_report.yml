@@ -6,12 +6,12 @@ body:
     attributes:
       value: |
         **Never paste API keys** in issues, logs or screenshots. / **API key'lerini asla paylaşma.**
-        Security problems: please use [private reporting](https://github.com/ugurshelby/prompter/security/advisories/new).
+        Security problems: please use [private reporting](https://github.com/ugurshelby/prism/security/advisories/new).
   - type: input
     id: version
     attributes:
-      label: Prompter version
-      placeholder: "2.0.0"
+      label: Prism version
+      placeholder: "2.1.0"
     validations:
       required: true
   - type: dropdown

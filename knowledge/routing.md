@@ -1,6 +1,6 @@
 # Choosing across model families
 
-Used only when the person lets Prompter pick among several families. The candidates are the models the person can actually use (their verified API keys plus the apps they said they use); never recommend outside them.
+Used only when the person lets Prism pick among several families. The candidates are the models the person can actually use (their verified API keys plus the apps they said they use); never recommend outside them.
 
 ## First, respect the person's context
 

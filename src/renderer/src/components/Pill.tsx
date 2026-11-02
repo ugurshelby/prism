@@ -6,7 +6,7 @@ import { Logo } from './Prism'
 export function Pill({ busy, badge, onOpen }: { busy: boolean; badge: boolean; onOpen: () => void }) {
   const start = useRef<{ x: number; y: number; moved: boolean } | null>(null)
   const frame = useRef(0)
-  const api = window.prompter.window
+  const api = window.prism.window
 
   return (
     <div className="pill-wrap">
@@ -16,7 +16,7 @@ export function Pill({ busy, badge, onOpen }: { busy: boolean; badge: boolean; o
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 420, damping: 24 }}
         whileHover={{ scale: 1.06 }}
-        title={busy ? 'Çalışıyor…' : 'Prompter'}
+        title={busy ? 'Çalışıyor…' : 'Prism'}
         onPointerDown={(e) => {
           if (e.button !== 0) return
           e.currentTarget.setPointerCapture(e.pointerId)

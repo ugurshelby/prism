@@ -14,7 +14,7 @@ export interface Alternative {
   tradeoff: string
 }
 
-/** Prompter'ın analiz/yazım için çağırdığı motor. */
+/** Prism'in analiz/yazım için çağırdığı motor. */
 export interface EngineRef {
   provider: ProviderId
   model: string

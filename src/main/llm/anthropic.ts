@@ -1,4 +1,4 @@
-// Anthropic Messages API istemcisi (Claude modelleri Prompter'ın motoru olarak).
+// Anthropic Messages API istemcisi (Claude modelleri Prism'in motoru olarak).
 
 import type { DiscoveredModel, Usage } from '@shared/types'
 import { readSse, send } from './http'

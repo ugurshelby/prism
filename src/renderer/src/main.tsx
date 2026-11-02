@@ -6,7 +6,7 @@ import { createRoot } from 'react-dom/client'
 import { installMock } from './mock'
 
 // Tarayıcıda (Electron dışında) arayüz geliştirmek için sahte köprü.
-if (!window.prompter) installMock()
+if (!window.prism) installMock()
 
 const { default: App } = await import('./App')
 

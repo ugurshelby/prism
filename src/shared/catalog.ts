@@ -1,4 +1,4 @@
-// Hedef aileler, modeller, effort ölçekleri, yüzeyler ve Prompter'ın kendi motor sağlayıcıları.
+// Hedef aileler, modeller, effort ölçekleri, yüzeyler ve Prism'in kendi motor sağlayıcıları.
 // Ana süreç ve arayüz aynı listeyi kullanır.
 
 export const FAMILIES = ['claude', 'openai', 'gemini', 'grok'] as const
@@ -493,7 +493,7 @@ function claudeNote(m: TargetModel, effort: Effort, surface: Surface): Note {
   }
 }
 
-// --- Prompter'ın kendi motoru (analiz + yazım için çağırdığı LLM) ---------------
+// --- Prism'in kendi motoru (analiz + yazım için çağırdığı LLM) ---------------
 
 export const PROVIDERS = ['vertex', 'anthropic', 'gemini', 'openai', 'xai'] as const
 export type ProviderId = (typeof PROVIDERS)[number]

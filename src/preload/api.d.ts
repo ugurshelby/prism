@@ -11,7 +11,7 @@ import type {
   WindowMode
 } from '../shared/types'
 
-export interface PrompterApi {
+export interface PrismApi {
   settings: {
     get(): Promise<SettingsView>
     set(patch: Partial<Settings>): Promise<SettingsView>
@@ -60,6 +60,6 @@ export interface PrompterApi {
 
 declare global {
   interface Window {
-    prompter: PrompterApi
+    prism: PrismApi
   }
 }

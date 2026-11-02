@@ -1,5 +1,5 @@
 import { app, clipboard, globalShortcut, ipcMain, Menu, nativeImage, Notification, session, shell, Tray } from 'electron'
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { FAMILY_INFO, MODELS, PROVIDERS, PROVIDER_INFO, type ProviderId } from '@shared/catalog'
 import type { AnalyzeRequest, GenerateRequest, Settings, StreamEvent, WindowMode } from '@shared/types'
@@ -21,9 +21,15 @@ import {
   toggleVisible
 } from './window'
 
+// Ürünün eski adı Prompter'dı: o adla kurulmuş sürümlerin ayarları, key'leri ve geçmişi olduğu klasörde kullanılır.
+// Chromium yeni klasörü açılışta önbellekler için kendisi oluşturduğundan klasöre değil içindeki verilere bakılır.
+const legacyData = join(app.getPath('appData'), 'Prompter')
+const hasData = (dir: string) => ['settings.json', 'history.json'].some((f) => existsSync(join(dir, f)))
+if (!hasData(app.getPath('userData')) && hasData(legacyData)) app.setPath('userData', legacyData)
+
 // Geliştirme ve testte gerçek ayar/geçmiş klasörüne dokunmamak için ayrı bir userData klasörü kullanılabilir.
-if (process.env.PROMPTER_USER_DATA) {
-  const dir = resolve(process.env.PROMPTER_USER_DATA)
+if (process.env.PRISM_USER_DATA) {
+  const dir = resolve(process.env.PRISM_USER_DATA)
   mkdirSync(dir, { recursive: true })
   app.setPath('userData', dir)
 }
@@ -104,7 +110,7 @@ function buildTrayMenu() {
 
 function refreshTray() {
   tray?.setContextMenu(buildTrayMenu())
-  tray?.setToolTip(active > 0 ? 'Prompter — çalışıyor…' : 'Prompter')
+  tray?.setToolTip(active > 0 ? 'Prism — çalışıyor…' : 'Prism')
 }
 
 /** Uzun süren analiz/yazım sırasında tray ipucunu günceller. */
@@ -137,7 +143,7 @@ function notifyDone(req: GenerateRequest) {
 function createTray() {
   const icon = nativeImage.createFromPath(resource(process.platform === 'darwin' ? 'trayTemplate.png' : 'tray.png'))
   tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon)
-  tray.setToolTip('Prompter')
+  tray.setToolTip('Prism')
   tray.setContextMenu(buildTrayMenu())
   tray.on('click', toggleVisible)
 }
@@ -155,11 +161,11 @@ function setLaunchAtLogin(on: boolean) {
 
 // Electron'un Linux'ta açılış kaydı yok; XDG autostart girdisi yazılır. AppImage'ın gerçek yolu APPIMAGE'dadır.
 function linuxAutostart(on: boolean) {
-  const file = join(app.getPath('appData'), 'autostart', 'prompter.desktop')
+  const file = join(app.getPath('appData'), 'autostart', 'prism.desktop')
   if (!on) return rmSync(file, { force: true })
   const exec = `"${process.env.APPIMAGE ?? process.execPath}"${app.isPackaged ? '' : ` "${app.getAppPath()}"`} --hidden`
   mkdirSync(dirname(file), { recursive: true })
-  writeFileSync(file, `[Desktop Entry]\nType=Application\nName=Prompter\nExec=${exec}\nX-GNOME-Autostart-enabled=true\n`)
+  writeFileSync(file, `[Desktop Entry]\nType=Application\nName=Prism\nExec=${exec}\nX-GNOME-Autostart-enabled=true\n`)
 }
 
 function applySettings(patch: Partial<Settings>) {
@@ -279,7 +285,7 @@ app.whenReady().then(() => {
   registerIpc()
   // Ayar açıksa kaydı bu kopyanın yoluna göre tazele (ör. geliştirmeden kurulu sürüme geçince).
   if (getSettings().launchAtLogin) setLaunchAtLogin(true)
-  const win = createWindow({ hidden: START_HIDDEN && !process.env.PROMPTER_CAPTURE })
+  const win = createWindow({ hidden: START_HIDDEN && !process.env.PRISM_CAPTURE })
   createTray()
   registerHotkey(getSettings().hotkey)
   // Key'i olup hiç doğrulanmamış sağlayıcıların modellerini arka planda getir.
@@ -289,12 +295,12 @@ app.whenReady().then(() => {
       win.webContents.send('settings:changed')
     })
     .catch(() => {})
-  if (process.env.PROMPTER_CAPTURE) captureStates(win, process.env.PROMPTER_CAPTURE)
+  if (process.env.PRISM_CAPTURE) captureStates(win, process.env.PRISM_CAPTURE)
 })
 
 /**
  * Geliştirme: panel ve pill hâllerinin ekran görüntüsünü alıp çıkar.
- * PROMPTER_CAPTURE_PROMPT verilirse arayüz üzerinden gerçek bir analiz → yazım akışı da çalıştırılır.
+ * PRISM_CAPTURE_PROMPT verilirse arayüz üzerinden gerçek bir analiz → yazım akışı da çalıştırılır.
  */
 function captureStates(win: Electron.BrowserWindow, dir: string) {
   const js = (code: string) => win.webContents.executeJavaScript(code)
@@ -321,7 +327,7 @@ function captureStates(win: Electron.BrowserWindow, dir: string) {
     setMode('panel')
     await wait(900)
 
-    const prompt = process.env.PROMPTER_CAPTURE_PROMPT
+    const prompt = process.env.PRISM_CAPTURE_PROMPT
     if (prompt) {
       await js(`(() => {
         const ta = document.querySelector('textarea')

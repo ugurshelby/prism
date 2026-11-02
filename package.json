@@ -1,7 +1,7 @@
 {
-  "name": "prompter",
-  "productName": "Prompter",
-  "version": "2.0.0",
+  "name": "prism",
+  "productName": "Prism",
+  "version": "2.1.0",
   "private": true,
   "description": "Desktop widget that turns rough prompts into model-specific prompts for Claude, GPT, Gemini and Grok, with your own API keys.",
   "author": {
@@ -9,13 +9,13 @@
     "email": "222421934+ugurshelby@users.noreply.github.com"
   },
   "license": "MIT",
-  "homepage": "https://github.com/ugurshelby/prompter#readme",
+  "homepage": "https://ugurshelby.github.io/prism/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ugurshelby/prompter.git"
+    "url": "git+https://github.com/ugurshelby/prism.git"
   },
   "bugs": {
-    "url": "https://github.com/ugurshelby/prompter/issues"
+    "url": "https://github.com/ugurshelby/prism/issues"
   },
   "keywords": [
     "prompt-engineering",

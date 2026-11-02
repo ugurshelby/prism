@@ -6,7 +6,7 @@ import { Logo } from './Prism'
 import { ProviderCard, Toggle } from './Settings'
 import { viewMotion } from './Views'
 
-/** İlk açılış: Prompter'ın motoru için en az bir sağlayıcı key'i ve kullanılan uygulamalar. */
+/** İlk açılış: Prism'in motoru için en az bir sağlayıcı key'i ve kullanılan uygulamalar. */
 export function Setup({
   view,
   onChanged,
@@ -16,14 +16,14 @@ export function Setup({
   onChanged: (v: SettingsView) => void
   onDone: () => void
 }) {
-  const apply = async (patch: Partial<SettingsT>) => onChanged(await window.prompter.settings.set(patch))
+  const apply = async (patch: Partial<SettingsT>) => onChanged(await window.prism.settings.set(patch))
   const ready = !!view.engine
 
   return (
     <motion.div className="view setup" {...viewMotion}>
       <div className="setup-hero">
         <Logo size={34} />
-        <b>Prompter’a hoş geldin</b>
+        <b>Prism’e hoş geldin</b>
         <span>
           Ham promptunu Claude, GPT, Gemini ya da Grok için yeniden yazar. Bunu yapmak için kendi çalıştırdığı bir modele
           ihtiyacı var: aşağıdan en az bir sağlayıcının API key’ini ekle.
@@ -31,7 +31,7 @@ export function Setup({
       </div>
 
       <div className="group">
-        <span className="label">1 · Prompter’ın motoru</span>
+        <span className="label">1 · Prism’in motoru</span>
         {PROVIDERS.map((id) => (
           <ProviderCard
             key={id}

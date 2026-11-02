@@ -4,7 +4,7 @@
 !.env.example
 *.key
 
-# Yerel notlar ve test verisi (PROMPTER_USER_DATA ile)
+# Yerel notlar ve test verisi (PRISM_USER_DATA ile)
 docs/local/
 # Anthropic dokümanlarının yerel kopyaları; yeniden dağıtılmaz.
 docs/platform/

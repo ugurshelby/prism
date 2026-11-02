@@ -86,7 +86,7 @@ function Item({
           <button
             className={`h-btn ${copied ? 'ok' : ''}`}
             onClick={async () => {
-              await window.prompter.clipboard.write(last.prompt)
+              await window.prism.clipboard.write(last.prompt)
               setCopied(true)
             }}
           >
@@ -121,7 +121,7 @@ export function History({
   const [family, setFamily] = useState<Family | 'all'>('all')
 
   useEffect(() => {
-    window.prompter.history.list().then(setItems)
+    window.prism.history.list().then(setItems)
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', esc)
     return () => window.removeEventListener('keydown', esc)
@@ -143,7 +143,7 @@ export function History({
 
   const remove = async (id: string) => {
     setItems((list) => list?.filter((e) => e.id !== id) ?? null)
-    await window.prompter.history.remove(id)
+    await window.prism.history.remove(id)
   }
 
   return (
@@ -222,7 +222,7 @@ export function History({
               className={`link ${confirmClear ? 'bad-text' : ''}`}
               onClick={async () => {
                 if (!confirmClear) return setConfirmClear(true)
-                await window.prompter.history.clear()
+                await window.prism.history.clear()
                 setItems([])
                 setConfirmClear(false)
               }}

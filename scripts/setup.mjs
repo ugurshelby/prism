@@ -10,7 +10,7 @@ const ok = (msg) => console.log(`✓ ${msg}`)
 
 const major = Number(process.versions.node.split('.')[0])
 if (major < 22) {
-  console.error(`✗ Node ${process.versions.node} bulundu; Prompter için Node 22 veya üstü gerekiyor.`)
+  console.error(`✗ Node ${process.versions.node} bulundu; Prism için Node 22 veya üstü gerekiyor.`)
   process.exit(1)
 }
 ok(`Node ${process.versions.node}`)
