@@ -1,0 +1,35 @@
+---
+import Icon from './Icon.astro'
+import { files, href, latest, type Lang } from '../lib/site'
+import { t } from '../lib/i18n'
+
+interface Props {
+  lang: Lang
+}
+const { lang } = Astro.props
+const s = t(lang)
+const f = files(latest)
+const label = (os: string) => (lang === 'tr' ? `${os} için indir` : `${s.cta.downloadFor} ${os}`)
+---
+
+<a
+  class="btn btn-primary"
+  data-dl
+  href={href(lang, 'download')}
+  data-win={f.win?.url}
+  data-mac-arm={f.macArm?.url}
+  data-mac-intel={f.macIntel?.url}
+  data-linux={f.appimage ? href(lang, 'download') + '#linux' : undefined}
+  data-label-win={label('Windows')}
+  data-label-mac-arm={label('macOS')}
+  data-label-mac-intel={label('macOS (Intel)')}
+  data-label-linux={label('Linux')}
+>
+  <Icon name="download" size={20} />
+  <span data-label>{s.cta.download}</span>
+  {latest && <small>v{latest.version}</small>}
+</a>
+
+<script>
+  import '../scripts/detect'
+</script>

@@ -1,0 +1,195 @@
+---
+import Base from '../layouts/Base.astro'
+import { REPO, href, type Lang } from '../lib/site'
+import { t } from '../lib/i18n'
+
+interface Props {
+  lang: Lang
+}
+const { lang } = Astro.props
+const s = t(lang)
+const keys = [
+  { name: 'Google AI Studio', url: 'https://aistudio.google.com/apikey', fam: 'Gemini' },
+  { name: 'Vertex AI', url: 'https://console.cloud.google.com/apis/credentials', fam: 'Gemini' },
+  { name: 'Anthropic', url: 'https://platform.claude.com/settings/keys', fam: 'Claude' },
+  { name: 'OpenAI', url: 'https://platform.openai.com/api-keys', fam: 'GPT' },
+  { name: 'xAI', url: 'https://console.x.ai', fam: 'Grok' }
+]
+const toc =
+  lang === 'tr'
+    ? [
+        ['start', 'Hızlı başlangıç'],
+        ['keys', 'API key’leri'],
+        ['use', 'Kullanım'],
+        ['data', 'Veri ve gizlilik'],
+        ['help', 'Sorun giderme']
+      ]
+    : [
+        ['start', 'Quick start'],
+        ['keys', 'API keys'],
+        ['use', 'Everyday use'],
+        ['data', 'Data and privacy'],
+        ['help', 'Troubleshooting']
+      ]
+---
+
+<Base lang={lang} page="docs" title={s.docs.title} description={s.docs.lead}>
+  <section class="hero">
+    <div class="container prose">
+      <h1>{s.docs.title}</h1>
+      <p class="lead">{s.docs.lead}</p>
+      <nav class="toc" aria-label="Contents">
+        {toc.map(([id, label]) => <a class="chip" href={`#${id}`} style="text-decoration:none">{label}</a>)}
+      </nav>
+
+      {
+        lang === 'tr' ? (
+          <>
+            <h2 id="start">Hızlı başlangıç</h2>
+            <ol>
+              <li>
+                <a href={href(lang, 'download')}>İndirme sayfasından</a> sistemine uygun dosyayı indirip kur. İlk açılışta sistemin bir kez onay ister.
+              </li>
+              <li>
+                Prism ilk açılışta kurulum ekranını gösterir. Aşağıdaki sağlayıcılardan birinin key’ini yapıştırıp <b>Kaydet</b>’e bas; key anında
+                doğrulanır.
+              </li>
+              <li>Abonelikle kullandığın uygulamaları (ör. Claude Code, ChatGPT) işaretle; aileler arası öneri bunları da hesaba katar.</li>
+              <li>
+                Ham promptunu yaz, <code>Ctrl+Enter</code>’a bas, öneriyi gözden geçir, varsa soruları yanıtla ve promptu kopyala.
+              </li>
+            </ol>
+
+            <h2 id="keys">API key’leri</h2>
+            <p>
+              Prism bir modeli <b>motor</b> olarak kullanır (analiz eder ve yazar) ve bir <b>hedef</b> model için yazar (promptu yapıştıracağın
+              model). Motor, key’ini eklediğin sağlayıcıda çalışır; tek key yeterli.
+            </p>
+            <table>
+              <thead>
+                <tr><th>Sağlayıcı</th><th>Key</th><th>Açtığı hedef</th></tr>
+              </thead>
+              <tbody>
+                {keys.map((k) => (
+                  <tr><td>{k.name}</td><td><a href={k.url}>{new URL(k.url).host}</a></td><td>{k.fam}</td></tr>
+                ))}
+              </tbody>
+            </table>
+            <ul>
+              <li>Key kaydedilince sağlayıcıya hafif bir istek gider ve o key’in kullanabildiği modeller listelenir. Geçersiz key açık bir mesajla reddedilir.</li>
+              <li>Vertex AI için Google Cloud proje ID’si de gerekir ve projede Vertex AI API’si etkin olmalı. Konum <code>global</code> kalmalı.</li>
+              <li>Ayarlar → <i>Prism motoru</i>: “Otomatik” Vertex AI tanımlıysa onu, değilse doğrulanmış ilk sağlayıcıyı kullanır. Analiz ve yazım modelleri ayrı seçilebilir.</li>
+              <li>Key’ler ortam değişkeninden ya da kullanıcı klasöründeki <code>.env</code> dosyasından da okunabilir (<a href={`${REPO}/blob/main/.env.example`}>.env.example</a>).</li>
+            </ul>
+
+            <h2 id="use">Kullanım</h2>
+            <ul>
+              <li><code>Ctrl+Shift+Space</code> (macOS’ta <code>Cmd+Shift+Space</code>) paneli gösterir ya da gizler.</li>
+              <li><b>Ekosistem:</b> tek ailede kalmak için Claude, GPT, Gemini ya da Grok; erişebildiğin bütün modeller arasından seçtirmek için ✦ Çapraz.</li>
+              <li><b>Yüzey:</b> kodlama ajanı, sohbet ya da API; promptun yapısı ve kurulum ipuçları buna göre değişir.</li>
+              <li><b>Önerilsin / Ben seçeyim:</b> öneriyi al ya da modeli ve seviyeyi kendin seç.</li>
+              <li>Pencereyi kapatmak Prism’i tray’e gizler; geçmiş son 200 promptu bu bilgisayarda tutar.</li>
+            </ul>
+
+            <h2 id="data">Veri ve gizlilik</h2>
+            <ul>
+              <li>Key’ler işletim sisteminin güvenli deposuyla şifrelenir ve yalnızca kullanıcı klasöründe durur; arayüze gönderilmez, loglara yazılmaz.</li>
+              <li>Promptlar yalnızca seçtiğin motor sağlayıcısına HTTPS ile gider. Telemetri ya da başka bir sunucu yok.</li>
+              <li>
+                Kullanıcı klasörü: <code>%APPDATA%\Prism</code> (Windows), <code>~/Library/Application Support/Prism</code> (macOS),
+                <code>~/.config/Prism</code> (Linux). Prompter’dan güncellediysen aynı yerdeki <code>Prompter</code> klasörü.
+              </li>
+              <li>Ayrıntılar: <a href={`${REPO}/blob/main/SECURITY.md`}>güvenlik politikası</a>.</li>
+            </ul>
+
+            <h2 id="help">Sorun giderme</h2>
+            <table>
+              <thead>
+                <tr><th>Belirti</th><th>Çözüm</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>401</code> / “key reddedildi”</td><td>Key yanlış ya da ilgili API etkin değil. Key’i yeniden gir ve Doğrula’ya bas.</td></tr>
+                <tr><td>Vertex <code>404</code></td><td>Konum <code>global</code> olmalı; proje ID’sini ve Vertex AI API’sinin etkin olduğunu kontrol et.</td></tr>
+                <tr><td><code>429</code></td><td>Hız sınırı ya da kota. Prism iki kez dener, sonra hatayı gösterir.</td></tr>
+                <tr><td>Linux: “Sistem anahtarlığı bulunamadı”</td><td>GNOME Keyring ya da KWallet kur, ya da key’i kullanıcı klasöründeki <code>.env</code> dosyasına yaz.</td></tr>
+                <tr><td>macOS: “açılamıyor” uyarısı</td><td>Sistem Ayarları → Gizlilik ve Güvenlik → Yine de Aç.</td></tr>
+              </tbody>
+            </table>
+            <p>Başka bir sorun mu var? <a href={`${REPO}/issues`}>GitHub’da bildir</a>; key’lerini asla paylaşma.</p>
+          </>
+        ) : (
+          <>
+            <h2 id="start">Quick start</h2>
+            <ol>
+              <li>
+                Get the installer for your system from the <a href={href(lang, 'download')}>download page</a>. Your system asks for confirmation once on
+                first launch.
+              </li>
+              <li>Prism opens a setup screen the first time. Paste a key from any provider below and press <b>Kaydet</b> (Save); it is verified right away.</li>
+              <li>Mark the apps you use through a subscription (for example Claude Code or ChatGPT) so cross-family recommendations include them.</li>
+              <li>Write your rough prompt, press <code>Ctrl+Enter</code>, review the recommendation, answer any questions and copy the prompt.</li>
+            </ol>
+
+            <h2 id="keys">API keys</h2>
+            <p>
+              Prism uses one model as its <b>engine</b> (it analyzes and writes) and writes for a <b>target</b> model (the one you paste the prompt
+              into). The engine runs on whichever provider you add a key for; one key is enough.
+            </p>
+            <table>
+              <thead>
+                <tr><th>Provider</th><th>Get a key</th><th>Unlocks</th></tr>
+              </thead>
+              <tbody>
+                {keys.map((k) => (
+                  <tr><td>{k.name}</td><td><a href={k.url}>{new URL(k.url).host}</a></td><td>{k.fam}</td></tr>
+                ))}
+              </tbody>
+            </table>
+            <ul>
+              <li>Saving a key sends a lightweight request to the provider and lists the models that key can use. Invalid keys are rejected with a clear message.</li>
+              <li>Vertex AI also needs your Google Cloud project ID with the Vertex AI API enabled. Keep the location <code>global</code>.</li>
+              <li>Settings → <i>Prism motoru</i> (engine): “Auto” prefers Vertex AI when configured, otherwise the first verified provider. Analysis and writing models can be set separately.</li>
+              <li>Keys can also come from environment variables or a <code>.env</code> file in the user data folder (<a href={`${REPO}/blob/main/.env.example`}>.env.example</a>).</li>
+            </ul>
+
+            <h2 id="use">Everyday use</h2>
+            <ul>
+              <li><code>Ctrl+Shift+Space</code> (<code>Cmd+Shift+Space</code> on macOS) shows or hides the panel.</li>
+              <li><b>Ecosystem:</b> Claude, GPT, Gemini or Grok to stay within one family, or ✦ Cross to choose among every model you can use.</li>
+              <li><b>Surface:</b> coding agent, chat or API; the prompt’s structure and setup tips follow it.</li>
+              <li><b>Önerilsin / Ben seçeyim</b> (recommend / I’ll choose): take the recommendation or pick the model and level yourself.</li>
+              <li>Closing the window keeps Prism in the tray; history keeps your last 200 prompts on this computer.</li>
+            </ul>
+            <p class="muted">The interface is in Turkish today; generated prompts are written in English.</p>
+
+            <h2 id="data">Data and privacy</h2>
+            <ul>
+              <li>Keys are encrypted with your operating system’s secure storage and kept only in your user data folder; never sent to the interface or written to logs.</li>
+              <li>Prompts go only to the engine provider you chose, over HTTPS. No telemetry, no other servers.</li>
+              <li>
+                User data folder: <code>%APPDATA%\Prism</code> (Windows), <code>~/Library/Application Support/Prism</code> (macOS),
+                <code>~/.config/Prism</code> (Linux); if you upgraded from Prompter, the same folder named <code>Prompter</code>.
+              </li>
+              <li>Details: <a href={`${REPO}/blob/main/SECURITY.md`}>security policy</a>.</li>
+            </ul>
+
+            <h2 id="help">Troubleshooting</h2>
+            <table>
+              <thead>
+                <tr><th>Symptom</th><th>Fix</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>401</code> / “key rejected”</td><td>Wrong key or the API isn’t enabled for it. Re-enter the key and press Verify.</td></tr>
+                <tr><td>Vertex <code>404</code></td><td>Location must be <code>global</code>; check the project ID and that the Vertex AI API is enabled.</td></tr>
+                <tr><td><code>429</code></td><td>Rate limit or quota. Prism retries twice, then shows the error.</td></tr>
+                <tr><td>Linux: “Sistem anahtarlığı bulunamadı”</td><td>Install GNOME Keyring or KWallet, or put the key in the user data folder’s <code>.env</code> file.</td></tr>
+                <tr><td>macOS: “can’t be opened” warning</td><td>System Settings → Privacy &amp; Security → Open Anyway.</td></tr>
+              </tbody>
+            </table>
+            <p>Something else? <a href={`${REPO}/issues`}>Report it on GitHub</a>, and never share your keys.</p>
+          </>
+        )
+      }
+    </div>
+  </section>
+</Base>

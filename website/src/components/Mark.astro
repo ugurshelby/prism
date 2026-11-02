@@ -1,0 +1,68 @@
+---
+// Prism işareti ve sürüm kuşaklarının varyasyonları. "tile" koyu karo içindir (renkler sabit),
+// "logo" sayfanın temasına uyar.
+interface Props {
+  variant: 'logo' | 'ray' | 'spectrum' | 'lens' | 'iris'
+  size?: number
+}
+const { variant, size = 28 } = Astro.props
+const tile = variant !== 'logo'
+const c = tile
+  ? { beam: '#eef0f4', claude: '#ff9a5a', gpt: '#7fd6a6', gemini: '#6cb0ff', grok: '#c9d1dc', pink: '#f78fb3', violet: '#b49cff', amber: '#ffd36e' }
+  : { beam: 'var(--beam)', claude: 'var(--claude)', gpt: 'var(--gpt)', gemini: 'var(--gemini)', grok: 'var(--grok)', pink: '#f78fb3', violet: '#b49cff', amber: 'var(--accent-2)' }
+const rays = [c.claude, c.gpt, c.gemini, c.grok]
+const ring = [c.claude, c.amber, c.gpt, c.gemini, c.violet, c.pink]
+---
+
+{
+  (variant === 'logo' || variant === 'spectrum') && (
+    <svg width={variant === 'logo' ? size : 132} height={variant === 'logo' ? size : 56} viewBox="0 0 64 40" fill="none" aria-hidden="true">
+      <line x1="1" y1="23" x2="22" y2="23" stroke={c.beam} stroke-width="3" stroke-linecap="round" />
+      <path d="M26 5 L40 33 L12 33 Z" stroke={c.beam} stroke-width="2.6" stroke-linejoin="round" />
+      {rays.map((r, i) => (
+        <line class="ray" x1="33" y1="23" x2="63" y2={12 + i * 7} stroke={r} stroke-width="3" stroke-linecap="round" />
+      ))}
+    </svg>
+  )
+}
+{
+  variant === 'ray' && (
+    <svg width="132" height="56" viewBox="0 0 64 40" fill="none" aria-hidden="true">
+      <line x1="2" y1="20" x2="62" y2="20" stroke={c.beam} stroke-width="3" stroke-linecap="round" />
+      <circle cx="62" cy="20" r="2.5" fill={c.claude} />
+    </svg>
+  )
+}
+{
+  variant === 'lens' && (
+    <svg width="132" height="56" viewBox="0 0 64 40" fill="none" aria-hidden="true">
+      {rays.map((r, i) => (
+        <line x1="1" y1={8 + i * 8} x2="26" y2={8 + i * 8} stroke={r} stroke-width="2.6" stroke-linecap="round" />
+      ))}
+      <path d="M32 3 C40 12 40 28 32 37 C24 28 24 12 32 3 Z" stroke={c.beam} stroke-width="2.6" stroke-linejoin="round" />
+      {rays.map((r, i) => (
+        <line x1="38" y1={8 + i * 8} x2="60" y2="20" stroke={r} stroke-width="2.6" stroke-linecap="round" />
+      ))}
+      <circle cx="61" cy="20" r="2.6" fill={c.beam} />
+    </svg>
+  )
+}
+{
+  variant === 'iris' && (
+    <svg width="132" height="56" viewBox="0 0 64 40" fill="none" aria-hidden="true">
+      {ring.map((r, i) => (
+        <circle
+          cx="32"
+          cy="20"
+          r="15"
+          stroke={r}
+          stroke-width="4.5"
+          stroke-dasharray="15.7 94.2"
+          stroke-dashoffset={-15.7 * i}
+          transform="rotate(-90 32 20)"
+        />
+      ))}
+      <circle cx="32" cy="20" r="6" fill={c.beam} />
+    </svg>
+  )
+}

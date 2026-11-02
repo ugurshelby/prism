@@ -1,0 +1,146 @@
+---
+import Base from '../layouts/Base.astro'
+import DownloadButton from '../components/DownloadButton.astro'
+import Icon from '../components/Icon.astro'
+import Mark from '../components/Mark.astro'
+import { GENERATIONS, REPO, asset, href, type Lang } from '../lib/site'
+import { t } from '../lib/i18n'
+
+interface Props {
+  lang: Lang
+}
+const { lang } = Astro.props
+const s = t(lang)
+const shots = ['compose', 'review', 'result']
+const families = [
+  { name: 'Claude', hue: 'var(--claude)', models: ['Fable 5.1', 'Opus 5.5', 'Sonnet 5.5', 'Haiku 5.5'], where: 'Claude Code · claude.ai · API' },
+  { name: 'GPT', hue: 'var(--gpt)', models: ['GPT-6 Astra', 'GPT-6.1 Sol', 'GPT-6.1 Terra', 'GPT-6 Luna'], where: 'Codex · ChatGPT · API' },
+  { name: 'Gemini', hue: 'var(--gemini)', models: ['Gemini 4 Argon', '3.8 Flash', '3.5 Flash-Lite'], where: 'Antigravity · Gemini · API' },
+  { name: 'Grok', hue: 'var(--grok)', models: ['Grok 4.7', 'Grok 4.3', 'Grok Build 0.1'], where: 'Grok Build · Grok · API' }
+]
+---
+
+<Base lang={lang} page="">
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <span class="eyebrow"><Mark variant="logo" size={18} />{s.hero.eyebrow}</span>
+        <h1>{s.hero.title[0]}<br /><span class="grad">{s.hero.title[1]}</span></h1>
+        <p class="lead">{s.hero.lead}</p>
+        <div class="actions">
+          <DownloadButton lang={lang} />
+          <a class="btn btn-ghost" href={href(lang, 'download')}>{s.cta.otherPlatforms}</a>
+        </div>
+        <p class="note">{s.cta.free}</p>
+      </div>
+      <div class="hero-visual">
+        <img class="shot" src={asset('screenshots/review.png')} width="550" height="800" alt="" loading="eager" />
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="section-head"><h2>{s.steps.title}</h2></div>
+      <div class="grid">
+        {
+          s.steps.items.map((step, i) => (
+            <div class="card step">
+              <span class="num">0{i + 1}</span>
+              <h3>{step.title}</h3>
+              <p>{step.body}</p>
+              <img src={asset(`screenshots/${shots[i]}.png`)} width="550" height="800" alt={step.title} loading="lazy" />
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="section-head">
+        <h2>{s.families.title}</h2>
+        <p class="lead">{s.families.lead}</p>
+      </div>
+      <div class="grid grid-4">
+        {
+          families.map((f) => (
+            <div class="card family" style={`--hue:${f.hue}`}>
+              <h3><span class="dot" />{f.name}</h3>
+              <div class="chips">
+                {f.models.map((m) => (
+                  <span class="chip">{m}</span>
+                ))}
+              </div>
+              <p style="margin-top:14px;font-size:14px" class="muted">{f.where}</p>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="section-head"><h2>{s.features.title}</h2></div>
+      <div class="grid">
+        {
+          s.features.items.map((f) => (
+            <div class="card feature">
+              <Icon name={f.icon} size={26} />
+              <h3>{f.title}</h3>
+              <p>{f.body}</p>
+            </div>
+          ))
+        }
+      </div>
+      <div class="card privacy" style="margin-top:16px">
+        <Icon name="shield" size={44} />
+        <div>
+          <h3>{s.privacy.title}</h3>
+          <p>{s.privacy.body}</p>
+          <p><a class="text-link" href={`${REPO}/blob/main/SECURITY.md`}>{s.privacy.link} →</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="section-head">
+        <h2>{s.generations.title}</h2>
+        <p class="lead">{s.generations.lead}</p>
+      </div>
+      <div class="grid grid-4">
+        {
+          GENERATIONS.map((g) => (
+            <a class={`card gen ${g.status === 'current' ? 'is-current' : ''}`} href={href(lang, 'versions') + `#${g.id}`} style="text-decoration:none">
+              <div class="mark">
+                <Mark variant={g.id} />
+              </div>
+              <div class="gen-head">
+                <h3>{g.name}</h3>
+                <span class="muted mono">{g.major}.x</span>
+                <span class={`badge ${g.status}`}>{s.generations.status[g.status]}</span>
+              </div>
+              <p class="tagline">{s.generations.items[g.id].tagline}</p>
+              <p>{s.generations.items[g.id].body}</p>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container" style="text-align:center">
+      <h2>{s.hero.title[1]}</h2>
+      <div class="actions" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px">
+        <DownloadButton lang={lang} />
+        <a class="btn btn-ghost" href={REPO}><Icon name="github" size={20} />{s.cta.github}</a>
+      </div>
+      <p class="note muted" style="margin-top:14px;font-size:14px">{s.cta.free}</p>
+    </div>
+  </section>
+</Base>

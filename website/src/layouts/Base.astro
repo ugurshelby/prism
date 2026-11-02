@@ -1,0 +1,89 @@
+---
+import '@fontsource-variable/bricolage-grotesque'
+import '@fontsource-variable/jetbrains-mono'
+import '../styles/global.css'
+import Mark from '../components/Mark.astro'
+import { REPO, asset, href, type Lang } from '../lib/site'
+import { t } from '../lib/i18n'
+
+interface Props {
+  lang: Lang
+  page: '' | 'versions' | 'download' | 'docs'
+  title?: string
+  description?: string
+}
+const { lang, page, title, description } = Astro.props
+const s = t(lang)
+const other: Lang = lang === 'en' ? 'tr' : 'en'
+const pageTitle = title ? `${title} · Prism` : s.meta.title
+const desc = description ?? s.meta.description
+const canonical = new URL(href(lang, page), Astro.site).toString()
+const nav = [
+  { page: 'versions', label: s.nav.versions },
+  { page: 'download', label: s.nav.download },
+  { page: 'docs', label: s.nav.docs }
+] as const
+// Statik site: yalnızca kendi dosyaları. Stil için satır içi izin, Astro'nun küçük stil bloklarını kapsar.
+const csp =
+  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'"
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {import.meta.env.PROD && <meta http-equiv="Content-Security-Policy" content={csp} />}
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={desc} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang={lang} href={canonical} />
+    <link rel="alternate" hreflang={other} href={new URL(href(other, page), Astro.site).toString()} />
+    <link rel="icon" href={asset('favicon.svg')} type="image/svg+xml" />
+    <meta name="theme-color" content="#0a0b0f" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={desc} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={new URL(asset('screenshots/review.png'), Astro.site).toString()} />
+  </head>
+  <body>
+    <div class="backdrop"></div>
+    <header class="site-header">
+      <div class="container">
+        <a class="brand" href={href(lang)} aria-label="Prism">
+          <Mark variant="logo" size={30} />
+          prism
+        </a>
+        <nav class="nav" aria-label="Main">
+          {
+            nav.map((n) => (
+              <a href={href(lang, n.page)} aria-current={page === n.page ? 'page' : undefined} class={n.page === 'versions' ? 'hide-sm' : undefined}>
+                {n.label}
+              </a>
+            ))
+          }
+          <a href={REPO} class="hide-sm">{s.nav.github}</a>
+          <a href={href(other, page)} class="lang" hreflang={other} lang={other}>{s.nav.lang}</a>
+        </nav>
+      </div>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="container">
+        <div class="row">
+          <a class="brand" href={href(lang)} aria-label="Prism"><Mark variant="logo" size={24} />prism</a>
+          <a href={REPO}>{s.footer.source}</a>
+          <a href={`${REPO}/blob/main/CHANGELOG.md`}>{s.footer.changelog}</a>
+          <a href={`${REPO}/blob/main/SECURITY.md`}>{s.footer.security}</a>
+          <a href={`${REPO}/blob/main/LICENSE`}>{s.footer.license}</a>
+        </div>
+        <p>{s.footer.disclaimer}</p>
+        <p>© 2026 ugurshelby</p>
+      </div>
+    </footer>
+  </body>
+</html>
