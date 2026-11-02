@@ -98,6 +98,7 @@ export interface Settings {
   alwaysOnTop: boolean
   hotkey: string
   launchAtLogin: boolean
+  vertexProject: string
 }
 
 export interface SettingsView extends Settings {

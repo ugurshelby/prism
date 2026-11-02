@@ -4,7 +4,7 @@ import type { Effort, ModelId } from '@shared/catalog'
 import type { Analysis, HistoryEntry, SettingsView, StreamEvent, WindowMode } from '@shared/types'
 
 const SAMPLE = `<prompt>
-I'm building Prompter, an Electron desktop widget that rewrites raw prompts for Claude models. The settings sheet needs a connection test that tells the user, within a few seconds, whether their Vertex AI key works.
+I'm building Prism Ray, an Electron desktop widget that rewrites raw prompts for Claude models. The settings sheet needs a connection test that tells the user, within a few seconds, whether their Vertex AI key works.
 
 Add a "Test connection" button to src/renderer/src/components/Settings.tsx that calls a new IPC handler in src/main/index.ts. The handler should send a minimal request to the configured analysis model and return { ok, ms, message }.
 
@@ -57,6 +57,7 @@ let settings: SettingsView = {
   alwaysOnTop: true,
   hotkey: 'CommandOrControl+Shift+Space',
   launchAtLogin: false,
+  vertexProject: '',
   key: { present: true, source: 'env' },
   project: 'my-gcp-project',
   location: 'global'

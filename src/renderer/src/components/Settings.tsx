@@ -100,6 +100,12 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
                   <KeyRound size={14} /> Kaydet
                 </button>
               </div>
+              <input
+                className="input mono"
+                placeholder="Google Cloud proje ID"
+                defaultValue={v.vertexProject || v.project}
+                onBlur={(e) => e.target.value.trim() !== v.vertexProject && apply({ vertexProject: e.target.value.trim() })}
+              />
               <div className="row">
                 <button
                   className="ghost"

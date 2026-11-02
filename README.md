@@ -1,3 +1,12 @@
+> **Prism Ray (1.x)** is the first Prism edition: prompts for Claude models only, written by one engine (Gemini on
+> Vertex AI). It is kept as a maintenance branch so it stays downloadable; new work happens on `main` (Prism Spectrum).
+> Downloads: https://ugurshelby.github.io/prism/download/ · License: MIT.
+>
+> Ray installs next to Spectrum as a separate app with its own settings. In Settings, enter your Vertex AI API key and
+> your Google Cloud project ID.
+
+---
+
 # Prompter
 
 Ham promptunu yazarsın; Prompter onu analiz edip uygun Claude 5.5 modelini ve effort seviyesini önerir, gerekirse birkaç soru sorar, sonra seçilen model ve effort için optimize edilmiş, kopyalanmaya hazır promptu yazar. Optimizer olarak Vertex AI üzerinden Gemini 4 Argon kullanılır.

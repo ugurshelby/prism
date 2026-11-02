@@ -10,7 +10,8 @@ const DEFAULTS: Settings = {
   defaultSurface: 'claude-code',
   alwaysOnTop: true,
   hotkey: 'CommandOrControl+Shift+Space',
-  launchAtLogin: false
+  launchAtLogin: false,
+  vertexProject: ''
 }
 
 const userFile = (name: string) => join(app.getPath('userData'), name)
@@ -96,7 +97,7 @@ export function getVertexConfig(): VertexConfig {
   return {
     key,
     source: saved ? 'saved' : key ? 'env' : 'none',
-    project: env.VERTEX_PROJECT_ID || '',
+    project: getSettings().vertexProject || env.VERTEX_PROJECT_ID || '',
     location: env.VERTEX_LOCATION || 'global'
   }
 }

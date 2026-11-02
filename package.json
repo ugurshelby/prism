@@ -1,11 +1,23 @@
 {
-  "name": "prompter",
-  "productName": "Prompter",
-  "version": "0.1.0",
+  "name": "prism-ray",
+  "productName": "Prism Ray",
+  "version": "1.0.0",
   "private": true,
-  "description": "Ham promptu analiz edip doğru Claude modeli ve effort seviyesi için optimize eden masaüstü widget'ı.",
-  "author": "ts",
+  "description": "Prism Ray: the first Prism edition. Rewrites rough prompts for Claude models, with Gemini on Vertex AI as the engine.",
+  "author": {
+    "name": "ugurshelby",
+    "email": "222421934+ugurshelby@users.noreply.github.com"
+  },
+  "license": "MIT",
+  "homepage": "https://ugurshelby.github.io/prism/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ugurshelby/prism.git"
+  },
   "main": "out/main/index.js",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
@@ -14,7 +26,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "icons": "node scripts/make-icons.mjs",
     "dist:win": "electron-vite build && electron-builder --win",
-    "dist:mac": "electron-vite build && electron-builder --mac"
+    "dist:mac": "electron-vite build && electron-builder --mac",
+    "dist:linux": "electron-vite build && electron-builder --linux"
   },
   "devDependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",

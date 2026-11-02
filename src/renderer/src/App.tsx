@@ -70,7 +70,7 @@ export default function App() {
       <header className="header">
         <div className="brand">
           <Logo />
-          Prompter
+          Prism Ray
           <small>Claude 5.5</small>
         </div>
         <div className="spacer" />

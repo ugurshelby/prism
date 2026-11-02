@@ -1,4 +1,4 @@
-import { app, clipboard, globalShortcut, ipcMain, Menu, nativeImage, shell, Tray } from 'electron'
+import { app, clipboard, globalShortcut, ipcMain, Menu, nativeImage, session, shell, Tray } from 'electron'
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { AnalyzeRequest, GenerateRequest, Settings, StreamEvent, WindowMode } from '@shared/types'
@@ -22,6 +22,18 @@ import {
 
 const SELFTEST = process.argv.includes('--selftest')
 if (!SELFTEST && !app.requestSingleInstanceLock()) app.quit()
+
+// Uygulama yalnızca kendi arayüzünü yükler: yeni pencere, başka sayfaya geçiş ve webview kapalı.
+app.on('web-contents-created', (_e, contents) => {
+  contents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://')) shell.openExternal(url)
+    return { action: 'deny' }
+  })
+  contents.on('will-navigate', (e, url) => {
+    if (url !== contents.getURL()) e.preventDefault()
+  })
+  contents.on('will-attach-webview', (e) => e.preventDefault())
+})
 
 let tray: Tray | null = null
 const running = new Map<string, AbortController>()
@@ -58,7 +70,7 @@ function buildTrayMenu() {
 function createTray() {
   const icon = nativeImage.createFromPath(resource(process.platform === 'darwin' ? 'trayTemplate.png' : 'tray.png'))
   tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon)
-  tray.setToolTip('Prompter')
+  tray.setToolTip('Prism Ray')
   tray.setContextMenu(buildTrayMenu())
   tray.on('click', toggleVisible)
 }
@@ -163,7 +175,8 @@ app.on('second-instance', () => {
 
 app.whenReady().then(() => {
   if (SELFTEST) return selftest(process.argv)
-  if (process.platform === 'win32') app.setAppUserModelId('com.prompter.app')
+  session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false))
+  if (process.platform === 'win32') app.setAppUserModelId('com.prism.ray')
   if (process.platform === 'darwin') app.dock?.hide()
   registerIpc()
   // Ayar açıksa kaydı bu kopyanın yoluna göre tazele (ör. geliştirmeden kurulu sürüme geçince).

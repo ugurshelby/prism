@@ -1,5 +1,7 @@
-appId: com.prompter.app
-productName: Prompter
+# Prism Ray, Spectrum'dan ayrı bir uygulama olarak kurulur: kendi appId'si ve kendi ayar klasörü var.
+appId: com.prism.ray
+productName: Prism Ray
+artifactName: Prism-Ray-${version}-${os}-${arch}.${ext}
 directories:
   buildResources: resources
   output: release
@@ -15,13 +17,40 @@ extraResources:
       - "tray*.png"
       - "trayTemplate*.png"
 icon: resources/icon.png
+publish: null
+
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+
 win:
-  target: nsis
+  target:
+    - target: nsis
+      arch: [x64]
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  artifactName: Prism-Ray-Setup-${version}-${arch}.${ext}
+
 mac:
-  target: dmg
+  target:
+    - target: dmg
+      arch: [arm64, x64]
   category: public.app-category.developer-tools
-  # İmzasız kişisel kullanım; ilk açılışta sağ tık → Aç.
-  identity: null
+  identity: "-"
+  hardenedRuntime: false
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  category: Development
+  executableName: prism-ray
+  synopsis: Prism Ray, prompt optimizer for Claude
+  maintainer: ugurshelby <222421934+ugurshelby@users.noreply.github.com>

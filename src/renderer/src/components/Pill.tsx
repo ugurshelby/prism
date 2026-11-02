@@ -16,7 +16,7 @@ export function Pill({ busy, badge, onOpen }: { busy: boolean; badge: boolean; o
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 420, damping: 24 }}
         whileHover={{ scale: 1.06 }}
-        title={busy ? 'Çalışıyor…' : 'Prompter'}
+        title={busy ? 'Çalışıyor…' : 'Prism Ray'}
         onPointerDown={(e) => {
           if (e.button !== 0) return
           e.currentTarget.setPointerCapture(e.pointerId)

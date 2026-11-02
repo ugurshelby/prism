@@ -62,7 +62,7 @@ export function createWindow(): BrowserWindow {
     maximizable: false,
     fullscreenable: false,
     show: false,
-    title: 'Prompter',
+    title: 'Prism Ray',
     alwaysOnTop: getSettings().alwaysOnTop,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
