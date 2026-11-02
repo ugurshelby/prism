@@ -1,0 +1,109 @@
+---
+import Base from '../layouts/Base.astro'
+import Icon from '../components/Icon.astro'
+import { REPO, date, files, genOf, latest, mb, releases, sums, type Lang, type Platform } from '../lib/site'
+import { t } from '../lib/i18n'
+
+interface Props {
+  lang: Lang
+}
+const { lang } = Astro.props
+const s = t(lang)
+const f = files(latest)
+const gen = latest ? genOf(latest.version) : undefined
+const groups: { id: 'win' | 'mac' | 'linux'; icon: string; title: string; platforms: Platform[]; step: string }[] = [
+  { id: 'win', icon: 'win', title: 'Windows', platforms: ['win'], step: s.download.steps.win },
+  { id: 'mac', icon: 'mac', title: 'macOS', platforms: ['macArm', 'macIntel'], step: s.download.steps.mac },
+  { id: 'linux', icon: 'linux', title: 'Linux', platforms: ['appimage', 'deb'], step: s.download.steps.linux }
+]
+const older = releases.slice(1)
+---
+
+<Base lang={lang} page="download" title={s.nav.download} description={s.download.lead}>
+  <section class="hero">
+    <div class="container">
+      <div class="section-head">
+        <h1>{s.download.title}</h1>
+        <p class="lead">{s.download.lead}</p>
+        {
+          latest && (
+            <p class="muted" style="margin-top:14px">
+              {s.download.latest}: <b style="color:var(--text)">Prism {gen?.name} {latest.version}</b> · {date(latest.published, lang)}
+            </p>
+          )
+        }
+      </div>
+
+      {
+        latest ? (
+          <div class="dl-grid">
+            {groups.map((g) => (
+              <div class="card dl" id={g.id} data-os-card={g.id}>
+                <div class="dl-head">
+                  <Icon name={g.icon} size={28} />
+                  <h3>{g.title}</h3>
+                </div>
+                {g.platforms.map((p) =>
+                  f[p] ? (
+                    <a class="dl-file" href={f[p]!.url} data-file={p === 'appimage' ? 'linux' : p === 'deb' ? undefined : p}>
+                      <b>
+                        {s.os[p]} <span class="muted">{mb(f[p]!.size)}</span>
+                      </b>
+                      <span class="mono">{f[p]!.name}</span>
+                      {f[p]!.sha256 && <span class="mono" title={f[p]!.sha256!}>SHA-256 {f[p]!.sha256!.slice(0, 16)}…</span>}
+                    </a>
+                  ) : null
+                )}
+                <div>
+                  <b style="font-size:15px">{s.download.firstLaunch}</b>
+                  <p class="muted" style="margin:6px 0 0;font-size:15px">{g.step}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div class="card">
+            <p style="margin:0">{s.download.unavailable}</p>
+            <p>
+              <a class="btn btn-primary" href={`${REPO}/releases/latest`}>{s.download.allReleases}</a>
+            </p>
+          </div>
+        )
+      }
+
+      <div class="callout">
+        <p style="margin:0">{s.download.firstLaunchLead}</p>
+        <p style="margin:8px 0 0">{s.download.upgrade}</p>
+      </div>
+
+      <p style="margin-top:24px;display:flex;gap:20px;flex-wrap:wrap">
+        {sums(latest) && <a class="text-link" href={sums(latest)!.url}>{s.download.sums}</a>}
+        <a class="text-link" href={`${REPO}/releases`}>{s.download.allReleases} →</a>
+      </p>
+
+      {
+        older.length > 0 && (
+          <>
+            <h2 style="font-size:26px;margin:56px 0 16px">{s.download.older}</h2>
+            <ul class="release-list">
+              {older.map((r) => (
+                <li>
+                  <b>
+                    Prism {genOf(r.version)?.name} {r.version}
+                  </b>
+                  <span class="muted">{date(r.published, lang)}</span>
+                  <a class="text-link" href={r.url} style="margin-left:auto">
+                    GitHub →
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </>
+        )
+      }
+    </div>
+  </section>
+  <script>
+    import '../scripts/detect'
+  </script>
+</Base>

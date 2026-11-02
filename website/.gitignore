@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.astro/
+# Derlemeden önce scripts/sync.mjs üretir.
+public/screenshots/
+src/data/releases.json
