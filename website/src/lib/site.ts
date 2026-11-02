@@ -12,11 +12,12 @@ export function href(lang: Lang, path = '') {
 
 export const asset = (path: string) => `${import.meta.env.BASE_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
 
-// --- Sürüm kuşakları -----------------------------------------------------------
+// --- Sürümler (edition) ---------------------------------------------------------
 
 export type GenId = 'ray' | 'spectrum' | 'lens' | 'iris'
-export const GENERATIONS: { id: GenId; major: number; name: string; status: 'retired' | 'current' | 'planned' }[] = [
-  { id: 'ray', major: 1, name: 'Ray', status: 'retired' },
+export type GenStatus = 'available' | 'current' | 'planned'
+export const GENERATIONS: { id: GenId; major: number; name: string; status: GenStatus }[] = [
+  { id: 'ray', major: 1, name: 'Ray', status: 'available' },
   { id: 'spectrum', major: 2, name: 'Spectrum', status: 'current' },
   { id: 'lens', major: 3, name: 'Lens', status: 'planned' },
   { id: 'iris', major: 4, name: 'Iris', status: 'planned' }
@@ -39,6 +40,8 @@ export interface Release {
   assets: Asset[]
 }
 export type Platform = 'win' | 'macArm' | 'macIntel' | 'appimage' | 'deb'
+export type Os = 'win' | 'mac' | 'linux'
+export const OS_PLATFORMS: Record<Os, Platform[]> = { win: ['win'], mac: ['macArm', 'macIntel'], linux: ['appimage', 'deb'] }
 
 const PATTERNS: Record<Platform, RegExp> = {
   win: /-x64\.exe$/,
@@ -48,8 +51,17 @@ const PATTERNS: Record<Platform, RegExp> = {
   deb: /\.deb$/
 }
 
-export const releases = (releasesJson as Release[]).filter((r) => genOf(r.version))
-export const latest: Release | undefined = releases[0]
+const semver = (v: string) => v.split('.').map(Number)
+const newer = (a: Release, b: Release) => {
+  const [x, y] = [semver(a.version), semver(b.version)]
+  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return y[i] - x[i]
+  return 0
+}
+
+export const releases = (releasesJson as Release[]).filter((r) => genOf(r.version)).sort(newer)
+export const releasesOf = (id: GenId) => releases.filter((r) => genOf(r.version)?.id === id)
+/** Ana sürümün (Spectrum) en yeni yayını; ana sayfadaki indirme düğmesi bunu verir. */
+export const latest: Release | undefined = releasesOf('spectrum')[0] ?? releases[0]
 
 export function files(r: Release | undefined): Partial<Record<Platform, Asset>> {
   if (!r) return {}

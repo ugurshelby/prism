@@ -1,8 +1,8 @@
 ---
 import Base from '../layouts/Base.astro'
 import DownloadButton from '../components/DownloadButton.astro'
+import EditionCard from '../components/EditionCard.astro'
 import Icon from '../components/Icon.astro'
-import Mark from '../components/Mark.astro'
 import { GENERATIONS, REPO, asset, href, type Lang } from '../lib/site'
 import { t } from '../lib/i18n'
 
@@ -23,8 +23,8 @@ const families = [
 <Base lang={lang} page="">
   <section class="hero">
     <div class="container hero-grid">
-      <div>
-        <span class="eyebrow"><Mark variant="logo" size={18} />{s.hero.eyebrow}</span>
+      <div class="hero-copy">
+        <span class="eyebrow">{s.hero.eyebrow}</span>
         <h1>{s.hero.title[0]}<br /><span class="grad">{s.hero.title[1]}</span></h1>
         <p class="lead">{s.hero.lead}</p>
         <div class="actions">
@@ -33,23 +33,25 @@ const families = [
         </div>
         <p class="note">{s.cta.free}</p>
       </div>
-      <div class="hero-visual">
-        <img class="shot" src={asset('screenshots/review.png')} width="550" height="800" alt="" loading="eager" />
-      </div>
+      <figure class="hero-visual">
+        <img class="shot" src={asset('screenshots/review.png')} width="660" height="960" alt="" decoding="async" />
+      </figure>
     </div>
   </section>
 
   <section>
     <div class="container">
-      <div class="section-head"><h2>{s.steps.title}</h2></div>
-      <div class="grid">
+      <div class="section-head" data-reveal><h2>{s.steps.title}</h2></div>
+      <div class="grid steps">
         {
           s.steps.items.map((step, i) => (
-            <div class="card step">
+            <div class="card step" data-reveal>
               <span class="num">0{i + 1}</span>
               <h3>{step.title}</h3>
               <p>{step.body}</p>
-              <img src={asset(`screenshots/${shots[i]}.png`)} width="550" height="800" alt={step.title} loading="lazy" />
+              <figure class="step-shot">
+                <img src={asset(`screenshots/${shots[i]}.png`)} width="660" height="960" alt={step.title} loading="lazy" decoding="async" />
+              </figure>
             </div>
           ))
         }
@@ -59,21 +61,21 @@ const families = [
 
   <section>
     <div class="container">
-      <div class="section-head">
+      <div class="section-head" data-reveal>
         <h2>{s.families.title}</h2>
         <p class="lead">{s.families.lead}</p>
       </div>
       <div class="grid grid-4">
         {
           families.map((f) => (
-            <div class="card family" style={`--hue:${f.hue}`}>
+            <div class="card family" style={`--hue:${f.hue}`} data-reveal>
               <h3><span class="dot" />{f.name}</h3>
               <div class="chips">
                 {f.models.map((m) => (
                   <span class="chip">{m}</span>
                 ))}
               </div>
-              <p style="margin-top:14px;font-size:14px" class="muted">{f.where}</p>
+              <p class="muted where">{f.where}</p>
             </div>
           ))
         }
@@ -83,11 +85,11 @@ const families = [
 
   <section>
     <div class="container">
-      <div class="section-head"><h2>{s.features.title}</h2></div>
+      <div class="section-head" data-reveal><h2>{s.features.title}</h2></div>
       <div class="grid">
         {
           s.features.items.map((f) => (
-            <div class="card feature">
+            <div class="card feature" data-reveal>
               <Icon name={f.icon} size={26} />
               <h3>{f.title}</h3>
               <p>{f.body}</p>
@@ -95,7 +97,7 @@ const families = [
           ))
         }
       </div>
-      <div class="card privacy" style="margin-top:16px">
+      <div class="card privacy" data-reveal>
         <Icon name="shield" size={44} />
         <div>
           <h3>{s.privacy.title}</h3>
@@ -108,39 +110,24 @@ const families = [
 
   <section>
     <div class="container">
-      <div class="section-head">
-        <h2>{s.generations.title}</h2>
-        <p class="lead">{s.generations.lead}</p>
+      <div class="section-head" data-reveal>
+        <h2>{s.editions.title}</h2>
+        <p class="lead">{s.editions.lead}</p>
       </div>
-      <div class="grid grid-4">
-        {
-          GENERATIONS.map((g) => (
-            <a class={`card gen ${g.status === 'current' ? 'is-current' : ''}`} href={href(lang, 'versions') + `#${g.id}`} style="text-decoration:none">
-              <div class="mark">
-                <Mark variant={g.id} />
-              </div>
-              <div class="gen-head">
-                <h3>{g.name}</h3>
-                <span class="muted mono">{g.major}.x</span>
-                <span class={`badge ${g.status}`}>{s.generations.status[g.status]}</span>
-              </div>
-              <p class="tagline">{s.generations.items[g.id].tagline}</p>
-              <p>{s.generations.items[g.id].body}</p>
-            </a>
-          ))
-        }
+      <div class="grid-2">
+        {GENERATIONS.map((g) => <EditionCard lang={lang} {...g} />)}
       </div>
     </div>
   </section>
 
   <section>
-    <div class="container" style="text-align:center">
+    <div class="container closing" data-reveal>
       <h2>{s.hero.title[1]}</h2>
-      <div class="actions" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px">
+      <div class="actions">
         <DownloadButton lang={lang} />
-        <a class="btn btn-ghost" href={REPO}><Icon name="github" size={20} />{s.cta.github}</a>
+        <a class="btn btn-ghost" href={href(lang, 'how-it-works')}>{s.nav.how} →</a>
       </div>
-      <p class="note muted" style="margin-top:14px;font-size:14px">{s.cta.free}</p>
+      <p class="note">{s.cta.free}</p>
     </div>
   </section>
 </Base>

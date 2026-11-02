@@ -48,7 +48,7 @@ Prism'in her büyük sürümünün bir adı var; adlar ışığın prizmadaki yo
 
 | Sürüm | Ad | Ne yapar | Durum |
 |---|---|---|---|
-| 1.x | **Ray** | Tek ışın: yalnızca Claude için prompt, tek motor (Vertex AI) | Emekli |
+| 1.x | **Ray** | Tek ışın: yalnızca Claude için prompt, tek motor (Vertex AI); Spectrum'un yanına kurulur | İndirilebilir |
 | 2.x | **Spectrum** | Işını ayırır: Claude, GPT, Gemini ve Grok, kendi key'lerin, aileler arası öneri | **Güncel** |
 | 3.x | **Lens** | Birden çok modeli tek işe odaklar: çok modelli iş akışları | Planlandı |
 | 4.x | **Iris** | Metnin ötesi: görsel, video, ses ve 3D üretim modelleri | Planlandı |

@@ -2,13 +2,14 @@
 import '@fontsource-variable/bricolage-grotesque'
 import '@fontsource-variable/jetbrains-mono'
 import '../styles/global.css'
+import '../styles/components.css'
 import Mark from '../components/Mark.astro'
 import { REPO, asset, href, type Lang } from '../lib/site'
 import { t } from '../lib/i18n'
 
 interface Props {
   lang: Lang
-  page: '' | 'versions' | 'download' | 'docs'
+  page: '' | 'versions' | 'download' | 'docs' | 'how-it-works'
   title?: string
   description?: string
 }
@@ -19,9 +20,10 @@ const pageTitle = title ? `${title} · Prism` : s.meta.title
 const desc = description ?? s.meta.description
 const canonical = new URL(href(lang, page), Astro.site).toString()
 const nav = [
-  { page: 'versions', label: s.nav.versions },
-  { page: 'download', label: s.nav.download },
-  { page: 'docs', label: s.nav.docs }
+  { page: 'versions', label: s.nav.editions, sm: false },
+  { page: 'download', label: s.nav.download, sm: true },
+  { page: 'how-it-works', label: s.nav.how, sm: false },
+  { page: 'docs', label: s.nav.docs, sm: false }
 ] as const
 // Statik site: yalnızca kendi dosyaları. Stil için satır içi izin, Astro'nun küçük stil bloklarını kapsar.
 const csp =
@@ -59,7 +61,7 @@ const csp =
         <nav class="nav" aria-label="Main">
           {
             nav.map((n) => (
-              <a href={href(lang, n.page)} aria-current={page === n.page ? 'page' : undefined} class={n.page === 'versions' ? 'hide-sm' : undefined}>
+              <a href={href(lang, n.page)} aria-current={page === n.page ? 'page' : undefined} class={n.sm ? undefined : 'hide-sm'}>
                 {n.label}
               </a>
             ))
@@ -76,6 +78,8 @@ const csp =
       <div class="container">
         <div class="row">
           <a class="brand" href={href(lang)} aria-label="Prism"><Mark variant="logo" size={24} />prism</a>
+          <a href={href(lang, 'how-it-works')}>{s.nav.how}</a>
+          <a href={href(lang, 'docs')}>{s.nav.docs}</a>
           <a href={REPO}>{s.footer.source}</a>
           <a href={`${REPO}/blob/main/CHANGELOG.md`}>{s.footer.changelog}</a>
           <a href={`${REPO}/blob/main/SECURITY.md`}>{s.footer.security}</a>

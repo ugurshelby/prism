@@ -64,6 +64,13 @@ svg {
   max-width: 100%;
   display: block;
 }
+/* width/height öznitelikleri yalnızca oranı bildirir; görüntü kutusuna göre ölçeklenir, ezilmez. */
+img {
+  height: auto;
+}
+figure {
+  margin: 0;
+}
 a {
   color: inherit;
 }
@@ -139,6 +146,7 @@ code,
   align-items: center;
 }
 .nav a {
+  white-space: nowrap;
   text-decoration: none;
   color: var(--text-2);
   font-size: 15px;

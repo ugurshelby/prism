@@ -1,115 +1,167 @@
-import type { GenId, Lang, Platform } from './site'
+import type { GenId, GenStatus, Lang, Os, Platform } from './site'
 
 const en = {
   meta: {
-    title: 'Prism: prompts written for the model you use',
+    title: 'Prism: prompts written for the model you actually use',
     description:
-      'Prism rewrites your rough prompt for Claude, GPT, Gemini or Grok, recommends the right model and effort level, and runs on your own API key. Free and open source for Windows, macOS and Linux.'
+      'Prism is a free desktop app that turns a rough request into a prompt written for Claude, GPT, Gemini or Grok. It suggests the model and effort level, asks what’s missing, and runs on your own API key.'
   },
-  nav: { versions: 'Versions', download: 'Download', docs: 'Docs', github: 'GitHub', lang: 'Türkçe' },
+  nav: { editions: 'Editions', download: 'Download', how: 'How it works', docs: 'Docs', github: 'GitHub', lang: 'Türkçe' },
   cta: {
     download: 'Download',
-    downloadFor: 'Download for',
-    allDownloads: 'All downloads',
-    otherPlatforms: 'Other platforms',
-    github: 'View on GitHub',
-    free: 'Free and open source · MIT · Windows, macOS, Linux',
+    downloadFor: (os: string) => `Download for ${os}`,
+    otherPlatforms: 'Other systems',
+    github: 'Read the code',
+    free: 'Free and open source. MIT license, no account, no telemetry.',
     mobile: 'Prism is a desktop app for Windows, macOS and Linux.'
   },
-  os: {
-    win: 'Windows',
-    macArm: 'macOS (Apple Silicon)',
-    macIntel: 'macOS (Intel)',
-    appimage: 'Linux (AppImage)',
-    deb: 'Linux (.deb)'
+  os: { win: 'Windows', mac: 'macOS', linux: 'Linux' } satisfies Record<Os, string>,
+  platform: {
+    win: 'Windows installer (x64)',
+    macArm: 'Apple Silicon (M1 and later)',
+    macIntel: 'Intel Mac',
+    appimage: 'AppImage (any distro)',
+    deb: '.deb (Debian, Ubuntu)'
   } satisfies Record<Platform, string>,
   hero: {
-    eyebrow: 'Prism Spectrum · for Claude, GPT, Gemini and Grok',
-    title: ['Write it rough.', 'Get it written for your model.'],
-    lead: 'Prism reads what you want, picks the right model and effort level, asks what is missing, and writes the prompt a senior engineer would write for Claude, GPT, Gemini or Grok. Your keys, your machine, no middleman.'
+    eyebrow: 'Prism Spectrum · Windows, macOS, Linux',
+    title: ['Type what you want.', 'Prism writes the prompt.'],
+    lead: 'Describe the task the way you’d say it out loud. Prism picks a model and an effort level, asks a question or two if something’s unclear, and hands back a prompt written for Claude, GPT, Gemini or Grok. It runs on your own API key, on your own machine.'
   },
   steps: {
-    title: 'From a rough idea to a ready prompt',
+    title: 'Three steps, about a minute',
     items: [
-      { title: 'Write it your way', body: 'Any language, any order, half a thought. Pick a family or let Prism compare all of them.' },
-      { title: 'Review the recommendation', body: 'Model, effort level and the reasoning behind them, plus a few questions when something is unclear.' },
-      { title: 'Copy and paste', body: 'A prompt shaped for your coding agent, chat app or API call, with the exact settings to use.' }
+      {
+        title: 'Write it rough',
+        body: 'Half a sentence is fine, and so is Turkish. Pick a model family, or let Prism look across every one you use.'
+      },
+      {
+        title: 'Check the pick',
+        body: 'You see the model, the effort level and the reason. If the task is vague, Prism asks before it writes.'
+      },
+      {
+        title: 'Copy it',
+        body: 'The prompt is shaped for where it’s going: a coding agent, a chat window or an API call. The settings to use come with it.'
+      }
     ]
   },
   families: {
-    title: 'One app, four model families',
-    lead: 'Each family is guided by knowledge cards distilled from its vendor’s official prompting guide.'
+    title: 'Claude, GPT, Gemini and Grok',
+    lead: 'Each family gets its own rules. The prompt you’d give Claude Opus isn’t the one GPT or Gemini wants.'
   },
   features: {
-    title: 'Built to stay out of your way',
+    title: 'What else it does',
     items: [
-      { icon: 'target', title: 'Model and effort, chosen for you', body: 'Claude effort, GPT and Grok reasoning effort, Gemini thinking level: only the levels each model supports.' },
-      { icon: 'surface', title: 'Written for where you paste it', body: 'Coding agents like Claude Code, Codex, Antigravity and Grok Build, chat apps, or the API.' },
-      { icon: 'key', title: 'Your keys, verified', body: 'Vertex AI, Google AI Studio, Anthropic, OpenAI or xAI. Prism checks a key the moment you add it.' },
-      { icon: 'cross', title: 'Cross-family recommendation', body: 'Ask for the best model across every family you can actually use, never one you can’t.' },
-      { icon: 'tray', title: 'Always within reach', body: 'Global hotkey, always-on-top panel, a tiny orb when collapsed, tray menu and notifications.' },
-      { icon: 'history', title: 'Searchable history', body: 'Your last 200 prompts on this computer, tagged by model and engine. Copy again or rewrite.' }
+      {
+        icon: 'target',
+        title: 'Model and effort, picked for the task',
+        body: 'Claude’s effort, GPT and Grok’s reasoning effort, Gemini’s thinking level. Prism only offers levels the model actually has.'
+      },
+      {
+        icon: 'surface',
+        title: 'Written for where it lands',
+        body: 'Claude Code, Codex, Antigravity and Grok Build get a different prompt than a chat window or an API call.'
+      },
+      {
+        icon: 'key',
+        title: 'Keys checked on the spot',
+        body: 'Paste a key from Google AI Studio, Vertex AI, Anthropic, OpenAI or xAI. Prism tries it and lists the models it can reach.'
+      },
+      {
+        icon: 'cross',
+        title: 'Only models you can use',
+        body: 'Cross mode compares families, and it never suggests a model you don’t have.'
+      },
+      {
+        icon: 'tray',
+        title: 'One shortcut away',
+        body: 'Ctrl+Shift+Space opens it. It stays on top, shrinks to a small orb and waits in the tray.'
+      },
+      {
+        icon: 'history',
+        title: 'A history you can search',
+        body: 'Your last 200 prompts stay on this computer, tagged with model and engine.'
+      }
     ]
   },
   privacy: {
-    title: 'Private by design',
-    body: 'Keys are encrypted by your operating system and never leave the app’s main process. Prompts go only to the provider you chose. No account, no telemetry, no server of ours.',
-    link: 'Read the security policy'
+    title: 'Your keys stay on your computer',
+    body: 'Keys are encrypted by your operating system and never reach the interface. Prompts go straight to the provider you picked. We don’t run a server, so there’s nothing on our side to log.',
+    link: 'Security policy'
   },
-  generations: {
-    title: 'Every version has a name',
-    lead: 'Light through a prism: from a single ray to the full spectrum, and beyond.',
-    status: { retired: 'Retired', current: 'Current', planned: 'Planned' },
+  editions: {
+    title: 'Four editions',
+    lead: 'Prism grows one edition at a time. Each is named after something light does inside a prism.',
+    status: { available: 'Available', current: 'Latest', planned: 'In the works' } satisfies Record<GenStatus, string>,
     items: {
-      ray: { tagline: 'A single beam', body: 'Prompts for Claude only, written by one engine. Where it all started.' },
-      spectrum: { tagline: 'The beam, split', body: 'Claude, GPT, Gemini and Grok. Bring your own key from five providers and get the best model you can use.' },
-      lens: { tagline: 'Many models, one focus', body: 'Big tasks split into workflows across the models and tools you own, with a prompt for every step.' },
-      iris: { tagline: 'Beyond text', body: 'Prompts for image, video, audio and 3D generation models, in a workspace shaped by the tools you use.' }
+      ray: { tagline: 'One beam', body: 'The first Prism. Claude only, one engine. Small and focused, and it still works.' },
+      spectrum: {
+        tagline: 'The beam, split',
+        body: 'Four model families, five key providers and recommendations across all of them. Most people want this one.'
+      },
+      lens: {
+        tagline: 'Many models, one job',
+        body: 'Big tasks get split across the models and tools you own, with a prompt for every step.'
+      },
+      iris: { tagline: 'Past text', body: 'Prompts for image, video, audio and 3D models, in a workspace built around the tools you turn on.' }
     } satisfies Record<GenId, { tagline: string; body: string }>,
     features: {
-      ray: ['Claude Fable, Opus, Sonnet and Haiku', 'Model and effort recommendation', 'Engine: Gemini on Vertex AI', 'Windows'],
+      ray: ['Claude Fable, Opus, Sonnet and Haiku', 'Model and effort recommendation', 'Engine: Gemini on Vertex AI', 'Installs next to Spectrum'],
       spectrum: [
-        'Claude, GPT, Gemini and Grok targets',
+        'Claude, GPT, Gemini and Grok',
         'Engines: Vertex AI, AI Studio, Anthropic, OpenAI, xAI',
-        'Live key check and model discovery',
-        'Coding agent, chat and API surfaces',
-        'Tray, hotkey, notifications, history',
-        'Windows, macOS and Linux'
+        'Keys checked when you add them',
+        'Coding agent, chat and API prompts',
+        'Tray, shortcut, notifications, history'
       ],
-      lens: ['Multi-model workflows', 'Setup that knows your tools and plans', 'Smart engine routing across your keys'],
-      iris: ['Image, video, audio and 3D models', 'A workspace limited to the models you enable']
+      lens: ['Multi-model workflows', 'Setup that knows your tools and plans', 'Engine routing across your keys'],
+      iris: ['Image, video, audio and 3D models', 'Only the models you turn on']
     } satisfies Record<GenId, string[]>,
-    releases: 'Releases',
-    noDownloads: 'No installers published.',
-    more: 'Compare versions'
+    get: (name: string) => `Get ${name}`,
+    notYet: 'Not released yet',
+    versions: (n: number) => (n === 1 ? '1 version' : `${n} versions`),
+    noBuilds: 'No builds published yet'
   },
   download: {
-    title: 'Download Prism',
-    lead: 'Pick your system. Every file is built from the open source code by GitHub Actions and smoke-tested before release.',
-    latest: 'Latest',
-    file: 'File',
-    size: 'Size',
+    title: 'Download',
+    lead: 'Pick an edition, a version and your system. We guessed your system from your browser; switch it if you need another one.',
+    edition: 'Edition',
+    version: 'Version',
+    system: 'System',
+    detected: 'your system',
+    latest: 'latest',
+    changes: (v: string) => `What changed in ${v}`,
+    changesOnGitHub: 'Release notes on GitHub',
+    released: 'Released',
+    noFiles: 'This version has no build for this system.',
+    notReleased: 'This edition isn’t out yet.',
+    notReleasedBody: 'It’s being built in the open. Watch the repository on GitHub to hear when it ships.',
+    noReleases: 'No builds of this edition are published yet.',
+    unavailable: 'We couldn’t load the release list. Every installer is also on GitHub Releases.',
     checksum: 'SHA-256',
-    allReleases: 'All releases on GitHub',
     sums: 'Checksums (SHA256SUMS.txt)',
-    unavailable: 'Release data could not be loaded. Get the installers from GitHub Releases.',
-    older: 'Earlier releases',
+    allReleases: 'All releases on GitHub',
     firstLaunch: 'First launch',
-    firstLaunchLead: 'Prism isn’t signed with a paid developer certificate yet, so your system asks for confirmation once.',
+    firstLaunchLead: 'Prism isn’t signed with a paid developer certificate yet, so your system asks once before opening it.',
     steps: {
-      win: 'SmartScreen shows “Windows protected your PC”: choose More info → Run anyway.',
-      mac: 'Open the .dmg, drag Prism to Applications and open it. Then go to System Settings → Privacy & Security → Open Anyway.',
-      linux: 'AppImage: make it executable (chmod +x) and run it. Debian/Ubuntu: sudo apt install ./Prism-*.deb. Saving keys needs GNOME Keyring or KWallet.'
-    },
-    upgrade: 'Upgrading from Prompter? Install Prism over it: your settings, keys and history stay. On macOS, delete the old Prompter.app afterwards.'
+      win: 'SmartScreen says “Windows protected your PC”. Choose More info, then Run anyway.',
+      mac: 'Open the .dmg and drag Prism to Applications. Open it once, then go to System Settings → Privacy & Security → Open Anyway.',
+      linux: 'AppImage: make it executable (chmod +x) and run it. Debian or Ubuntu: sudo apt install ./Prism-*.deb. Saving keys needs GNOME Keyring or KWallet.'
+    } satisfies Record<Os, string>,
+    upgrade: 'Coming from Prompter? Install Prism over it. Your settings, keys and history stay where they are. On a Mac, delete the old Prompter.app afterwards.',
+    noscript: 'The picker needs JavaScript. Here are the latest Spectrum files:'
   },
-  docs: { title: 'Docs', lead: 'Everything you need to set up Prism and get great prompts out of it.' },
+  docs: { title: 'Docs', lead: 'Setting Prism up, getting a key, and what to do when something doesn’t work.' },
+  how: {
+    title: 'How Prism works',
+    lead: 'A look under the hood, from the keyboard shortcut to the copied prompt.'
+  },
   footer: {
     license: 'MIT License',
     security: 'Security',
     changelog: 'Changelog',
     source: 'Source code',
-    disclaimer: 'Model names are trademarks of their owners. Prism is not affiliated with Anthropic, Google, OpenAI or xAI.'
+    disclaimer: 'Model names belong to their owners. Prism isn’t affiliated with Anthropic, Google, OpenAI or xAI.'
   }
 }
 
@@ -119,112 +171,161 @@ const tr: Dict = {
   meta: {
     title: 'Prism: kullandığın modele göre yazılmış promptlar',
     description:
-      'Prism ham promptunu Claude, GPT, Gemini ya da Grok için yeniden yazar, doğru modeli ve seviyeyi önerir ve kendi API key’inle çalışır. Windows, macOS ve Linux için ücretsiz ve açık kaynak.'
+      'Prism, ham bir isteği Claude, GPT, Gemini ya da Grok için yazılmış bir prompta çeviren ücretsiz bir masaüstü uygulaması. Modeli ve seviyeyi önerir, eksik olanı sorar ve kendi API key’inle çalışır.'
   },
-  nav: { versions: 'Sürümler', download: 'İndir', docs: 'Belgeler', github: 'GitHub', lang: 'English' },
+  nav: { editions: 'Sürümler', download: 'İndir', how: 'Nasıl çalışır', docs: 'Belgeler', github: 'GitHub', lang: 'English' },
   cta: {
     download: 'İndir',
-    downloadFor: 'İndir:',
-    allDownloads: 'Tüm indirmeler',
+    downloadFor: (os: string) => `${os} için indir`,
     otherPlatforms: 'Diğer sistemler',
-    github: 'GitHub’da incele',
-    free: 'Ücretsiz ve açık kaynak · MIT · Windows, macOS, Linux',
-    mobile: 'Prism Windows, macOS ve Linux için bir masaüstü uygulaması.'
+    github: 'Koda bak',
+    free: 'Ücretsiz ve açık kaynak. MIT lisansı, hesap yok, telemetri yok.',
+    mobile: 'Prism, Windows, macOS ve Linux için bir masaüstü uygulaması.'
   },
-  os: {
-    win: 'Windows',
-    macArm: 'macOS (Apple Silicon)',
-    macIntel: 'macOS (Intel)',
-    appimage: 'Linux (AppImage)',
-    deb: 'Linux (.deb)'
+  os: { win: 'Windows', mac: 'macOS', linux: 'Linux' },
+  platform: {
+    win: 'Windows kurulumu (x64)',
+    macArm: 'Apple Silicon (M1 ve sonrası)',
+    macIntel: 'Intel Mac',
+    appimage: 'AppImage (her dağıtım)',
+    deb: '.deb (Debian, Ubuntu)'
   },
   hero: {
-    eyebrow: 'Prism Spectrum · Claude, GPT, Gemini ve Grok için',
-    title: ['Ham hâliyle yaz.', 'Modeline göre yazılmışını al.'],
-    lead: 'Prism ne istediğini okur, doğru modeli ve seviyeyi seçer, eksik olanı sorar ve Claude, GPT, Gemini ya da Grok için deneyimli bir mühendisin yazacağı promptu yazar. Key’ler senin, bilgisayar senin, arada kimse yok.'
+    eyebrow: 'Prism Spectrum · Windows, macOS, Linux',
+    title: ['Ne istediğini yaz.', 'Promptu Prism yazsın.'],
+    lead: 'İşi nasıl anlatıyorsan öyle yaz. Prism bir model ve seviye seçer, belirsiz bir şey varsa bir iki soru sorar ve Claude, GPT, Gemini ya da Grok için yazılmış promptu geri verir. Kendi API key’inle, kendi bilgisayarında çalışır.'
   },
   steps: {
-    title: 'Ham fikirden hazır prompta',
+    title: 'Üç adım, bir dakika kadar',
     items: [
-      { title: 'Nasıl düşünüyorsan öyle yaz', body: 'Türkçe, dağınık, yarım bir fikir; fark etmez. Bir aile seç ya da Prism hepsini karşılaştırsın.' },
-      { title: 'Öneriyi gözden geçir', body: 'Model, seviye ve gerekçesi; bir şey belirsizse birkaç kısa soru.' },
-      { title: 'Kopyala, yapıştır', body: 'Kodlama ajanına, sohbet uygulamasına ya da API çağrına göre biçimlenmiş prompt ve kullanılacak ayarlar.' }
+      {
+        title: 'Ham hâliyle yaz',
+        body: 'Yarım bir cümle de olur, Türkçe de. Bir model ailesi seç ya da Prism kullandığın hepsine baksın.'
+      },
+      {
+        title: 'Seçime bak',
+        body: 'Modeli, seviyeyi ve nedenini görürsün. İş belirsizse Prism yazmadan önce sorar.'
+      },
+      {
+        title: 'Kopyala',
+        body: 'Prompt gideceği yere göre yazılır: kodlama ajanı, sohbet penceresi ya da API çağrısı. Kullanman gereken ayarlar da yanında gelir.'
+      }
     ]
   },
   families: {
-    title: 'Tek uygulama, dört model ailesi',
-    lead: 'Her aile, üreticisinin resmî prompt rehberinden damıtılmış bilgi kartlarıyla yönlendirilir.'
+    title: 'Claude, GPT, Gemini ve Grok',
+    lead: 'Her ailenin kendi kuralları var. Claude Opus’a verdiğin prompt, GPT’nin ya da Gemini’nin istediği prompt değil.'
   },
   features: {
-    title: 'Yoluna çıkmamak için tasarlandı',
+    title: 'Başka neler yapıyor',
     items: [
-      { icon: 'target', title: 'Model ve seviye senin için seçilir', body: 'Claude effort, GPT ve Grok reasoning effort, Gemini thinking level: yalnızca modelin desteklediği seviyeler.' },
-      { icon: 'surface', title: 'Yapıştıracağın yere göre yazılır', body: 'Claude Code, Codex, Antigravity, Grok Build gibi kodlama ajanları, sohbet uygulamaları ya da API.' },
-      { icon: 'key', title: 'Key’lerin doğrulanır', body: 'Vertex AI, Google AI Studio, Anthropic, OpenAI ya da xAI. Prism key’i eklediğin anda dener.' },
-      { icon: 'cross', title: 'Aileler arası öneri', body: 'Kullanabildiğin bütün aileler arasından en iyi modeli iste; kullanamadığın bir model asla önerilmez.' },
-      { icon: 'tray', title: 'Hep elinin altında', body: 'Genel kısayol, her zaman üstte panel, küçülünce minik bir küre, tray menüsü ve bildirimler.' },
-      { icon: 'history', title: 'Aranabilir geçmiş', body: 'Son 200 promptun bu bilgisayarda, model ve motorla etiketli. Tekrar kopyala ya da yeniden yaz.' }
+      {
+        icon: 'target',
+        title: 'Model ve seviye işe göre seçilir',
+        body: 'Claude’da effort, GPT ve Grok’ta reasoning effort, Gemini’de thinking level. Prism yalnızca modelde gerçekten olan seviyeleri gösterir.'
+      },
+      {
+        icon: 'surface',
+        title: 'Gideceği yere göre yazılır',
+        body: 'Claude Code, Codex, Antigravity ve Grok Build için yazılan prompt, sohbet penceresine ya da API çağrısına yazılandan farklıdır.'
+      },
+      {
+        icon: 'key',
+        title: 'Key anında denenir',
+        body: 'Google AI Studio, Vertex AI, Anthropic, OpenAI ya da xAI key’ini yapıştır. Prism dener ve ulaşabildiği modelleri listeler.'
+      },
+      {
+        icon: 'cross',
+        title: 'Yalnızca kullanabildiğin modeller',
+        body: 'Çapraz mod aileleri karşılaştırır ama sende olmayan bir modeli önermez.'
+      },
+      {
+        icon: 'tray',
+        title: 'Bir kısayol uzağında',
+        body: 'Ctrl+Shift+Space ile açılır. Hep üstte durur, küçülünce minik bir küreye döner, tray’de bekler.'
+      },
+      {
+        icon: 'history',
+        title: 'Aranabilir geçmiş',
+        body: 'Son 200 promptun bu bilgisayarda kalır; model ve motorla etiketli.'
+      }
     ]
   },
   privacy: {
-    title: 'Gizlilik baştan düşünüldü',
-    body: 'Key’ler işletim sisteminin şifrelemesiyle saklanır ve uygulamanın ana sürecinden çıkmaz. Promptlar yalnızca seçtiğin sağlayıcıya gider. Hesap yok, telemetri yok, bizim bir sunucumuz yok.',
-    link: 'Güvenlik politikasını oku'
+    title: 'Key’lerin bilgisayarında kalır',
+    body: 'Key’ler işletim sisteminin şifrelemesiyle saklanır ve arayüze hiç gelmez. Promptlar doğrudan seçtiğin sağlayıcıya gider. Bizim bir sunucumuz yok; bizim tarafta kaydedilecek bir şey de yok.',
+    link: 'Güvenlik politikası'
   },
-  generations: {
-    title: 'Her sürümün bir adı var',
-    lead: 'Prizmadan geçen ışık: tek bir ışından bütün tayfa, ve ötesine.',
-    status: { retired: 'Emekli', current: 'Güncel', planned: 'Planlandı' },
+  editions: {
+    title: 'Dört sürüm',
+    lead: 'Prism her sürümde biraz büyüyor. Adlarını, ışığın bir prizmanın içinde yaptıklarından alıyorlar.',
+    status: { available: 'İndirilebilir', current: 'En yeni', planned: 'Yolda' },
     items: {
-      ray: { tagline: 'Tek ışın', body: 'Yalnızca Claude için prompt, tek motor. Her şeyin başladığı yer.' },
-      spectrum: { tagline: 'Renklerine ayrılan ışın', body: 'Claude, GPT, Gemini ve Grok. Beş sağlayıcıdan kendi key’ini getir, kullanabildiğin en iyi modeli al.' },
-      lens: { tagline: 'Çok model, tek odak', body: 'Büyük işler, sahip olduğun model ve araçlara yayılan iş akışlarına bölünür; her adım için ayrı prompt.' },
-      iris: { tagline: 'Metnin ötesi', body: 'Görsel, video, ses ve 3D üretim modelleri için prompt; kullandığın araçlara göre şekillenen bir çalışma alanı.' }
+      ray: { tagline: 'Tek ışın', body: 'İlk Prism. Yalnızca Claude, tek motor. Küçük, derli toplu ve hâlâ çalışıyor.' },
+      spectrum: {
+        tagline: 'Işın renklerine ayrıldı',
+        body: 'Dört model ailesi, beş key sağlayıcısı ve hepsinin arasında öneri. Çoğu kişinin aradığı sürüm bu.'
+      },
+      lens: { tagline: 'Çok model, tek iş', body: 'Büyük işler, sahip olduğun model ve araçlara bölünür; her adım için ayrı prompt.' },
+      iris: { tagline: 'Metnin ötesi', body: 'Görsel, video, ses ve 3D modelleri için prompt; açtığın araçlara göre kurulan bir çalışma alanında.' }
     },
     features: {
-      ray: ['Claude Fable, Opus, Sonnet ve Haiku', 'Model ve seviye önerisi', 'Motor: Vertex AI üzerinde Gemini', 'Windows'],
+      ray: ['Claude Fable, Opus, Sonnet ve Haiku', 'Model ve seviye önerisi', 'Motor: Vertex AI üzerinde Gemini', 'Spectrum’un yanına kurulur'],
       spectrum: [
-        'Claude, GPT, Gemini ve Grok hedefleri',
+        'Claude, GPT, Gemini ve Grok',
         'Motorlar: Vertex AI, AI Studio, Anthropic, OpenAI, xAI',
-        'Anında key kontrolü ve model keşfi',
-        'Kodlama ajanı, sohbet ve API yüzeyleri',
-        'Tray, kısayol, bildirim, geçmiş',
-        'Windows, macOS ve Linux'
+        'Key eklerken denenir',
+        'Kodlama ajanı, sohbet ve API promptları',
+        'Tray, kısayol, bildirim, geçmiş'
       ],
-      lens: ['Çok modelli iş akışları', 'Araçlarını ve aboneliklerini bilen kurulum', 'Key’lerin arasında akıllı motor yönlendirme'],
-      iris: ['Görsel, video, ses ve 3D modelleri', 'Yalnızca açtığın modellerle sınırlı çalışma alanı']
+      lens: ['Çok modelli iş akışları', 'Araçlarını ve aboneliklerini bilen kurulum', 'Key’lerin arasında motor yönlendirme'],
+      iris: ['Görsel, video, ses ve 3D modelleri', 'Yalnızca açtığın modeller']
     },
-    releases: 'Yayınlar',
-    noDownloads: 'Kurulum dosyası yayınlanmadı.',
-    more: 'Sürümleri karşılaştır'
+    get: (name: string) => `İndir · ${name}`,
+    notYet: 'Henüz çıkmadı',
+    versions: (n: number) => `${n} yayın`,
+    noBuilds: 'Henüz yayın yok'
   },
   download: {
-    title: 'Prism’i indir',
-    lead: 'Sistemini seç. Her dosya açık kaynak koddan GitHub Actions ile derlenir ve yayından önce duman testinden geçer.',
-    latest: 'Son sürüm',
-    file: 'Dosya',
-    size: 'Boyut',
+    title: 'İndir',
+    lead: 'Bir sürüm, bir yayın ve sistemini seç. Sistemini tarayıcından tahmin ettik; başka biri lazımsa değiştir.',
+    edition: 'Sürüm',
+    version: 'Yayın',
+    system: 'Sistem',
+    detected: 'senin sistemin',
+    latest: 'en yeni',
+    changes: (v: string) => `${v} ile gelenler`,
+    changesOnGitHub: 'GitHub’daki yayın notları',
+    released: 'Yayın tarihi',
+    noFiles: 'Bu yayında bu sistem için dosya yok.',
+    notReleased: 'Bu sürüm henüz çıkmadı.',
+    notReleasedBody: 'Açık kaynak olarak yapılıyor. Çıktığında haberin olsun istersen depoyu GitHub’da takip et.',
+    noReleases: 'Bu sürümün henüz yayınlanmış bir dosyası yok.',
+    unavailable: 'Yayın listesini yükleyemedik. Bütün kurulum dosyaları GitHub Releases’ta da var.',
     checksum: 'SHA-256',
-    allReleases: 'GitHub’daki tüm yayınlar',
     sums: 'Sağlama değerleri (SHA256SUMS.txt)',
-    unavailable: 'Sürüm bilgisi alınamadı. Kurulum dosyalarını GitHub Releases’tan indirebilirsin.',
-    older: 'Önceki yayınlar',
+    allReleases: 'GitHub’daki bütün yayınlar',
     firstLaunch: 'İlk açılış',
-    firstLaunchLead: 'Prism henüz ücretli bir geliştirici sertifikasıyla imzalı değil; sistemin bir kez onay ister.',
+    firstLaunchLead: 'Prism henüz ücretli bir geliştirici sertifikasıyla imzalı değil; sistemin açmadan önce bir kez sorar.',
     steps: {
-      win: 'SmartScreen “Windows bilgisayarınızı korudu” der: Ek bilgi → Yine de çalıştır.',
-      mac: '.dmg’yi aç, Prism’i Uygulamalar’a sürükle ve aç. Sonra Sistem Ayarları → Gizlilik ve Güvenlik → Yine de Aç.',
-      linux: 'AppImage: çalıştırılabilir yap (chmod +x) ve aç. Debian/Ubuntu: sudo apt install ./Prism-*.deb. Key saklamak için GNOME Keyring ya da KWallet gerekir.'
+      win: 'SmartScreen “Windows bilgisayarınızı korudu” der. Ek bilgi’yi, sonra Yine de çalıştır’ı seç.',
+      mac: '.dmg’yi aç, Prism’i Uygulamalar’a sürükle. Bir kez açmayı dene, sonra Sistem Ayarları → Gizlilik ve Güvenlik → Yine de Aç.',
+      linux: 'AppImage: çalıştırılabilir yap (chmod +x) ve aç. Debian ya da Ubuntu: sudo apt install ./Prism-*.deb. Key saklamak için GNOME Keyring ya da KWallet gerekir.'
     },
-    upgrade: 'Prompter’dan mı geçiyorsun? Prism’i üzerine kur: ayarların, key’lerin ve geçmişin korunur. macOS’ta sonra eski Prompter.app’i sil.'
+    upgrade: 'Prompter’dan mı geliyorsun? Prism’i üzerine kur. Ayarların, key’lerin ve geçmişin yerinde kalır. Mac’te sonra eski Prompter.app’i sil.',
+    noscript: 'Seçici JavaScript ister. En yeni Spectrum dosyaları şunlar:'
   },
-  docs: { title: 'Belgeler', lead: 'Prism’i kurmak ve ondan iyi promptlar almak için gereken her şey.' },
+  docs: { title: 'Belgeler', lead: 'Prism’i kurmak, key almak ve bir şey çalışmadığında yapılacaklar.' },
+  how: {
+    title: 'Prism nasıl çalışır',
+    lead: 'Kaputun altına bir bakış: klavye kısayolundan kopyalanan prompta kadar.'
+  },
   footer: {
     license: 'MIT Lisansı',
     security: 'Güvenlik',
     changelog: 'Değişiklikler',
     source: 'Kaynak kod',
-    disclaimer: 'Model adları sahiplerinin ticari markalarıdır. Prism’in Anthropic, Google, OpenAI ya da xAI ile bir bağı yoktur.'
+    disclaimer: 'Model adları sahiplerine aittir. Prism’in Anthropic, Google, OpenAI ya da xAI ile bir bağı yok.'
   }
 }
 

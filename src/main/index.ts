@@ -37,6 +37,9 @@ if (process.env.PRISM_USER_DATA) {
 const SELFTEST = process.argv.includes('--selftest')
 if (!SELFTEST && !app.requestSingleInstanceLock()) app.quit()
 
+// Ekran görüntüleri retina ekranlarda da net görünsün diye 1,5x çizilir (2x'te panel çoğu ekrana sığmaz).
+if (process.env.PRISM_CAPTURE) app.commandLine.appendSwitch('force-device-scale-factor', '1.5')
+
 // Linux'ta saydam pencere (kompozitör varsa) bu anahtarla çalışır.
 if (process.platform === 'linux') app.commandLine.appendSwitch('enable-transparent-visuals')
 

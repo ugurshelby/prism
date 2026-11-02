@@ -1,0 +1,52 @@
+---
+import Mark from './Mark.astro'
+import { href, releasesOf, type GenId, type GenStatus, type Lang } from '../lib/site'
+import { t } from '../lib/i18n'
+
+interface Props {
+  lang: Lang
+  id: GenId
+  name: string
+  major: number
+  status: GenStatus
+  detail?: boolean
+}
+const { lang, id, name, major, status, detail = false } = Astro.props
+const s = t(lang)
+const count = releasesOf(id).length
+const link = `${href(lang, 'download')}#${id}`
+---
+
+<article id={detail ? id : undefined} class={`card gen ${status === 'current' ? 'is-current' : ''}`} data-reveal>
+  <div class="mark"><Mark variant={id} /></div>
+  <div class="gen-head">
+    <h3>Prism {name}</h3>
+    <span class="muted mono">{major}.x</span>
+    <span class={`badge ${status}`}>{s.editions.status[status]}</span>
+  </div>
+  <p class="tagline">{s.editions.items[id].tagline}</p>
+  <p>{s.editions.items[id].body}</p>
+  {
+    detail && (
+      <ul>
+        {s.editions.features[id].map((f) => (
+          <li>{f}</li>
+        ))}
+      </ul>
+    )
+  }
+  <div class="gen-foot">
+    {
+      status === 'planned' ? (
+        <span class="muted">{s.editions.notYet}</span>
+      ) : (
+        <>
+          <a class="btn btn-ghost btn-sm" href={link}>
+            {s.editions.get(name)} →
+          </a>
+          <span class="muted">{count ? s.editions.versions(count) : s.editions.noBuilds}</span>
+        </>
+      )
+    }
+  </div>
+</article>

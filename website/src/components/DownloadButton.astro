@@ -9,21 +9,21 @@ interface Props {
 const { lang } = Astro.props
 const s = t(lang)
 const f = files(latest)
-const label = (os: string) => (lang === 'tr' ? `${os} için indir` : `${s.cta.downloadFor} ${os}`)
+const page = href(lang, 'download')
 ---
 
 <a
   class="btn btn-primary"
   data-dl
-  href={href(lang, 'download')}
+  href={page}
   data-win={f.win?.url}
   data-mac-arm={f.macArm?.url}
   data-mac-intel={f.macIntel?.url}
-  data-linux={f.appimage ? href(lang, 'download') + '#linux' : undefined}
-  data-label-win={label('Windows')}
-  data-label-mac-arm={label('macOS')}
-  data-label-mac-intel={label('macOS (Intel)')}
-  data-label-linux={label('Linux')}
+  data-linux={`${page}?os=linux`}
+  data-label-win={s.cta.downloadFor('Windows')}
+  data-label-mac-arm={s.cta.downloadFor('macOS')}
+  data-label-mac-intel={s.cta.downloadFor('macOS (Intel)')}
+  data-label-linux={s.cta.downloadFor('Linux')}
 >
   <Icon name="download" size={20} />
   <span data-label>{s.cta.download}</span>

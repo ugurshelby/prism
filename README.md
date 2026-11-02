@@ -47,7 +47,7 @@ Each major version of Prism has a name, following the path of light through a pr
 
 | Version | Name | What it does | Status |
 |---|---|---|---|
-| 1.x | **Ray** | A single beam: prompts for Claude only, one engine (Vertex AI) | Retired |
+| 1.x | **Ray** | A single beam: prompts for Claude only, one engine (Vertex AI); installs next to Spectrum | Available |
 | 2.x | **Spectrum** | Splits the beam: Claude, GPT, Gemini and Grok, your own keys, cross-family recommendation | **Current** |
 | 3.x | **Lens** | Focuses several models on one task: multi-model workflows | Planned |
 | 4.x | **Iris** | Beyond text: image, video, audio and 3D generation models | Planned |

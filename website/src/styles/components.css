@@ -1,0 +1,522 @@
+/* Izgara, indirme seçicisi, hareket ve "Nasıl çalışır" yazısı. Renk ve yazı tipleri global.css'teki değişkenlerden gelir. */
+
+.grid-2 {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 760px) {
+  .grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Kartlar: üzerine gelince hafifçe kalkar, kenarı aydınlanır. */
+.card {
+  transition:
+    transform 0.35s var(--ease),
+    border-color 0.35s var(--ease),
+    box-shadow 0.35s var(--ease);
+}
+.card.feature:hover,
+.card.family:hover,
+.card.gen:hover,
+.card.step:hover {
+  transform: translateY(-3px);
+  border-color: var(--line-2);
+  box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.55);
+}
+.btn:active {
+  transform: translateY(0) scale(0.98);
+}
+.btn-sm {
+  padding: 9px 14px;
+  font-size: 14px;
+  border-radius: 11px;
+}
+
+/* Kaydırınca beliren öğeler: tarayıcı destekliyorsa betiksiz, kaydırmaya bağlı animasyon. */
+@supports (animation-timeline: view()) {
+  [data-reveal] {
+    animation: reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 22%;
+  }
+}
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Kahraman alanı */
+.hero-visual {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.hero-visual .shot {
+  width: 100%;
+  max-width: 380px;
+  animation: rise 0.9s var(--ease) 0.1s both;
+  transition: transform 0.6s var(--ease);
+}
+.hero-visual:hover .shot {
+  transform: translateY(-4px) rotate(-0.4deg);
+}
+.hero-copy > * {
+  animation: rise 0.8s var(--ease) both;
+}
+.hero-copy > :nth-child(2) {
+  animation-delay: 0.06s;
+}
+.hero-copy > :nth-child(3) {
+  animation-delay: 0.12s;
+}
+.hero-copy > :nth-child(4) {
+  animation-delay: 0.18s;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Adım kartlarındaki ekran görüntüleri: doğal oranda, ortalı, en fazla 300 px. */
+.steps .step {
+  height: 100%;
+}
+.step-shot {
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex;
+  justify-content: center;
+}
+.step-shot img {
+  width: 100%;
+  max-width: 300px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: #0a0b0f;
+  transition: transform 0.5s var(--ease);
+}
+.step:hover .step-shot img {
+  transform: translateY(-3px);
+}
+.family .where {
+  margin-top: 14px;
+  font-size: 14px;
+}
+.card.privacy {
+  margin-top: 16px;
+}
+.closing {
+  text-align: center;
+}
+.closing .actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 28px;
+}
+.closing .note {
+  margin-top: 14px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* Sürüm kartları */
+.gen .mark {
+  transition: background 0.4s var(--ease);
+}
+.gen:hover .mark {
+  background: #111319;
+}
+.gen-foot {
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+.badge.available {
+  border-color: color-mix(in srgb, var(--gpt) 50%, transparent);
+  color: var(--gpt);
+}
+.badge.planned {
+  border-style: dashed;
+}
+
+/* --- İndirme seçicisi -------------------------------------------------------- */
+.picker {
+  padding: 22px;
+}
+.picker-label {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+  display: block;
+}
+.tabs {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tab-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--w, 0);
+  height: var(--h, 0);
+  transform: translate(var(--x, 0), var(--y, 0));
+  border-radius: 10px;
+  background: var(--bg-1);
+  border: 1px solid var(--line-2);
+  box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.6);
+  transition:
+    transform 0.45s var(--ease),
+    width 0.45s var(--ease),
+    height 0.45s var(--ease);
+  opacity: 0;
+}
+/* Dört sürüm: geniş ekranda tek sıra, dar ekranda 2×2. */
+.tabs.editions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: visible;
+}
+@media (max-width: 760px) {
+  .tabs.editions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.picker.is-ready .tab-indicator {
+  opacity: 1;
+}
+.tabs [role='tab'] {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-2);
+  font: 600 15px/1.2 var(--font);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.25s;
+}
+.tabs [role='tab']:hover,
+.tabs [role='tab'][aria-selected='true'] {
+  color: var(--text);
+}
+.picker:not(.is-ready) .tabs [aria-selected='true'] {
+  background: var(--bg-1);
+}
+.editions [role='tab'] {
+  justify-content: flex-start;
+  padding: 8px 12px;
+}
+.tab-mark {
+  width: 56px;
+  height: 30px;
+  border-radius: 8px;
+  background: #0a0b0f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  transition: transform 0.35s var(--ease);
+}
+.tab-mark svg {
+  width: 52px;
+  height: 22px;
+}
+.editions [aria-selected='true'] .tab-mark {
+  transform: scale(1.06);
+}
+.tab-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+.tab-text small {
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--muted);
+}
+@media (max-width: 760px) {
+  .tab-mark {
+    display: none;
+  }
+}
+.picker-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 16px;
+  margin-top: 18px;
+}
+@media (max-width: 760px) {
+  .picker-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.picker-controls[data-empty] .field:first-child {
+  opacity: 0.5;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+select {
+  appearance: none;
+  width: 100%;
+  font: 600 15px/1.2 var(--font);
+  color: var(--text);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%23858a99' stroke-width='1.8'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E") no-repeat right 14px center,
+    var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 13px 40px 13px 14px;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+select:hover:not(:disabled) {
+  border-color: var(--line-2);
+}
+select:disabled {
+  cursor: default;
+}
+.os-detected {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+.picker-body {
+  margin-top: 22px;
+  min-height: 180px;
+}
+.picker-body.swap > * {
+  animation: swap 0.45s var(--ease) both;
+}
+@keyframes swap {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.dl-layout {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+}
+@media (max-width: 860px) {
+  .dl-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.dl-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dl-files {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.picker-body.swap .dl-file {
+  animation: swap 0.45s var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+.dl-file {
+  transition:
+    border-color 0.25s,
+    transform 0.3s var(--ease),
+    background 0.25s;
+}
+.dl-file:hover {
+  transform: translateX(3px);
+}
+.first-launch b {
+  font-size: 15px;
+}
+.first-launch p {
+  margin: 6px 0 0;
+  color: var(--text-2);
+  font-size: 15px;
+}
+.notes {
+  border-left: 1px solid var(--line);
+  padding-left: 24px;
+}
+@media (max-width: 860px) {
+  .notes {
+    border-left: 0;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    padding-top: 20px;
+  }
+}
+.notes h3 {
+  font-size: 18px;
+}
+.notes p {
+  margin: 6px 0 0;
+  font-size: 14px;
+}
+.notes ul {
+  margin: 14px 0 0;
+  padding-left: 18px;
+  color: var(--text-2);
+  font-size: 15px;
+}
+.notes li + li {
+  margin-top: 6px;
+}
+.notes .links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 16px;
+}
+.empty {
+  padding: 28px;
+  border: 1px dashed var(--line-2);
+  border-radius: 14px;
+  text-align: center;
+}
+.empty p {
+  margin: 8px 0 0;
+  color: var(--text-2);
+}
+
+/* --- Nasıl çalışır ----------------------------------------------------------- */
+.post {
+  max-width: 720px;
+}
+.post .eyebrow {
+  margin: 0 0 20px;
+}
+.post > p {
+  font-size: 18px;
+  line-height: 1.7;
+}
+.post h2 {
+  font-size: 28px;
+  margin-top: 64px;
+}
+.post-end {
+  margin-top: 56px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.flow {
+  list-style: none;
+  padding: 0;
+  margin: 40px 0 8px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (max-width: 720px) {
+  .flow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.flow li {
+  position: relative;
+  padding: 14px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line-2);
+  background: color-mix(in srgb, var(--bg-1) 85%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 15px;
+  line-height: 1.35;
+  animation: rise 0.6s var(--ease) both;
+  animation-delay: calc(0.15s + var(--i) * 90ms);
+}
+.flow li b {
+  color: var(--text);
+}
+.flow li span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.flow li:nth-child(2),
+.flow li:nth-child(4) {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.flow li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: -9px;
+  top: 50%;
+  width: 8px;
+  height: 2px;
+  background: var(--line-2);
+}
+@media (max-width: 720px) {
+  .flow li:not(:last-child)::after {
+    right: auto;
+    left: 50%;
+    top: auto;
+    bottom: -9px;
+    width: 2px;
+    height: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal],
+  .hero-copy > *,
+  .hero-visual .shot,
+  .flow li,
+  .picker-body.swap > *,
+  .picker-body.swap .dl-file {
+    animation: none !important;
+  }
+  .card,
+  .tab-indicator,
+  .dl-file {
+    transition: none !important;
+  }
+}
