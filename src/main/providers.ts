@@ -68,6 +68,12 @@ export function credentials(p: ProviderId): Credentials {
 
 export function saveKey(p: ProviderId, key: string) {
   if (!safeStorage.isEncryptionAvailable()) throw new Error('Bu sistemde güvenli depolama kullanılamıyor.')
+  // Linux'ta anahtarlık (Secret Service / KWallet) yoksa Electron sabit bir parolayla yazar; bu gerçek koruma değil.
+  if (process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text') {
+    throw new Error(
+      "Sistem anahtarlığı bulunamadı (GNOME Keyring / KWallet), key güvenle saklanamıyor. Anahtarlığı kur ya da key'i ~/.config/Prompter/.env dosyasına yaz."
+    )
+  }
   const path = keyFile(p)
   mkdirSync(dirname(path), { recursive: true })
   writeFileSync(path, safeStorage.encryptString(key.trim()))

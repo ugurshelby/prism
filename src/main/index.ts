@@ -1,6 +1,6 @@
-import { app, clipboard, globalShortcut, ipcMain, Menu, nativeImage, Notification, shell, Tray } from 'electron'
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { app, clipboard, globalShortcut, ipcMain, Menu, nativeImage, Notification, session, shell, Tray } from 'electron'
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { FAMILY_INFO, MODELS, PROVIDERS, PROVIDER_INFO, type ProviderId } from '@shared/catalog'
 import type { AnalyzeRequest, GenerateRequest, Settings, StreamEvent, WindowMode } from '@shared/types'
 import { getSettings, knowledgeDir, updateSettings } from './config'
@@ -30,6 +30,22 @@ if (process.env.PROMPTER_USER_DATA) {
 
 const SELFTEST = process.argv.includes('--selftest')
 if (!SELFTEST && !app.requestSingleInstanceLock()) app.quit()
+
+// Linux'ta saydam pencere (kompozitör varsa) bu anahtarla çalışır.
+if (process.platform === 'linux') app.commandLine.appendSwitch('enable-transparent-visuals')
+
+// Uygulama yalnızca kendi arayüzünü yükler: yeni pencere, başka sayfaya geçiş ve webview kapalı.
+// Dış bağlantılar (ör. key alma sayfaları) yalnızca https ise sistem tarayıcısında açılır.
+app.on('web-contents-created', (_e, contents) => {
+  contents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://')) shell.openExternal(url)
+    return { action: 'deny' }
+  })
+  contents.on('will-navigate', (e, url) => {
+    if (url !== contents.getURL()) e.preventDefault()
+  })
+  contents.on('will-attach-webview', (e) => e.preventDefault())
+})
 
 let tray: Tray | null = null
 const running = new Map<string, AbortController>()
@@ -129,11 +145,21 @@ function createTray() {
 // Kurulu sürümde uygulamanın kendisi, geliştirmede electron.exe + proje klasörü açılışta başlatılır.
 // Windows'ta kayıt adı AppUserModelId olduğu için ikisi aynı kaydı günceller.
 function setLaunchAtLogin(on: boolean) {
+  if (process.platform === 'linux') return linuxAutostart(on)
   app.setLoginItemSettings(
     app.isPackaged
       ? { openAtLogin: on, args: ['--hidden'] }
       : { openAtLogin: on, path: process.execPath, args: [app.getAppPath(), '--hidden'] }
   )
+}
+
+// Electron'un Linux'ta açılış kaydı yok; XDG autostart girdisi yazılır. AppImage'ın gerçek yolu APPIMAGE'dadır.
+function linuxAutostart(on: boolean) {
+  const file = join(app.getPath('appData'), 'autostart', 'prompter.desktop')
+  if (!on) return rmSync(file, { force: true })
+  const exec = `"${process.env.APPIMAGE ?? process.execPath}"${app.isPackaged ? '' : ` "${app.getAppPath()}"`} --hidden`
+  mkdirSync(dirname(file), { recursive: true })
+  writeFileSync(file, `[Desktop Entry]\nType=Application\nName=Prompter\nExec=${exec}\nX-GNOME-Autostart-enabled=true\n`)
 }
 
 function applySettings(patch: Partial<Settings>) {
@@ -246,6 +272,8 @@ app.on('second-instance', () => {
 
 app.whenReady().then(() => {
   if (SELFTEST) return selftest(process.argv)
+  // Arayüz kamera, mikrofon, konum vb. hiçbir tarayıcı iznine ihtiyaç duymaz.
+  session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false))
   if (process.platform === 'win32') app.setAppUserModelId('com.prompter.app')
   if (process.platform === 'darwin') app.dock?.hide()
   registerIpc()
