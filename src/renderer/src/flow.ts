@@ -51,7 +51,7 @@ export function useFlow(onFinished?: () => void) {
 
   useEffect(
     () =>
-      window.prompter.engine.onStream((ev) => {
+      window.prism.engine.onStream((ev) => {
         if (ev.id !== genId.current) return
         if (ev.type === 'chunk') setS((prev) => ({ ...prev, stream: prev.stream + ev.text }))
         else if (ev.type === 'done') {
@@ -77,7 +77,7 @@ export function useFlow(onFinished?: () => void) {
       return { question: q.question, answer: [a?.option, a?.text].filter(Boolean).join(' — ') }
     })
     setS((prev) => ({ ...prev, choice, stage: 'generating', stream: '', result: null, error: null, startedAt: Date.now() }))
-    window.prompter.engine.generate({
+    window.prism.engine.generate({
       id,
       prompt: cur.prompt,
       surface: cur.surface,
@@ -99,7 +99,7 @@ export function useFlow(onFinished?: () => void) {
     const manual = cur.selectMode === 'manual' ? cur.manual : undefined
     patch({ stage: 'analyzing', error: null, analysis: null, answers: {}, result: null, startedAt: Date.now() })
     try {
-      const analysis = await window.prompter.engine.analyze({ prompt: cur.prompt, surface: cur.surface, family: cur.family, manual })
+      const analysis = await window.prism.engine.analyze({ prompt: cur.prompt, surface: cur.surface, family: cur.family, manual })
       if (seq !== analyzeSeq.current) return
       const choice = manual ?? { model: analysis.recommendation.model, effort: analysis.recommendation.effort }
       setS((prev) => ({ ...prev, analysis, choice }))
@@ -117,7 +117,7 @@ export function useFlow(onFinished?: () => void) {
       analyzeSeq.current++
       patch({ stage: 'compose' })
     } else if (cur.stage === 'generating' && genId.current) {
-      window.prompter.engine.cancel(genId.current)
+      window.prism.engine.cancel(genId.current)
       genId.current = null
       patch({ stage: cur.analysis ? 'review' : 'compose' })
     }
@@ -133,7 +133,7 @@ export function useFlow(onFinished?: () => void) {
 
   const stopRunning = () => {
     analyzeSeq.current++
-    if (genId.current) window.prompter.engine.cancel(genId.current)
+    if (genId.current) window.prism.engine.cancel(genId.current)
     genId.current = null
   }
 

@@ -1,5 +1,6 @@
+# appId eski adla kalır: Windows'ta Prompter kurulumlarının üzerine güncelleme olarak kurulsun.
 appId: com.prompter.app
-productName: Prompter
+productName: Prism
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 directories:
   buildResources: resources
@@ -55,6 +56,6 @@ linux:
     - target: deb
       arch: [x64]
   category: Development
-  executableName: prompter
+  executableName: prism
   synopsis: Prompt optimizer for Claude, GPT, Gemini and Grok
   maintainer: ugurshelby <222421934+ugurshelby@users.noreply.github.com>

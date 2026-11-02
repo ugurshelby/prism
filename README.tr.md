@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="resources/icon.png" width="96" alt="Prompter logosu" />
+<img src="resources/icon.png" width="96" alt="Prism logosu" />
 
-# Prompter
+# Prism
 
 **Ham promptunu yaz, kullanacağın modele göre yeniden yazılmış hâlini al.**
 
@@ -10,12 +10,12 @@ Promptunu **Claude, GPT, Gemini ya da Grok** için yeniden yazan bir masaüstü 
 önerir, gerekirse birkaç netleştirme sorusu sorar ve kodlama ajanına, sohbet uygulamasına ya da API çağrına
 yapıştırmaya hazır promptu yazar. Kendi API key'inle çalışır; araya başka bir sunucu girmez.
 
-[![CI](https://github.com/ugurshelby/prompter/actions/workflows/ci.yml/badge.svg)](https://github.com/ugurshelby/prompter/actions/workflows/ci.yml)
-[![Son sürüm](https://img.shields.io/github/v/release/ugurshelby/prompter?label=indir)](https://github.com/ugurshelby/prompter/releases/latest)
+[![CI](https://github.com/ugurshelby/prism/actions/workflows/ci.yml/badge.svg)](https://github.com/ugurshelby/prism/actions/workflows/ci.yml)
+[![Son sürüm](https://img.shields.io/github/v/release/ugurshelby/prism?label=indir)](https://github.com/ugurshelby/prism/releases/latest)
 [![Platformlar](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-informational)](#kurulum)
 [![Lisans: MIT](https://img.shields.io/badge/lisans-MIT-green.svg)](LICENSE)
 
-[English](README.md) · **Türkçe**
+**[Web sitesi ve indirme](https://ugurshelby.github.io/prism/tr/)** · [English](README.md) · **Türkçe**
 
 <img src="docs/screenshots/compose.png" width="270" alt="Ham promptu yaz ve ekosistemi seç" />
 <img src="docs/screenshots/review.png" width="270" alt="Model ve seviye önerisi" />
@@ -28,12 +28,12 @@ yapıştırmaya hazır promptu yazar. Kendi API key'inle çalışır; araya baş
 - **Dört model ailesi tek yerde.** Claude (Fable, Opus, Sonnet, Haiku), OpenAI (GPT-6 Astra, GPT-6.1 Sol/Terra,
   GPT-6 Luna), Gemini (4 Argon, 3.8 Flash, 3.5 Flash-Lite) ve Grok (4.7, 4.3, Build). Kurallar her üreticinin resmî
   prompt rehberinden damıtılıp düzenlenebilir [bilgi kartlarına](knowledge/) yazıldı.
-- **Model ve seviye önerisi.** Prompter görevi okuyup model ve seviyeyi (Claude `effort`, OpenAI/Grok
+- **Model ve seviye önerisi.** Prism görevi okuyup model ve seviyeyi (Claude `effort`, OpenAI/Grok
   `reasoning effort`, Gemini `thinking level`) gerekçesi ve eminlik oranıyla önerir. "✦ Çapraz" seçilirse
   erişebildiğin tüm aileler arasından seçer.
 - **Yapıştıracağın yere göre yazılır.** Kodlama ajanları (Claude Code, Codex, Antigravity, Grok Build), sohbet
   uygulamaları ya da API. Sonuç ekranı modeli ve seviyeyi hedef araçta nasıl ayarlayacağını da söyler.
-- **Key'lerin anında doğrulanır.** Vertex AI, Google AI Studio, Anthropic, OpenAI ya da xAI key'i ekle; Prompter
+- **Key'lerin anında doğrulanır.** Vertex AI, Google AI Studio, Anthropic, OpenAI ya da xAI key'i ekle; Prism
   hemen dener ve erişebildiği modelleri listeler.
 - **Yoluna çıkmaz.** Her zaman üstte duran panel, genel kısayol, küçülünce sürüklenebilir küre, tray menüsü, prompt
   hazır olunca bildirim, oturum açılışında başlatma ve aranabilir geçmiş.
@@ -42,25 +42,39 @@ yapıştırmaya hazır promptu yazar. Kendi API key'inle çalışır; araya baş
 
 > Arayüz şimdilik Türkçe; yazılan promptlar İngilizce. Çeviri katkılarına açığız.
 
+## Sürümler
+
+Prism'in her büyük sürümünün bir adı var; adlar ışığın prizmadaki yolunu izliyor.
+
+| Sürüm | Ad | Ne yapar | Durum |
+|---|---|---|---|
+| 1.x | **Ray** | Tek ışın: yalnızca Claude için prompt, tek motor (Vertex AI) | Emekli |
+| 2.x | **Spectrum** | Işını ayırır: Claude, GPT, Gemini ve Grok, kendi key'lerin, aileler arası öneri | **Güncel** |
+| 3.x | **Lens** | Birden çok modeli tek işe odaklar: çok modelli iş akışları | Planlandı |
+| 4.x | **Iris** | Metnin ötesi: görsel, video, ses ve 3D üretim modelleri | Planlandı |
+
+Prism'in 2.0'a kadarki adı *Prompter*'dı. Prism'i Prompter'ın üzerine kurmak ayarlarını, key'lerini ve geçmişini korur.
+
 ## Kurulum
 
-Sistemine uygun kurulum dosyasını **[son sürümden](https://github.com/ugurshelby/prompter/releases/latest)** indir:
+Sistemine uygun kurulum dosyasını **[web sitesinden](https://ugurshelby.github.io/prism/tr/download/)** ya da
+**[son sürümden](https://github.com/ugurshelby/prism/releases/latest)** indir:
 
 | Sistem | Dosya |
 |---|---|
-| Windows 10/11 (x64) | `Prompter-Setup-<sürüm>-x64.exe` |
-| macOS, Apple Silicon (M1 ve sonrası) | `Prompter-<sürüm>-mac-arm64.dmg` |
-| macOS, Intel | `Prompter-<sürüm>-mac-x64.dmg` |
-| Linux (x64) | `Prompter-<sürüm>-linux-x86_64.AppImage` ya da `Prompter-<sürüm>-linux-amd64.deb` |
+| Windows 10/11 (x64) | `Prism-Setup-<sürüm>-x64.exe` |
+| macOS, Apple Silicon (M1 ve sonrası) | `Prism-<sürüm>-mac-arm64.dmg` |
+| macOS, Intel | `Prism-<sürüm>-mac-x64.dmg` |
+| Linux (x64) | `Prism-<sürüm>-linux-x86_64.AppImage` ya da `Prism-<sürüm>-linux-amd64.deb` |
 
 Kurulum dosyaları açık kaynak ama ücretli bir geliştirici sertifikasıyla imzalı değil; bu yüzden ilk açılışta bir
 kez onay gerekir:
 
 - **Windows:** SmartScreen "Windows bilgisayarınızı korudu" der → **Ek bilgi → Yine de çalıştır**.
-- **macOS:** `.dmg`'yi aç, Prompter'ı Uygulamalar'a sürükle, bir kez açmayı dene, sonra
-  **Sistem Ayarları → Gizlilik ve Güvenlik → Yine de Aç**. (Alternatif: `xattr -dr com.apple.quarantine /Applications/Prompter.app`.)
-- **Linux AppImage:** `chmod +x Prompter-*.AppImage && ./Prompter-*.AppImage`.
-  **Debian/Ubuntu:** `sudo apt install ./Prompter-*-linux-amd64.deb`.
+- **macOS:** `.dmg`'yi aç, Prism'i Uygulamalar'a sürükle, bir kez açmayı dene, sonra
+  **Sistem Ayarları → Gizlilik ve Güvenlik → Yine de Aç**. (Alternatif: `xattr -dr com.apple.quarantine /Applications/Prism.app`.)
+- **Linux AppImage:** `chmod +x Prism-*.AppImage && ./Prism-*.AppImage`.
+  **Debian/Ubuntu:** `sudo apt install ./Prism-*-linux-amd64.deb`.
   Key saklamak için bir anahtarlık (GNOME Keyring ya da KWallet) gerekir; çoğu masaüstünde zaten vardır.
 
 Her sürümde indirdiğin dosyayı doğrulaman için `SHA256SUMS.txt` bulunur. Yeni sürümü eskisinin üzerine kurmak
@@ -71,8 +85,8 @@ ayarlarını, key'lerini ve geçmişini korur.
 Gereksinimler: [Node.js 22+](https://nodejs.org) ve Git.
 
 ```bash
-git clone https://github.com/ugurshelby/prompter.git
-cd prompter
+git clone https://github.com/ugurshelby/prism.git
+cd prism
 npm ci
 npm run setup     # Node'u denetler, gerekirse Electron'u indirir, .env.example'dan .env oluşturur
 npm run dev
@@ -92,7 +106,7 @@ Kendi kurulum dosyanı üretmek için: `npm run dist:win`, `npm run dist:mac` ya
 
 ## Sağlayıcılar ve API key'leri
 
-Prompter bir modeli **motor** olarak kullanır (analiz eder ve yazar) ve bir **hedef** model için yazar (promptu
+Prism bir modeli **motor** olarak kullanır (analiz eder ve yazar) ve bir **hedef** model için yazar (promptu
 yapıştıracağın model). Motor, key'ini eklediğin sağlayıcıda çalışır; tek key yeterli.
 
 | Sağlayıcı | Key nereden | Motor modelleri | Açtığı hedefler |
@@ -105,13 +119,14 @@ yapıştıracağın model). Motor, key'ini eklediğin sağlayıcıda çalışır
 
 - **Doğrulama:** Key kaydedilince sağlayıcıya hafif bir istek gider ve o key'in kullanabildiği metin modelleri
   listelenir. Geçersiz key anlaşılır bir mesajla reddedilir. **Doğrula ve modelleri getir** kontrolü tekrarlar.
-- **Motor seçimi:** Ayarlar → *Prompter motoru*. "Otomatik", Vertex AI tanımlıysa onu, değilse doğrulanmış ilk
+- **Motor seçimi:** Ayarlar → *Prism motoru*. "Otomatik", Vertex AI tanımlıysa onu, değilse doğrulanmış ilk
   sağlayıcıyı kullanır. Analiz ve yazım modelleri ayrı seçilebilir; **Motoru test et** kısa bir deneme isteği gönderir.
 - **Vertex AI** için Google Cloud proje ID'si de gerekir (Ayarlar ya da `VERTEX_PROJECT_ID`) ve projede Vertex AI
   API'si etkin olmalı. Konum `global` kalmalı; bazı modeller (ör. `gemini-4-argon`) bölgesel uç noktalarda yok.
 - **Arayüzsüz:** Key'ler ortam değişkeninden ya da `.env` dosyasından da okunur ([`.env.example`](.env.example)).
   Sıra: Ayarlar'da kayıtlı key → ortam değişkeni → `.env`. Kurulu uygulama `.env`'i kullanıcı klasöründe arar:
-  `%APPDATA%\Prompter` (Windows), `~/Library/Application Support/Prompter` (macOS), `~/.config/Prompter` (Linux).
+  `%APPDATA%\Prism` (Windows), `~/Library/Application Support/Prism` (macOS), `~/.config/Prism` (Linux);
+  Prompter'dan güncellediysen aynı yerdeki `Prompter` klasörü.
 
 ## Nasıl çalışır
 
@@ -129,7 +144,7 @@ ham prompt ──► motor (senin key'in) ──► analiz: görev, en uygun mod
 ## Günlük kullanım
 
 - `Ctrl+Shift+Space` (macOS'ta `Cmd+Shift+Space`) paneli gösterir ya da gizler; Ayarlar'dan değişir.
-- Pencereyi kapatmak Prompter'ı tray'e (macOS'ta menü çubuğuna) gizler. Tray menüsü geçmişi ve ayarları açar, aktif
+- Pencereyi kapatmak Prism'i tray'e (macOS'ta menü çubuğuna) gizler. Tray menüsü geçmişi ve ayarları açar, aktif
   motoru gösterir.
 - Raptiye paneli her zaman üstte tutar; küçült düğmesi onu sürüklenebilir küçük bir küreye çevirir.
 - Geçmiş son 200 promptu bu bilgisayarda aile, model, seviye ve motorla etiketli tutar; aileye göre süz, ara, tekrar
@@ -139,7 +154,7 @@ ham prompt ──► motor (senin key'in) ──► analiz: görev, en uygun mod
 
 - Key'ler işletim sisteminin güvenli deposuyla (Windows DPAPI, macOS Keychain, Linux Secret Service/KWallet)
   şifrelenip yalnızca kullanıcı klasöründe saklanır; arayüze gönderilmez, loglara yazılmaz. Anahtarlığı olmayan
-  Linux'ta Prompter key'i zayıf korumayla saklamak yerine kaydetmeyi reddeder.
+  Linux'ta Prism key'i zayıf korumayla saklamak yerine kaydetmeyi reddeder.
 - Promptlar yalnızca seçtiğin motor sağlayıcısına HTTPS ile gider. OpenAI ve xAI istekleri `store: false` ile
   gönderilir. Telemetri ya da başka bir sunucu yok.
 - Uygulama sertleştirildi: izole (sandbox) arayüz, sıkı CSP, engellenmiş sayfa geçişi ve izinler, paketlenmiş
@@ -154,9 +169,9 @@ Ayrıntılar ve güvenlik açığını gizlice bildirme yolu: [SECURITY.md](SECU
 |---|---|
 | `401` / "key reddedildi" | Key yanlış ya da ilgili API etkin değil. Ayarlar'dan key'i yeniden gir ve Doğrula'ya bas. |
 | Vertex `404` | Konum `global` olmalı; proje ID'sini ve Vertex AI API'sinin etkin olduğunu kontrol et. |
-| `429` | Hız sınırı ya da kota. Prompter iki kez dener, sonra hatayı gösterir. |
+| `429` | Hız sınırı ya da kota. Prism iki kez dener, sonra hatayı gösterir. |
 | Motor "yapılandırılmamış" | En az bir key ekle; Vertex için proje ID'si de gerekir. |
-| Linux: "Sistem anahtarlığı bulunamadı" | GNOME Keyring ya da KWallet kur/aç, ya da key'i `~/.config/Prompter/.env` dosyasına yaz. |
+| Linux: "Sistem anahtarlığı bulunamadı" | GNOME Keyring ya da KWallet kur/aç, ya da key'i `~/.config/Prism/.env` dosyasına yaz. |
 | `npm run dev` Electron'u bulamıyor | `npm run setup` çalıştır. |
 
 ## Geliştirme
@@ -171,7 +186,7 @@ Ayrıntılar ve güvenlik açığını gizlice bildirme yolu: [SECURITY.md](SECU
 | `npx electron . --selftest --smoke` | Ağsız kontrol: uygulama açılıyor ve tüm bilgi kartlarını yüklüyor mu |
 | `npm run dist:win` / `dist:mac` / `dist:linux` | `release/` klasörüne kurulum dosyası üretir |
 
-Gerçek ayar ve geçmişine dokunmadan denemek için: `PROMPTER_USER_DATA=./tmp-userdata npm run dev`.
+Gerçek ayar ve geçmişine dokunmadan denemek için: `PRISM_USER_DATA=./tmp-userdata npm run dev`.
 
 Prompt kalitesi [`knowledge/`](knowledge/) klasöründe: her aile için `principles.md`, `effort.md`, `models.md`, her
 yüzey ve her hedef model için birer kart. Kartlar her istekte yeniden okunur. Bkz. [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -180,5 +195,5 @@ Electron, React ve TypeScript ile yapıldı.
 
 ## Lisans
 
-[MIT](LICENSE). Model adları sahiplerinin ticari markalarıdır; Prompter'ın Anthropic, Google, OpenAI ya da xAI ile
+[MIT](LICENSE). Model adları sahiplerinin ticari markalarıdır; Prism'in Anthropic, Google, OpenAI ya da xAI ile
 bir bağı yoktur.

@@ -10,7 +10,7 @@ import { card } from './engine/knowledge'
 import { candidatePool, overrideEngine, providerViews, resolveEngine, targetAccess, verify } from './providers'
 
 const SAMPLE =
-  'prompter projesinde ayarlar paneline vertex bağlantısını test eden bir buton ekle, key arayüze inmesin, hata olursa mesajı göster'
+  'prism projesinde ayarlar paneline vertex bağlantısını test eden bir buton ekle, key arayüze inmesin, hata olursa mesajı göster'
 
 export async function selftest(argv: string[]) {
   const args = argv.slice(argv.indexOf('--selftest') + 1).filter((a) => !a.startsWith('--'))

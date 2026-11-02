@@ -20,7 +20,7 @@ function systemPrompt(req: GenerateRequest, lang: ReplyLanguage) {
   const family = FAMILY_INFO[model.family]
   const surface = family.surfaces[req.surface].label
   const level = model.efforts.length ? `at \`${req.effort}\` ${family.effortLabel}` : 'with its fixed reasoning level'
-  return `You are the writing stage of Prompter. You write the final prompt the person will paste into ${surface} for ${model.name} running ${level}. Write the prompt that a senior engineer who knows this model well would write for this exact intent.
+  return `You are the writing stage of Prism. You write the final prompt the person will paste into ${surface} for ${model.name} running ${level}. Write the prompt that a senior engineer who knows this model well would write for this exact intent.
 
 <vision>
 ${card('vision.md')}
@@ -48,7 +48,7 @@ Rules:
 - Shape the prompt for the selected effort level and the target model as the cards describe. Use a tested snippet from the target model card only when the behavior it addresses is likely for this task, and keep its wording.
 - Length follows the task: a small request gets a few sentences; a large agentic task gets a structured brief.
 ${languageRule(lang, req.surface)}
-- Never mention Prompter, this analysis, effort levels or model names inside the prompt unless the surface needs them (an API system prompt may state the model identity).
+- Never mention Prism, this analysis, effort levels or model names inside the prompt unless the surface needs them (an API system prompt may state the model identity).
 - Don't wrap the prompt in code fences.
 
 Output exactly this, nothing before or after:

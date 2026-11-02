@@ -1,14 +1,14 @@
 # Contributing
 
-Thanks for helping improve Prompter! Issues and pull requests are welcome in English or Turkish.
+Thanks for helping improve Prism! Issues and pull requests are welcome in English or Turkish.
 
 ## Development setup
 
 Requirements: Node.js 22+ and Git.
 
 ```bash
-git clone https://github.com/ugurshelby/prompter.git
-cd prompter
+git clone https://github.com/ugurshelby/prism.git
+cd prism
 npm ci
 npm run setup     # downloads Electron if needed, creates .env from .env.example
 npm run dev       # starts the app with hot reload
@@ -17,7 +17,7 @@ npm run dev       # starts the app with hot reload
 To keep your real settings and history untouched while developing, point the app to a scratch folder:
 
 ```bash
-PROMPTER_USER_DATA=./tmp-userdata npm run dev
+PRISM_USER_DATA=./tmp-userdata npm run dev
 ```
 
 `npm run mock` opens the interface in a browser with fake data and no API calls.
@@ -45,6 +45,7 @@ If you have a key configured, `npm run selftest` runs one real analyze → gener
 | `src/renderer/` | React interface |
 | `src/shared/catalog.ts` | Target models, effort levels, surfaces, providers |
 | `knowledge/` | Prompting guidance cards per model family, read by the engine at runtime |
+| `website/` | The website (Astro): `cd website && npm ci && npm run dev`; deployed to GitHub Pages by `pages.yml` |
 
 ### Improving prompt quality
 

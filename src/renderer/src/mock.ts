@@ -1,10 +1,10 @@
 // Electron dışında, tarayıcıda arayüz geliştirmek için sahte köprü. Üretimde kullanılmaz.
-import type { PrompterApi } from '../../preload/api'
+import type { PrismApi } from '../../preload/api'
 import { PROVIDERS, type Effort, type ModelId } from '@shared/catalog'
 import type { Analysis, HistoryEntry, ProviderView, SettingsView, StreamEvent, WindowMode } from '@shared/types'
 
 const SAMPLE = `<prompt>
-I'm building Prompter, an Electron desktop widget that rewrites raw prompts for Claude models. The settings sheet needs a connection test that tells the user, within a few seconds, whether their Vertex AI key works.
+I'm building Prism, an Electron desktop widget that rewrites raw prompts for Claude models. The settings sheet needs a connection test that tells the user, within a few seconds, whether their Vertex AI key works.
 
 Add a "Test connection" button to src/renderer/src/components/Settings.tsx that calls a new IPC handler in src/main/index.ts. The handler should send a minimal request to the configured analysis model and return { ok, ms, message }.
 
@@ -154,7 +154,7 @@ export function installMock() {
   const timers = new Map<string, number>()
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-  const api: PrompterApi = {
+  const api: PrismApi = {
     settings: {
       get: async () => settings,
       set: async (patch) => (settings = { ...settings, ...patch }),
@@ -233,5 +233,5 @@ export function installMock() {
     ui: { onOpen: () => () => {} },
     platform: 'win32'
   }
-  ;(window as any).prompter = api
+  ;(window as any).prism = api
 }

@@ -140,7 +140,7 @@ function systemPrompt(req: AnalyzeRequest, pool: ModelId[]) {
   const manual = req.manual
     ? `\nThe person has already chosen ${MODELS[req.manual.model].name} at \`${req.manual.effort}\` effort and will use that. Still give your honest recommendation (it is shown only as a hint), but your main job here is the clarifying questions.\n`
     : ''
-  return `You are the analysis stage of Prompter, a desktop tool that turns a person's raw request into an excellent prompt for a ${target}. You don't write the prompt; you decide which model and effort level fit the request on the given surface, and what must be clarified first.
+  return `You are the analysis stage of Prism, a desktop tool that turns a person's raw request into an excellent prompt for a ${target}. You don't write the prompt; you decide which model and effort level fit the request on the given surface, and what must be clarified first.
 
 <vision>
 ${card('vision.md')}

@@ -8,4 +8,4 @@ This project follows the spirit of the [Contributor Covenant](https://www.contri
 
 Maintainers may edit or remove comments, issues and pull requests that break these rules, and may block repeat
 offenders. Report problems privately to the maintainer through a
-[private security advisory](https://github.com/ugurshelby/prompter/security/advisories/new) or a direct GitHub message.
+[private security advisory](https://github.com/ugurshelby/prism/security/advisories/new) or a direct GitHub message.

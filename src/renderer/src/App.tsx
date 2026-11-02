@@ -35,12 +35,12 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    const w = window.prompter.window
+    const w = window.prism.window
     w.getState().then((st) => {
       setMode(st.mode)
       setPinned(st.pinned)
     })
-    window.prompter.settings.get().then((v) => {
+    window.prism.settings.get().then((v) => {
       applySettings(v)
       setSetup(!v.engine)
       patch({ surface: v.defaultSurface, family: v.defaultFamily })
@@ -50,11 +50,11 @@ export default function App() {
       if (m === 'panel') setUnseen(false)
     })
     const offPin = w.onPinned(setPinned)
-    const offOpen = window.prompter.ui.onOpen((target) => {
+    const offOpen = window.prism.ui.onOpen((target) => {
       setHistoryOpen(target === 'history')
       setSettingsOpen(target === 'settings')
     })
-    const offChanged = window.prompter.settings.onChanged(() => window.prompter.settings.get().then(applySettings))
+    const offChanged = window.prism.settings.onChanged(() => window.prism.settings.get().then(applySettings))
     return () => {
       offMode()
       offPin()
@@ -69,7 +69,7 @@ export default function App() {
   const targets = view?.targets ?? {}
 
   if (mode === 'pill') {
-    return <Pill busy={busy} badge={unseen} onOpen={() => window.prompter.window.setMode('panel')} />
+    return <Pill busy={busy} badge={unseen} onOpen={() => window.prism.window.setMode('panel')} />
   }
 
   return (
@@ -81,27 +81,27 @@ export default function App() {
       <header className="header">
         <div className="brand">
           <Logo />
-          Prompter
+          Prism
           <small>{setup ? 'Kurulum' : FAMILY_SHORT[s.family].replace('✦ ', '')}</small>
         </div>
         <div className="spacer" />
         <button
           className={`icon-btn ${pinned ? 'on' : ''}`}
           title={pinned ? 'Her zaman üstte: açık' : 'Her zaman üstte: kapalı'}
-          onClick={async () => setPinned(await window.prompter.window.togglePin())}
+          onClick={async () => setPinned(await window.prism.window.togglePin())}
         >
           {pinned ? <Pin size={15} /> : <PinOff size={15} />}
         </button>
         <button className={`icon-btn ${historyOpen ? 'on' : ''}`} title="Geçmiş" onClick={() => setHistoryOpen((v) => !v)}>
           <HistoryIcon size={15} />
         </button>
-        <button className="icon-btn" title="Küçült" onClick={() => window.prompter.window.setMode('pill')}>
+        <button className="icon-btn" title="Küçült" onClick={() => window.prism.window.setMode('pill')}>
           <Minimize2 size={15} />
         </button>
         <button className="icon-btn" title="Ayarlar" onClick={() => setSettingsOpen(true)}>
           <Settings2 size={15} />
         </button>
-        <button className="icon-btn close" title="Gizle (tray'de çalışmaya devam eder)" onClick={() => window.prompter.window.hide()}>
+        <button className="icon-btn close" title="Gizle (tray'de çalışmaya devam eder)" onClick={() => window.prism.window.hide()}>
           <X size={16} />
         </button>
       </header>
@@ -141,7 +141,7 @@ export default function App() {
 
 function ResizeGrip() {
   const active = useRef(false)
-  const api = window.prompter.window
+  const api = window.prism.window
   return (
     <svg
       className="grip"

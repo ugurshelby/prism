@@ -44,7 +44,7 @@ function body(kind: Kind, call: LlmCall, stream: boolean) {
     // xAI örnekleme değerlerini her istekte açıkça göndermeyi öneriyor; OpenAI reasoning'de kabul etmiyor.
     ...(kind === 'xai' ? { temperature: 0.7, top_p: 0.95 } : {}),
     ...(call.schema
-      ? { text: { format: { type: 'json_schema', name: 'prompter_output', schema: toStrict(call.schema), strict: true } } }
+      ? { text: { format: { type: 'json_schema', name: 'prism_output', schema: toStrict(call.schema), strict: true } } }
       : {}),
     ...(stream ? { stream: true } : {})
   }

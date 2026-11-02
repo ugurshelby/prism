@@ -62,7 +62,7 @@ export function createWindow(opts: { hidden?: boolean } = {}): BrowserWindow {
     maximizable: false,
     fullscreenable: false,
     show: false,
-    title: 'Prompter',
+    title: 'Prism',
     alwaysOnTop: getSettings().alwaysOnTop,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

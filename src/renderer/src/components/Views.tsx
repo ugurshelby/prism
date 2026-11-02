@@ -40,7 +40,7 @@ import { PrismLoader } from './Prism'
 
 type Flow = ReturnType<typeof useFlow>
 
-const isMac = window.prompter.platform === 'darwin'
+const isMac = window.prism.platform === 'darwin'
 const MOD = isMac ? '⌘' : 'Ctrl'
 
 export const viewMotion = {
@@ -512,7 +512,7 @@ function CopyMini({ text }: { text: string }) {
       className="icon-btn"
       title="Kopyala"
       onClick={async () => {
-        await window.prompter.clipboard.write(text)
+        await window.prism.clipboard.write(text)
         setDone(true)
         setTimeout(() => setDone(false), 1200)
       }}
@@ -546,7 +546,7 @@ export function Result({ flow }: { flow: Flow }) {
   }, [copied, burst])
 
   const copy = async () => {
-    await window.prompter.clipboard.write(text)
+    await window.prism.clipboard.write(text)
     setBurst((c) => c + 1)
     setCopied(true)
   }
