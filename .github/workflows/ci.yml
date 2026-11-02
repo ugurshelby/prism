@@ -2,20 +2,41 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    name: check (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
-      # Tip kontrolü ve derleme Electron ikilisine ihtiyaç duymaz.
       - run: npm ci
-        env:
-          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      # Electron ikilisi inmediyse indirir; README'deki kurulum adımını da sınar.
+      - run: npm run setup
       - run: npm run typecheck
       - run: npm run build
+      # Uygulama ağ ve key olmadan açılıp bütün bilgi kartlarını yükleyebiliyor mu?
+      - name: Smoke test
+        if: runner.os != 'Linux'
+        run: npx electron . --selftest --smoke
+      - name: Smoke test (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npx electron . --no-sandbox --selftest --smoke
