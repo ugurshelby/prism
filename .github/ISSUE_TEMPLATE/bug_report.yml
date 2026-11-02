@@ -1,0 +1,47 @@
+name: Bug report / Hata bildirimi
+description: Something doesn't work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never paste API keys** in issues, logs or screenshots. / **API key'lerini asla paylaşma.**
+        Security problems: please use [private reporting](https://github.com/ugurshelby/prompter/security/advisories/new).
+  - type: input
+    id: version
+    attributes:
+      label: Prompter version
+      placeholder: "2.0.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux (AppImage)
+        - Linux (.deb)
+        - From source (npm run dev)
+    validations:
+      required: true
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Engine provider
+      options:
+        - Vertex AI
+        - Google AI Studio
+        - Anthropic
+        - OpenAI
+        - xAI
+        - Not configured / not relevant
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Steps to reproduce, what you expected and what you saw. Include the error message if any.
+    validations:
+      required: true

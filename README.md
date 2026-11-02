@@ -1,157 +1,183 @@
+<div align="center">
+
+<img src="resources/icon.png" width="96" alt="Prompter logo" />
+
 # Prompter
 
-Ham promptunu yazarsın; Prompter onu analiz edip hedef model için yeniden yazar. **Claude, OpenAI (ChatGPT / GPT), Gemini ve Grok** ailelerini tanır: uygun modeli ve effort / reasoning / thinking seviyesini önerir, gerekirse birkaç netleştirme sorusu sorar, sonra o model, seviye ve yüzey (kodlama ajanı, sohbet, API) için optimize edilmiş, kopyalanmaya hazır promptu yazar. Windows ve macOS'ta çalışan, her zaman üstte durabilen, küçültülebilen bir masaüstü widget'ı (Electron + React + TypeScript).
+**Write a rough prompt. Get one tuned for the exact model you'll use.**
 
-Prompter iki ayrı model kullanır:
+A desktop widget that rewrites your prompt for **Claude, GPT, Gemini or Grok**: it picks the right model and
+effort level, asks a couple of clarifying questions when needed, and writes a copy-ready prompt for your coding
+agent, chat app or API call. Bring your own API key; nothing runs on someone else's server.
 
-| Rol | Ne | Nasıl seçilir |
-|---|---|---|
-| **Motor** | Analizi, öneriyi ve yazımı yapan model; Prompter'ın kendisi çağırır | Ayarlar → Prompter motoru. Key'ini eklediğin sağlayıcılardan biri (Vertex AI, Anthropic, Google AI Studio, OpenAI, xAI). |
-| **Hedef** | Promptun yazıldığı model; promptu kopyalayıp oraya sen verirsin | Ana ekranda ekosistem (✦ Çapraz / Claude / GPT / Gemini / Grok), yüzey ve "Önerilsin / Ben seçeyim". |
+[![CI](https://github.com/ugurshelby/prompter/actions/workflows/ci.yml/badge.svg)](https://github.com/ugurshelby/prompter/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/ugurshelby/prompter?label=download)](https://github.com/ugurshelby/prompter/releases/latest)
+[![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-informational)](#install)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-## Kurulum (kaynaktan)
+**English** · [Türkçe](README.tr.md)
 
-Gereksinimler: Node.js 22+, Git ve en az bir sağlayıcının API key'i.
+<img src="docs/screenshots/compose.png" width="270" alt="Write a rough prompt and pick the ecosystem" />
+<img src="docs/screenshots/review.png" width="270" alt="Model and effort recommendation" />
+<img src="docs/screenshots/result.png" width="270" alt="Optimized prompt ready to copy" />
+
+</div>
+
+## Features
+
+- **Four model families, one place.** Claude (Fable, Opus, Sonnet, Haiku), OpenAI (GPT-6 Astra, GPT-6.1 Sol/Terra,
+  GPT-6 Luna), Gemini (4 Argon, 3.8 Flash, 3.5 Flash-Lite) and Grok (4.7, 4.3, Build). Rules come from each vendor's
+  official prompting guide, distilled into editable [knowledge cards](knowledge/).
+- **Model and effort recommendation.** Prompter reads your task and suggests the model and level (Claude `effort`,
+  OpenAI/Grok `reasoning effort`, Gemini `thinking level`) with its reasoning and a confidence score. Choose
+  "✦ Cross" to compare across every family you have access to.
+- **Written for where you'll paste it.** Coding agents (Claude Code, Codex, Antigravity, Grok Build), chat apps
+  or the API. The result also tells you how to set that model and level in the target tool.
+- **Your keys, verified.** Add a key for Vertex AI, Google AI Studio, Anthropic, OpenAI or xAI. Prompter checks it
+  right away and lists the models it can reach.
+- **Stays out of the way.** Always-on-top panel, global hotkey, collapsible orb, tray menu, a notification when a
+  prompt is ready, optional start at login, and a searchable history.
+- **Private by design.** Keys are encrypted by your OS and never leave the main process. No telemetry, no backend.
+
+> The interface is in Turkish today; generated prompts are written in English. Translations are welcome.
+
+## Install
+
+Download the installer for your system from the
+**[latest release](https://github.com/ugurshelby/prompter/releases/latest)**:
+
+| System | File |
+|---|---|
+| Windows 10/11 (x64) | `Prompter-Setup-<version>-x64.exe` |
+| macOS, Apple Silicon (M1 and later) | `Prompter-<version>-mac-arm64.dmg` |
+| macOS, Intel | `Prompter-<version>-mac-x64.dmg` |
+| Linux (x64) | `Prompter-<version>-linux-x86_64.AppImage` or `Prompter-<version>-linux-amd64.deb` |
+
+The builds are open source but not signed with a paid developer certificate, so the first launch needs one extra step:
+
+- **Windows:** SmartScreen shows "Windows protected your PC" → **More info → Run anyway**.
+- **macOS:** open the `.dmg`, drag Prompter to Applications, open it once, then go to
+  **System Settings → Privacy & Security → Open Anyway**. (Alternative: `xattr -dr com.apple.quarantine /Applications/Prompter.app`.)
+- **Linux AppImage:** `chmod +x Prompter-*.AppImage && ./Prompter-*.AppImage`.
+  **Debian/Ubuntu:** `sudo apt install ./Prompter-*-linux-amd64.deb`.
+  Key storage needs a keyring (GNOME Keyring or KWallet), which most desktops already have.
+
+Each release includes `SHA256SUMS.txt` so you can verify your download. Installing a new version over an old one keeps
+your settings, keys and history.
+
+### Build from source
+
+Requirements: [Node.js 22+](https://nodejs.org) and Git.
 
 ```bash
-git clone <repo-url> prompter
+git clone https://github.com/ugurshelby/prompter.git
 cd prompter
-npm install
-npm run setup
+npm ci
+npm run setup     # checks Node, downloads Electron if needed, creates .env from .env.example
 npm run dev
 ```
 
-`npm run setup` Node sürümünü denetler, Electron ikilisi inmemişse indirir ve `.env.example` dosyasını `.env` olarak kopyalar (var olan `.env`'e dokunmaz). İlk açılışta hiç sağlayıcı tanımlı değilse Prompter bir kurulum ekranı gösterir: key'i oradan girip doğrulayabilirsin.
+To build an installer yourself: `npm run dist:win`, `npm run dist:mac` or `npm run dist:linux` (output in `release/`).
 
-## Sağlayıcılar ve key'ler
+## Quick start
 
-Yalnızca kullandığın sağlayıcıyı doldurman yeterli. Key'i ya Ayarlar → Sağlayıcılar'dan gir ya da `.env` dosyasına yaz.
+1. **Add a key.** On first launch Prompter shows a setup screen. Paste an API key from any provider below and press
+   **Kaydet** (Save). It is verified immediately; the green status means the engine is ready. Use the **Key al**
+   link next to each provider to open its key page.
+2. **Mark the apps you use.** In the same screen, tick the ecosystems you use through a subscription app
+   (for example Claude Code or ChatGPT) so cross-family recommendations include them.
+3. **Write, review, copy.** Type your rough prompt, press `Ctrl+Enter`, check the recommendation, answer any
+   questions, and copy the final prompt.
 
-| Sağlayıcı | `.env` değişkeni | Key nereden | Erişilen hedef aile |
+## Providers and API keys
+
+Prompter uses one model as its **engine** (it analyzes and writes) and writes for a **target** model (the one you
+paste the prompt into). The engine runs on whichever provider you add a key for; one key is enough.
+
+| Provider | Get a key | Engine models | Unlocks targets |
 |---|---|---|---|
-| Vertex AI | `VERTEX_API_KEY`, `VERTEX_PROJECT_ID`, `VERTEX_LOCATION=global` | Google Cloud Console → APIs & Services → Credentials (Vertex AI API etkin olmalı) | Gemini |
-| Anthropic | `ANTHROPIC_API_KEY` | platform.claude.com → API keys | Claude |
-| Google AI Studio | `GEMINI_API_KEY` | aistudio.google.com/apikey | Gemini |
-| OpenAI | `OPENAI_API_KEY` | platform.openai.com/api-keys | OpenAI (GPT) |
-| xAI | `XAI_API_KEY` | console.x.ai | Grok |
+| Google AI Studio | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | Gemini | Gemini |
+| Vertex AI | [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials) | Gemini | Gemini |
+| Anthropic | [platform.claude.com/settings/keys](https://platform.claude.com/settings/keys) | Claude | Claude |
+| OpenAI | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | GPT | GPT |
+| xAI | [console.x.ai](https://console.x.ai) | Grok | Grok |
 
-- **Vertex AI** için proje ID'si de gerekir (Ayarlar'daki proje alanı ya da `VERTEX_PROJECT_ID`). Konum `global` kalmalı: `gemini-4-argon` bölgesel uç noktalarda 404 verir. Ayrıntılar: [docs/vertex-ai-gemini-kurulumu.md](docs/vertex-ai-gemini-kurulumu.md).
-- **Öncelik sırası:** Ayarlar'dan kaydedilen key → ortam değişkeni → `.env`. Geliştirmede proje kökündeki `.env`, kurulu sürümde kullanıcı klasöründeki `.env` okunur (Windows: `%APPDATA%\Prompter\.env`, macOS: `~/Library/Application Support/Prompter/.env`).
+- **Verification:** saving a key sends a lightweight request to the provider and lists the text models that key can
+  use. Invalid keys are rejected with a clear message. **Doğrula ve modelleri getir** (Verify) repeats the check.
+- **Engine choice:** Settings → *Prompter motoru*. "Auto" prefers Vertex AI when configured, otherwise the first
+  verified provider. Analysis and writing models can be set separately; **Motoru test et** sends a short test request.
+- **Vertex AI** also needs your Google Cloud project ID (Settings or `VERTEX_PROJECT_ID`) with the Vertex AI API
+  enabled. Keep the location `global`, since some models (such as `gemini-4-argon`) are not served from regional endpoints.
+- **Without the UI:** keys can also come from environment variables or a `.env` file (see [`.env.example`](.env.example)).
+  Order: key saved in Settings → environment variable → `.env`. The installed app reads `.env` from its user data
+  folder: `%APPDATA%\Prompter` (Windows), `~/Library/Application Support/Prompter` (macOS), `~/.config/Prompter` (Linux).
 
-### Key güvenliği
+## How it works
 
-- Arayüzden girilen key, işletim sisteminin şifrelemesiyle (Windows DPAPI, macOS Keychain; Electron `safeStorage`) kullanıcı klasöründe `<sağlayıcı>.key` dosyasına yazılır. Proje klasörüne yazılmaz.
-- Key yalnızca ana süreçte kullanılır: arayüze hiç gönderilmez (yalnızca `••••ab12` biçiminde maskeli hâli), derlenen arayüz paketine girmez, hata mesajlarından ve loglardan ayıklanır.
-- `.env`, `.env.*` ve `*.key` git dışında tutulur (`.gitignore`). `.env.example` yalnızca boş şablondur.
-- OpenAI ve xAI istekleri `store: false` ile gönderilir.
+```
+your rough prompt ──► engine (your key) ──► analysis: task, best model + level, questions
+                                       └──► rewrite with the target family's knowledge cards ──► copy
+```
 
-### Model keşfi
+- **Ecosystem:** pick Claude, GPT, Gemini or Grok to stay within one family, or **✦ Cross** to let the analysis choose
+  among the models you can use (verified keys plus apps you marked).
+- **Surface:** *Kodlama ajanı* (coding agent), *Sohbet* (chat) or *API*. The prompt's structure and the setup tips
+  change accordingly.
+- **"Önerilsin / Ben seçeyim":** take the recommendation, or choose the model and level yourself; only the levels the
+  model supports are shown.
 
-Bir key kaydedildiğinde ya da "Doğrula ve modelleri getir"e basıldığında Prompter bağlantıyı dener ve o key'in eriştiği metin modellerini listeler (Anthropic, OpenAI, xAI ve AI Studio'da model listesi uç noktası; Vertex'te API key ile liste çalışmadığı için bilinen modeller tek tek kısa bir istekle yoklanır). Sonuç kullanıcı klasöründeki `models.json` dosyasında saklanır ve:
+## Everyday use
 
-- Ayarlar'da motorun analiz / yazım modeli için seçenek olarak gösterilir,
-- çapraz önerinin aday havuzunu belirler (aşağıya bak).
+- `Ctrl+Shift+Space` (`Cmd+Shift+Space` on macOS) shows or hides the panel; change it in Settings.
+- Closing the window keeps Prompter in the tray (menu bar on macOS). The tray menu opens history, settings and shows
+  the active engine.
+- The pin keeps the panel on top; the collapse button turns it into a small draggable orb.
+- History keeps your last 200 prompts on this computer, tagged with family, model, level and engine; search and filter
+  by family, copy again or rewrite.
 
-Key'i olup hiç doğrulanmamış sağlayıcılar uygulama açılışında bir kez arka planda doğrulanır.
+## Security and privacy
 
-### Motor seçimi
+- Keys are encrypted with the OS secure storage (Windows DPAPI, macOS Keychain, Linux Secret Service/KWallet), stored
+  only in your user data folder, and never sent to the interface or written to logs. Linux without a keyring:
+  Prompter refuses to save keys rather than storing them weakly.
+- Prompts go only to the engine provider you chose, over HTTPS. OpenAI and xAI requests are sent with `store: false`.
+  No telemetry, no other servers.
+- The app is hardened: sandboxed renderer, strict CSP, blocked navigation and permissions, Electron fuses in packaged
+  builds. CI actions are pinned, and the repository uses secret scanning with push protection, Dependabot and CodeQL.
 
-Ayarlar → Prompter motoru → Sağlayıcı: "Otomatik" iken Vertex tanımlıysa Vertex (Gemini 4 Argon), değilse doğrulanmış ilk sağlayıcı kullanılır. Her sağlayıcı için analiz ve yazım modelleri ayrı seçilebilir; varsayılanlar:
+See [SECURITY.md](SECURITY.md) for details and how to report a vulnerability privately.
 
-| Sağlayıcı | Analiz | Yazım |
-|---|---|---|
-| Vertex AI | `gemini-4-argon` | `gemini-4-argon` |
-| Anthropic | `claude-sonnet-5-5` | `claude-opus-5-5` |
-| Google AI Studio | `gemini-3.8-flash` | `gemini-4-argon` |
-| OpenAI | `gpt-6.1-sol` | `gpt-6-astra` |
-| xAI | `grok-4.7` | `grok-4.7` |
+## Troubleshooting
 
-Varsayılan model key'in erişiminde yoksa keşfedilen listeden en uygun olan seçilir. "Motoru test et" seçili motora kısa bir istek gönderir.
-
-## Hedef ekosistemler ve öneri
-
-- **Claude / GPT / Gemini / Grok:** Öneri yalnızca o ailenin modelleri arasından yapılır. Elle seçimde modeller ve o modelin desteklediği seviyeler gösterilir (Claude `effort`, Gemini `thinking level`, OpenAI ve Grok `reasoning effort`; Grok Build'de seviye sabittir).
-- **✦ Çapraz:** Aday havuzu, doğrulanmış key'lerin eriştiği hedef modeller ile Ayarlar → Hedef ekosistem'de "key olmadan kullanıyorum" diye işaretlediğin uygulamalardan (ör. Claude aboneliğiyle Claude Code, ChatGPT uygulaması) oluşur. Havuz boşsa tüm katalog kullanılır.
-- **Yüzey:** Kodlama ajanı (Claude Code, Codex, Antigravity, Grok Build), sohbet (claude.ai, ChatGPT, Gemini, Grok) ya da API. Sonuç ekranında hedef araçta modeli ve seviyeyi nasıl ayarlayacağın yazar.
-
-Prompt her zaman İngilizce yazılır; "Modelin sana yanıt dili" ayarı içine bir dil satırı ekler.
-
-## Kullanım
-
-- `Ctrl+Shift+Space` (macOS'ta `Cmd+Shift+Space`) pencereyi gösterir ya da gizler; kısayol Ayarlar'dan değişir.
-- Kapat düğmesi pencereyi tray'e gizler. Tray menüsünde göster/gizle, küçült, Geçmiş, Ayarlar, aktif motor ve çıkış vardır. Pencere gizliyken biten yazım için sistem bildirimi gösterilir (Ayarlar → Pencere).
-- "Oturum açılışında başlat" açıksa Prompter oturum açılışında tray'de gizli başlar.
-- Başlıktaki raptiye her zaman üstte kalmayı açıp kapatır; küçült düğmesi paneli sürüklenebilir bir küreye çevirir.
-- Geçmiş (saat simgesi): her analiz bir kayıt açar, o analizden yapılan her yazım kayda eklenir. Kayıtlar hedef aile, model, effort, yüzey ve yazımı yapan motorla etiketlenir; aileye göre süzülebilir ve aranabilir. En fazla 200 kayıt kullanıcı klasöründeki `history.json` dosyasında tutulur.
-
-## Komutlar
-
-| Komut | Ne yapar |
+| Symptom | Fix |
 |---|---|
-| `npm run setup` | İlk kurulum: Node sürümü, Electron ikilisi, `.env` şablonu |
-| `npm run dev` | Geliştirme modu (sıcak yenileme) |
-| `npm run selftest -- "prompt"` | Arayüz açmadan analiz + yazımı gerçek sağlayıcıya karşı çalıştırır. Seçenekler: `--family=auto\|claude\|openai\|gemini\|grok`, `--surface=agent\|chat\|api`, `--engine=vertex\|anthropic\|gemini\|openai\|xai` |
-| `npm run selftest -- --discover` | Tanımlı key'leri doğrular, erişilen modelleri, hedef erişimini ve motoru listeler |
-| `npm run typecheck` | Tip kontrolü |
-| `npm run build` | Derleme (`out/`) |
-| `npm run mock` | Arayüzü Electron olmadan, sahte verilerle tarayıcıda açar (`#setup`: ilk kurulum ekranı) |
-| `npm run icons` | `resources/` altındaki ikonları yeniden üretir |
-| `npm run dist:win` / `dist:mac` | Kurulum paketi (`release/`) |
+| `401` / "key rejected" | Wrong key or the API isn't enabled for it. Re-enter the key in Settings and press Verify. |
+| Vertex `404` | Location must be `global`; check the project ID and that the Vertex AI API is enabled. |
+| `429` | Rate limit or quota. Prompter retries twice, then shows the error. |
+| Engine "yapılandırılmamış" (not configured) | Add at least one key; Vertex also needs a project ID. |
+| Linux: "Sistem anahtarlığı bulunamadı" | Install/unlock GNOME Keyring or KWallet, or put the key in `~/.config/Prompter/.env`. |
+| `npm run dev` can't find Electron | Run `npm run setup`. |
 
-Gerçek ayar ve geçmişine dokunmadan denemek için ayrı bir kullanıcı klasörü ver:
+## Development
 
-```bash
-PROMPTER_USER_DATA=./tmp-userdata npm run dev
-```
-
-## Normal uygulama olarak kurma
-
-```bash
-npm run dist:win
-```
-
-`release/Prompter Setup <sürüm>.exe` dosyasını çalıştır (macOS'ta `npm run dist:mac` → `.dmg`). Paket imzasızdır: Windows SmartScreen ve macOS Gatekeeper ilk açılışta uyarır (macOS'ta sağ tık → Aç). Kurulum eskisinin üzerine yazar; ayarlar, key'ler ve geçmiş kullanıcı klasöründe kalır. Bilgi kartları kurulum klasörüne kopyalanır; `knowledge/` altındaki değişiklikler yeniden paketleyene kadar kurulu sürüme yansımaz.
-
-v1'den geçişte ayarlar otomatik taşınır (varsayılan ekosistem Claude kalır) ve eski `settings.json` / `history.json` bir kez `*.v1.json` olarak yedeklenir.
-
-## Bilgi tabanı (`knowledge/`)
-
-Motorun system talimatına giren kartlar, her istekte diskten okunur (düzenlediğin kart bir sonraki istekte geçerli olur):
-
-```
-knowledge/
-  vision.md            Prompter'ın iyi prompt anlayışı (tüm aileler)
-  routing.md           Çapraz öneride aileler arası seçim
-  <aile>/              claude, openai, gemini, grok
-    models.md          Güncel modeller, fiyat, seviyeler, model seçimi
-    effort.md          Seviyeler ve promptun seviyeye göre değişimi
-    principles.md      Ailenin resmî prompt rehberinden damıtılmış ilkeler
-    surfaces/          agent.md, chat.md, api.md
-    targets/<model>.md Modele özgü davranışlar ve işe yarayan kalıplar
-```
-
-Yeni bir hedef model eklemek için: `src/shared/catalog.ts` içinde `MODEL_IDS` ve `MODELS`'e ekle, `knowledge/<aile>/targets/<model-id>.md` kartını yaz ve gerekirse `models.md` tablosunu güncelle.
-
-## Yapı
-
-- `src/main/` — Electron ana süreci: pencere, tray, kısayol, bildirimler (`index.ts`, `window.ts`), ayarlar (`config.ts`), key / keşif / motor seçimi (`providers.ts`), sağlayıcı istemcileri (`llm/`), motor (`engine/analyze.ts`, `engine/generate.ts`), geçmiş (`history.ts`)
-- `src/preload/` — arayüze açılan güvenli köprü
-- `src/renderer/` — React arayüzü
-- `src/shared/` — model kataloğu, aileler, sağlayıcılar, tipler
-- `knowledge/` — bilgi kartları
-- `docs/` — kaynak dokümanlar (Claude dokümanlarının yerel kopyası, Vertex kurulumu)
-
-## Sorun giderme
-
-| Belirti | Çözüm |
+| Command | What it does |
 |---|---|
-| `npm run dev` Electron bulamıyor | `npm run setup` (npm script'leri kapalıysa Electron ikilisi inmemiş olabilir) |
-| Vertex `404` | `VERTEX_LOCATION=global` olmalı; proje ID'sini ve model ID'sini kontrol et |
-| `401` / `403` | Key yanlış ya da ilgili API etkin değil; Ayarlar'dan key'i yenile ve "Doğrula"ya bas |
-| `429` | Kota doldu; Prompter iki kez artan beklemeyle tekrar dener, sonra hatayı gösterir |
-| "Bu sistemde güvenli depolama kullanılamıyor" | İşletim sisteminin anahtar deposu yok (bazı Linux masaüstleri); key'i `.env` ile ver |
-| Motor "yapılandırılmamış" | En az bir sağlayıcıya key ekle; Vertex için proje ID'si de gerekir |
+| `npm run dev` | Run with hot reload |
+| `npm run mock` | Open the interface in a browser with fake data (`#setup` shows the first-run screen) |
+| `npm run typecheck` / `npm run build` | Type-check / build into `out/` |
+| `npm run selftest -- "prompt"` | One real analyze → write round trip without the UI (`--family`, `--surface`, `--engine`) |
+| `npm run selftest -- --discover` | Verify configured keys and list reachable models |
+| `npx electron . --selftest --smoke` | Offline check that the app boots and loads every knowledge card |
+| `npm run dist:win` / `dist:mac` / `dist:linux` | Build installers into `release/` |
 
-## Veri ve gizlilik
+Use `PROMPTER_USER_DATA=./tmp-userdata npm run dev` to keep your real settings and history untouched.
 
-Promptların yalnızca seçtiğin motor sağlayıcısına gönderilir. Geçmiş, ayarlar ve keşfedilen model listesi yalnızca bu bilgisayarda, kullanıcı klasöründe tutulur.
+Prompt quality lives in [`knowledge/`](knowledge/): per family `principles.md`, `effort.md`, `models.md`, one card
+per surface and one per target model. Cards are re-read on every request. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Built with Electron, React and TypeScript.
+
+## License
+
+[MIT](LICENSE). Model names are trademarks of their respective owners; Prompter is not affiliated with Anthropic,
+Google, OpenAI or xAI.
