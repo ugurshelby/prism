@@ -1,4 +1,4 @@
-// Gemini istemcisi: Vertex AI (bkz. docs/vertex-ai-gemini-kurulumu.md) ve Google AI Studio (Gemini API).
+// Gemini istemcisi: Vertex AI (proje yolu, global konum) ve Google AI Studio (Gemini API).
 // İkisi aynı generateContent gövdesini kullanır; yalnızca uç nokta ve key türü farklı.
 
 import type { DiscoveredModel, Usage } from '@shared/types'

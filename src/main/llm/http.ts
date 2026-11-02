@@ -23,7 +23,9 @@ function errorMessage(data: any): string | undefined {
 
 function friendly(label: string, status: number, message: string): string {
   if (status === 404) return `Model bulunamadı ya da erişim yok (404). Ayarlardaki model ID'sini kontrol et. ${message}`
-  if (status === 401 || status === 403) return `${label} API key'i reddedildi (${status}). Ayarlardan key'i kontrol et.`
+  // Google AI Studio ve xAI geçersiz key'e 401 yerine 400 döndürür.
+  const badKey = status === 401 || status === 403 || (status === 400 && /api key/i.test(message))
+  if (badKey) return `${label} API key'i reddedildi (${status}). Ayarlardan key'i kontrol et.`
   if (status === 429) return `${label} kotası doldu (429). Biraz sonra tekrar dene.`
   return `${label} ${status}: ${message}`
 }

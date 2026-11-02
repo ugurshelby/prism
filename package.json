@@ -3,8 +3,30 @@
   "productName": "Prompter",
   "version": "2.0.0",
   "private": true,
-  "description": "Ham promptu analiz edip Claude, GPT, Gemini ya da Grok için doğru model ve effort seviyesine göre optimize eden masaüstü widget'ı.",
-  "author": "ts",
+  "description": "Desktop widget that turns rough prompts into model-specific prompts for Claude, GPT, Gemini and Grok, with your own API keys.",
+  "author": {
+    "name": "ugurshelby",
+    "email": "222421934+ugurshelby@users.noreply.github.com"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/ugurshelby/prompter#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ugurshelby/prompter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ugurshelby/prompter/issues"
+  },
+  "keywords": [
+    "prompt-engineering",
+    "claude",
+    "gpt",
+    "gemini",
+    "grok",
+    "llm",
+    "electron",
+    "desktop"
+  ],
   "main": "out/main/index.js",
   "engines": {
     "node": ">=22"
@@ -19,7 +41,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "icons": "node scripts/make-icons.mjs",
     "dist:win": "electron-vite build && electron-builder --win",
-    "dist:mac": "electron-vite build && electron-builder --mac"
+    "dist:mac": "electron-vite build && electron-builder --mac",
+    "dist:linux": "electron-vite build && electron-builder --linux"
   },
   "devDependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",

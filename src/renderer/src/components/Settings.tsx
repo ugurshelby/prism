@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
-import { ChevronDown, Cpu, FolderOpen, KeyRound, Plug, Power, RefreshCw, X } from 'lucide-react'
+import { ChevronDown, Cpu, ExternalLink, FolderOpen, KeyRound, Plug, Power, RefreshCw, X } from 'lucide-react'
 import {
   FAMILIES,
   FAMILY_INFO,
@@ -70,6 +70,12 @@ export function ProviderCard({
       <div className="provider-head">
         <b>{info.label}</b>
         <span className="provider-family">{FAMILY_INFO[info.family].name}</span>
+        {/* Ana süreç https bağlantılarını sistem tarayıcısında açar. */}
+        {!view.key.present && (
+          <a className="link" href={info.keyUrl} target="_blank" rel="noreferrer">
+            Key al <ExternalLink size={11} />
+          </a>
+        )}
         <span className="pill-status" style={{ marginLeft: 'auto' }}>
           <i style={{ background: st.color, boxShadow: `0 0 8px ${st.color}` }} />
           {st.text}
