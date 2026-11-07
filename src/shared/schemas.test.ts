@@ -14,7 +14,7 @@ import {
 } from './schemas'
 
 // Gerçek key biçimine benzemeyen sahte değer: gizli bilgi taramaları test dosyasını işaretlemesin.
-const KEY = 'test-key-abcdefghijklmnopqrstuvwxyz0123456789'
+const KEY = 'Fake_Test_Value_For_Schemas_0123456789'
 
 describe('ProviderIdSchema', () => {
   it('bilinen sağlayıcıları kabul eder', () => {

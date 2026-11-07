@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { assertProviderUrl, readJson, redact, send } from './http'
 import { LlmError } from './types'
 
-const KEY = 'test-key-0123456789abcdefghijklmnop'
+const KEY = 'Fake_Test_Value_For_Http_0123456789'
 
 describe('assertProviderUrl', () => {
   it('izinli sağlayıcı sunucularını kabul eder', () => {
