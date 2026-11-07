@@ -1,7 +1,7 @@
 {
   "name": "prism",
   "productName": "Prism",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "description": "Desktop widget that turns rough prompts into model-specific prompts for Claude, GPT, Gemini and Grok, with your own API keys.",
   "author": {
