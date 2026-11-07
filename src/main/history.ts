@@ -1,43 +1,145 @@
-// Geçmiş: her analiz bir girdi açar, o analizden yapılan her yazım girdiye eklenir.
-// userData/history.json içinde, en yeni en üstte, en fazla LIMIT girdi.
+// Geçmiş: her analiz bir girdi açar, o analizden yapılan her yazım girdiye eklenir. En yeni en üstte, en fazla LIMIT girdi.
+// Promptlar kişisel ya da gizli bilgi içerebilir: geçmiş userData/history.enc içinde işletim sisteminin anahtarlığıyla
+// şifreli durur. Anahtarlık yoksa diske hiç yazılmaz, yalnızca bu oturumda bellekte tutulur.
 
-import { app } from 'electron'
 import { randomUUID } from 'node:crypto'
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
-import type { Analysis, AnalyzeRequest, GenerateRequest, GenerateResult, HistoryEntry } from '@shared/types'
+import { copyFileSync, existsSync, readFileSync, readdirSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { HistoryEntrySchema } from '@shared/schemas'
+import type { Analysis, AnalyzeRequest, GenerateRequest, GenerateResult, HistoryEntry, HistoryList, HistoryStorage } from '@shared/types'
+import { userFile, writeFileAtomic } from './config'
+import { logWarn } from './log'
+import { seal, unseal, vaultState, wipeFile } from './vault'
 
 const LIMIT = 200
-const file = () => join(app.getPath('userData'), 'history.json')
 
 let entries: HistoryEntry[] | null = null
+let storage: HistoryStorage = 'memory'
+// Silinen kayıtlar: o sırada süren bir yazım bitince girdiyi yeniden açmasın.
+const deleted = new Set<string>()
+
+/** Kayıtlar tek tek doğrulanır; bozuk bir kayıt geri kalan geçmişi düşürmesin. complete: hiçbir kayıt atlanmadı. */
+function parseEntries(raw: unknown, source: string): { entries: HistoryEntry[]; complete: boolean } {
+  if (!Array.isArray(raw)) {
+    logWarn('history', `${source} bir liste değil, yok sayıldı`)
+    return { entries: [], complete: false }
+  }
+  const valid: HistoryEntry[] = []
+  let dropped = 0
+  for (const item of raw) {
+    const parsed = HistoryEntrySchema.safeParse(item)
+    if (parsed.success) valid.push(parsed.data)
+    else dropped++
+  }
+  if (dropped) logWarn('history', `${source} içindeki ${dropped} kayıt beklenen biçimde değil, atlandı`)
+  return { entries: valid, complete: dropped === 0 }
+}
+
+/** Şifreli geçmiş açılamazsa null. Dosyaya dokunulmaz: anahtarlık geçici olarak kilitli olabilir (ör. oturum açılışı). */
+function readEncrypted(): HistoryEntry[] | null {
+  const path = userFile('history.enc')
+  let parsed: { entries: HistoryEntry[]; complete: boolean }
+  try {
+    parsed = parseEntries(JSON.parse(unseal(readFileSync(path))) as unknown, 'history.enc')
+  } catch (e) {
+    logWarn('history', 'şifreli geçmiş açılamadı; dosya yerinde bırakıldı, bu oturumda geçmiş yalnızca bellekte', e)
+    return null
+  }
+  // Atlanan kayıtlar bir sonraki yazımda kaybolmasın: dosyanın şifreli hâli olduğu gibi yedeklenir.
+  if (!parsed.complete) {
+    const backup = `${path}.${Date.now()}.bak`
+    copyFileSync(path, backup)
+    logWarn('history', 'atlanan kayıtlar için şifreli geçmişin yedeği alındı')
+  }
+  return parsed.entries
+}
+
+const LEGACY_FILES = ['history.json', 'history.v1.json', 'history.json.tmp'] as const
+
+/**
+ * Eski sürümlerin düz metin geçmişi bir kez okunur. Geçerli kayıtlar şifreli geçmişe taşınır; dosyaların ham
+ * içeriği de (okunamayan ya da biçimi tutmayan kayıtlar kaybolmasın diye) şifreli bir arşive alınır. Ardından
+ * düz metin kopyalar sıfırlarla ezilip silinir; diskte düz metin geçmiş kalmaz.
+ */
+function migrateLegacy(): HistoryEntry[] {
+  const present = LEGACY_FILES.filter((name) => existsSync(userFile(name)))
+  if (!present.length) return []
+  const raw: Record<string, string> = {}
+  for (const name of present) raw[name] = readFileSync(userFile(name), 'utf8')
+  let migrated: HistoryEntry[] = []
+  if (raw['history.json'] !== undefined) {
+    try {
+      migrated = parseEntries(JSON.parse(raw['history.json']) as unknown, 'history.json').entries
+    } catch (e) {
+      logWarn('history', 'düz metin geçmiş ayrıştırılamadı; ham hâli şifreli arşive alınıyor', e)
+    }
+  }
+  archiveLegacy(raw)
+  for (const name of present) wipeFile(userFile(name))
+  return migrated
+}
+
+/** Eski dosyaların ham içeriği history.legacy.enc içinde şifreli durur; önceki arşiv varsa üzerine eklenir. */
+function archiveLegacy(raw: Record<string, string>) {
+  const path = userFile('history.legacy.enc')
+  const archive: Record<string, string> = {}
+  if (existsSync(path)) {
+    try {
+      const parsed: unknown = JSON.parse(unseal(readFileSync(path)))
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        for (const [k, v] of Object.entries(parsed)) if (typeof v === 'string') archive[k] = v
+      }
+    } catch (e) {
+      // Önceki arşiv açılamıyor (anahtarlık değişmiş olabilir): şifreli hâliyle kenara alınır, yeni arşiv başlar.
+      logWarn('history', 'eski geçmiş arşivi açılamadı, yedeklenip yenisi başlatıldı', e)
+      copyFileSync(path, `${path}.${Date.now()}.bak`)
+    }
+  }
+  const stamp = new Date().toISOString()
+  for (const [name, text] of Object.entries(raw)) archive[`${stamp} ${name}`] = text
+  writeFileAtomic('history.legacy.enc', seal(JSON.stringify(archive)))
+}
 
 function load(): HistoryEntry[] {
   if (entries) return entries
-  try {
-    // v1 kayıtlarında kodlama ajanı yüzeyi 'claude-code' idi.
-    entries = (JSON.parse(readFileSync(file(), 'utf8')) as HistoryEntry[]).map((e) =>
-      (e.surface as string) === 'claude-code' ? { ...e, surface: 'agent' } : e
-    )
-  } catch {
-    entries = []
+  const vault = vaultState()
+  if (!vault.ok) {
+    logWarn('history', `${vault.reason} Geçmiş yalnızca bu oturumda tutulacak`)
+    storage = 'memory'
+    return (entries = [])
   }
-  return entries!
+  const current = existsSync(userFile('history.enc')) ? readEncrypted() : []
+  if (current === null) {
+    // Açılamayan dosyanın üzerine yazılmasın diye bu oturum bellek kipinde sürer.
+    storage = 'memory'
+    return (entries = [])
+  }
+  storage = 'encrypted'
+  entries = current
+  let legacy: HistoryEntry[] = []
+  try {
+    legacy = migrateLegacy()
+  } catch (e) {
+    // Arşiv yazılamadıysa eski dosyalar silinmeden yerinde kalır; göç bir sonraki açılışta yeniden denenir.
+    logWarn('history', 'eski geçmiş taşınamadı, dosyalar yerinde bırakıldı', e)
+  }
+  if (legacy.length) {
+    const known = new Set(current.map((e) => e.id))
+    entries.push(...legacy.filter((e) => !known.has(e.id)))
+    persist()
+  }
+  return entries
 }
 
 function persist() {
   const list = load()
   list.sort((a, b) => b.updatedAt - a.updatedAt)
   list.splice(LIMIT)
-  mkdirSync(app.getPath('userData'), { recursive: true })
-  // Yarım yazılmış dosya kalmasın diye önce geçici dosyaya yaz.
-  const tmp = `${file()}.tmp`
-  writeFileSync(tmp, JSON.stringify(list))
-  renameSync(tmp, file())
+  if (storage === 'encrypted') writeFileAtomic('history.enc', seal(JSON.stringify(list)))
 }
 
-export function listHistory(): HistoryEntry[] {
-  return [...load()].sort((a, b) => b.updatedAt - a.updatedAt)
+export function listHistory(): HistoryList {
+  return { entries: [...load()].sort((a, b) => b.updatedAt - a.updatedAt), storage }
 }
 
 export function recordAnalysis(req: AnalyzeRequest, analysis: Analysis): string {
@@ -60,11 +162,13 @@ export function recordAnalysis(req: AnalyzeRequest, analysis: Analysis): string 
 
 export function recordOutput(req: GenerateRequest, result: GenerateResult) {
   const now = Date.now()
-  let entry = req.historyId ? load().find((e) => e.id === req.historyId) : undefined
+  if (req.historyId && deleted.has(req.historyId)) return
+  // Arayüzün verdiği kimliğe yalnızca aynı promptun girdisiyse güvenilir; başka bir kaydın üzerine yazılmaz.
+  let entry = req.historyId ? load().find((e) => e.id === req.historyId && e.prompt === req.prompt) : undefined
   if (!entry) {
-    // Analizi silinmiş ya da hiç kaydedilmemiş bir yazım: kendi girdisini açar.
+    // Analizi silinmiş, hiç kaydedilmemiş ya da eşleşmeyen bir yazım: kendi girdisini yeni bir kimlikle açar.
     entry = {
-      id: req.historyId ?? randomUUID(),
+      id: randomUUID(),
       createdAt: now,
       updatedAt: now,
       prompt: req.prompt,
@@ -90,11 +194,20 @@ export function recordOutput(req: GenerateRequest, result: GenerateResult) {
 }
 
 export function deleteHistory(id: string) {
+  deleted.add(id)
   entries = load().filter((e) => e.id !== id)
   persist()
 }
 
+/** "Geçmişi temizle" eski sürümlerden taşınan arşivi ve şifreli yedekleri de siler; diskte prompt kalmaz. */
 export function clearHistory() {
+  for (const e of load()) deleted.add(e.id)
   entries = []
   persist()
+  const archive = userFile('history.legacy.enc')
+  wipeFile(archive)
+  const dir = dirname(archive)
+  for (const name of readdirSync(dir)) {
+    if (/^history\.(enc|legacy\.enc)\.\d+\.bak$/.test(name)) wipeFile(join(dir, name))
+  }
 }
