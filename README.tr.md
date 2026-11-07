@@ -37,8 +37,9 @@ yapıştırmaya hazır promptu yazar. Kendi API key'inle çalışır; araya baş
   hemen dener ve erişebildiği modelleri listeler.
 - **Yoluna çıkmaz.** Her zaman üstte duran panel, genel kısayol, küçülünce sürüklenebilir küre, tray menüsü, prompt
   hazır olunca bildirim, oturum açılışında başlatma ve aranabilir geçmiş.
-- **Gizlilik baştan düşünüldü.** Key'ler işletim sisteminin şifrelemesiyle saklanır ve ana süreçten çıkmaz.
-  Telemetri yok, sunucu yok.
+- **Gizlilik baştan düşünüldü.** Key'ler ve geçmiş işletim sisteminin şifrelemesiyle saklanır. Telemetri yok, Prism
+  sunucusu yok; promptlar yalnızca seçtiğin sağlayıcıya gider (sağlayıcının ne sakladığı için
+  [Güvenlik ve gizlilik](#güvenlik-ve-gizlilik)).
 
 > Arayüz şimdilik Türkçe; yazılan promptlar İngilizce. Çeviri katkılarına açığız.
 
@@ -48,7 +49,7 @@ Prism'in her büyük sürümünün bir adı var; adlar ışığın prizmadaki yo
 
 | Sürüm | Ad | Ne yapar | Durum |
 |---|---|---|---|
-| 1.x | **Ray** | Tek ışın: yalnızca Claude için prompt, tek motor (Vertex AI); Spectrum'un yanına kurulur | İndirilebilir |
+| 1.x | **Ray** | Tek ışın: yalnızca Claude için prompt, tek motor (Vertex AI); Spectrum'un yanına kurulur | Eski sürüm: indirilebilir, güvenlik güncellemesi almaz |
 | 2.x | **Spectrum** | Işını ayırır: Claude, GPT, Gemini ve Grok, kendi key'lerin, aileler arası öneri | **Güncel** |
 | 3.x | **Lens** | Birden çok modeli tek işe odaklar: çok modelli iş akışları | Planlandı |
 | 4.x | **Iris** | Metnin ötesi: görsel, video, ses ve 3D üretim modelleri | Planlandı |
@@ -77,8 +78,14 @@ kez onay gerekir:
   **Debian/Ubuntu:** `sudo apt install ./Prism-*-linux-amd64.deb`.
   Key saklamak için bir anahtarlık (GNOME Keyring ya da KWallet) gerekir; çoğu masaüstünde zaten vardır.
 
-Her sürümde indirdiğin dosyayı doğrulaman için `SHA256SUMS.txt` bulunur. Yeni sürümü eskisinin üzerine kurmak
-ayarlarını, key'lerini ve geçmişini korur.
+Her sürümde `SHA256SUMS.txt` bulunur. Kurulum dosyasının yanına indirip çalıştırmadan önce doğrula:
+
+- **Windows (PowerShell):** `Get-FileHash .\Prism-Setup-<sürüm>-x64.exe -Algorithm SHA256` ve çıkan değeri `SHA256SUMS.txt` içindeki satırla karşılaştır.
+- **macOS:** `shasum -a 256 -c SHA256SUMS.txt --ignore-missing`
+- **Linux:** `sha256sum -c SHA256SUMS.txt --ignore-missing`
+
+Prism'de otomatik güncelleme yok; kendi kendine kod indirmez. Güncellemek için yeni kurulum dosyasını indirip eskisinin
+üzerine kur; ayarların, key'lerin ve geçmişin korunur.
 
 ### Kaynaktan çalıştırma
 
@@ -119,14 +126,13 @@ yapıştıracağın model). Motor, key'ini eklediğin sağlayıcıda çalışır
 
 - **Doğrulama:** Key kaydedilince sağlayıcıya hafif bir istek gider ve o key'in kullanabildiği metin modelleri
   listelenir. Geçersiz key anlaşılır bir mesajla reddedilir. **Doğrula ve modelleri getir** kontrolü tekrarlar.
-- **Motor seçimi:** Ayarlar → *Prism motoru*. "Otomatik", Vertex AI tanımlıysa onu, değilse doğrulanmış ilk
-  sağlayıcıyı kullanır. Analiz ve yazım modelleri ayrı seçilebilir; **Motoru test et** kısa bir deneme isteği gönderir.
-- **Vertex AI** için Google Cloud proje ID'si de gerekir (Ayarlar ya da `VERTEX_PROJECT_ID`) ve projede Vertex AI
+- **Motor seçimi:** Ayarlar → *Prism motoru*. "Otomatik", doğrulanmış sağlayıcıları (önce Vertex AI) tercih eder. Bir
+  sağlayıcı seçtiysen ve key'i yoksa ya da okunamıyorsa, Prism başka sağlayıcıya geçmez, hata verir. Analiz ve yazım modelleri ayrı seçilebilir; **Motoru test et** kısa bir deneme isteği gönderir.
+- **Vertex AI** için Google Cloud proje ID'si de gerekir (Ayarlar ya da `.env` içinde `VERTEX_PROJECT_ID`) ve projede Vertex AI
   API'si etkin olmalı. Konum `global` kalmalı; bazı modeller (ör. `gemini-4-argon`) bölgesel uç noktalarda yok.
-- **Arayüzsüz:** Key'ler ortam değişkeninden ya da `.env` dosyasından da okunur ([`.env.example`](.env.example)).
-  Sıra: Ayarlar'da kayıtlı key → ortam değişkeni → `.env`. Kurulu uygulama `.env`'i kullanıcı klasöründe arar:
-  `%APPDATA%\Prism` (Windows), `~/Library/Application Support/Prism` (macOS), `~/.config/Prism` (Linux);
-  Prompter'dan güncellediysen aynı yerdeki `Prompter` klasörü.
+- **Kurulu uygulama key'leri yalnızca şifreli depodan okur.** Ortam değişkenleri ve `.env` dosyaları düz metin olduğu
+  için yalnızca geliştirme sürümü (`npm run dev`, `npm run selftest`) bunları okur ([`.env.example`](.env.example)).
+  Eski bir sürümden kullanıcı klasöründe key'li bir `.env` kaldıysa Ayarlar, key'i oradan kaydedip dosyayı silmeni söyler.
 
 ## Nasıl çalışır
 
@@ -147,19 +153,34 @@ ham prompt ──► motor (senin key'in) ──► analiz: görev, en uygun mod
 - Pencereyi kapatmak Prism'i tray'e (macOS'ta menü çubuğuna) gizler. Tray menüsü geçmişi ve ayarları açar, aktif
   motoru gösterir.
 - Raptiye paneli her zaman üstte tutar; küçült düğmesi onu sürüklenebilir küçük bir küreye çevirir.
-- Geçmiş son 200 promptu bu bilgisayarda aile, model, seviye ve motorla etiketli tutar; aileye göre süz, ara, tekrar
-  kopyala ya da yeniden yaz.
+- Geçmiş son 200 promptu bu bilgisayarda şifreli, aile, model, seviye ve motorla etiketli tutar; aileye göre süz, ara,
+  tekrar kopyala ya da yeniden yaz. Ayarlar → *Gizlilik*'ten kapatılabilir.
 
 ## Güvenlik ve gizlilik
 
-- Key'ler işletim sisteminin güvenli deposuyla (Windows DPAPI, macOS Keychain, Linux Secret Service/KWallet)
-  şifrelenip yalnızca kullanıcı klasöründe saklanır; arayüze gönderilmez, loglara yazılmaz. Anahtarlığı olmayan
-  Linux'ta Prism key'i zayıf korumayla saklamak yerine kaydetmeyi reddeder.
-- Promptlar yalnızca seçtiğin motor sağlayıcısına HTTPS ile gider. OpenAI ve xAI istekleri `store: false` ile
-  gönderilir. Telemetri ya da başka bir sunucu yok.
-- Uygulama sertleştirildi: izole (sandbox) arayüz, sıkı CSP, engellenmiş sayfa geçişi ve izinler, paketlenmiş
-  sürümde Electron fuse'ları. CI'daki action'lar sabitlendi; depoda push korumalı gizli bilgi taraması, Dependabot ve
-  CodeQL açık.
+- **Key'ler** işletim sisteminin güvenli deposuyla (Windows DPAPI, macOS Keychain, Linux Secret Service/KWallet)
+  şifrelenip yalnızca kullanıcı klasöründe saklanır. Loglara ve hata mesajlarına yazılmaz; key'leri ayırt edebilmen
+  için arayüze yalnızca son dört karakter gelir. Anahtarlığı olmayan Linux'ta Prism key'i zayıf korumayla saklamak
+  yerine kaydetmeyi reddeder.
+- **Geçmiş** de aynı yolla şifrelenir. Eski sürümlerin düz metin geçmişi ilk açılışta şifreli depoya taşınır, sonra
+  üzerine yazılıp silinir. Anahtarlık yoksa geçmiş yalnızca o oturum boyunca bellekte tutulur. Geçmişi kapatabilir,
+  pencereyi ekran görüntüsünden ve ekran paylaşımından gizleyebilirsin (macOS ve Windows 10 2004 ve sonrası); ikisi de Ayarlar → *Gizlilik*'te.
+- **Promptlar yalnızca seçtiğin motor sağlayıcısına** HTTPS ile ve yalnızca o sağlayıcının API sunucularına gider.
+  Sağlayıcının ne sakladığını Prism değil, sağlayıcının koşulları belirler:
+  - **Google AI Studio, ücretsiz kullanım:** Google prompt ve yanıtları ürünlerini geliştirmek için kullanabilir, insan
+    inceleyiciler okuyabilir ([koşullar](https://aistudio.google.com/docs/terms)). Ücretsiz key'le gizli içerik
+    gönderme; faturalandırılan bir proje ya da Vertex AI kullan.
+  - **OpenAI ve xAI:** istekler `store: false` ile gider, yanıtlar uygulama durumu olarak saklanmaz. Sağlayıcı yine de
+    kötüye kullanım denetimi için veri tutabilir (OpenAI: 30 güne kadar,
+    [ayrıntı](https://developers.openai.com/api/docs/guides/your-data)).
+  - **Anthropic, Vertex AI ve ücretli Gemini API:** her sağlayıcının veri kullanım koşullarına bak.
+- Telemetri, hata raporu, Prism sunucusu ve otomatik güncelleme yok.
+- **Sertleştirme:** izole (sandbox) arayüz, sıkı CSP, engellenmiş sayfa geçişi ve izinler, arayüzden gelen her isteğin
+  doğrulanması, paketlenmiş sürümde Electron fuse'ları. CI her push'ta lint, tip denetimi, test, bağımlılık denetimi ve
+  Semgrep taraması çalıştırır; action'lar sabitlendi, depoda push korumalı gizli bilgi taraması, Dependabot ve CodeQL açık.
+- **Yerel tehdit modeli:** İşletim sisteminin güvenli deposu verini başka kullanıcı hesaplarından ve kopyalanmış
+  dosyalardan korur; kendi hesabında çalışan zararlı yazılıma karşı korumaz (Windows'ta DPAPI, oturumundaki her programa
+  çözer). Ayrıntı: [SECURITY.md](SECURITY.md#scope).
 
 Ayrıntılar ve güvenlik açığını gizlice bildirme yolu: [SECURITY.md](SECURITY.md).
 
@@ -171,7 +192,8 @@ Ayrıntılar ve güvenlik açığını gizlice bildirme yolu: [SECURITY.md](SECU
 | Vertex `404` | Konum `global` olmalı; proje ID'sini ve Vertex AI API'sinin etkin olduğunu kontrol et. |
 | `429` | Hız sınırı ya da kota. Prism iki kez dener, sonra hatayı gösterir. |
 | Motor "yapılandırılmamış" | En az bir key ekle; Vertex için proje ID'si de gerekir. |
-| Linux: "Sistem anahtarlığı bulunamadı" | GNOME Keyring ya da KWallet kur/aç, ya da key'i `~/.config/Prism/.env` dosyasına yaz. |
+| Linux: "Sistem anahtarlığı bulunamadı" | GNOME Keyring ya da KWallet kurup aç, sonra Prism'i yeniden başlat. Anahtarlık olmadan key kaydedilemez. |
+| "key'i .env dosyasında" | Eski sürüm key'leri `.env`'den okuyordu. Key'i Ayarlar → Sağlayıcılar'dan kaydet, sonra `.env` dosyasını sil. |
 | `npm run dev` Electron'u bulamıyor | `npm run setup` çalıştır. |
 
 ## Geliştirme
@@ -181,6 +203,7 @@ Ayrıntılar ve güvenlik açığını gizlice bildirme yolu: [SECURITY.md](SECU
 | `npm run dev` | Sıcak yenilemeyle çalıştırır |
 | `npm run mock` | Arayüzü sahte verilerle tarayıcıda açar (`#setup` ilk kurulum ekranı) |
 | `npm run typecheck` / `npm run build` | Tip kontrolü / `out/` klasörüne derleme |
+| `npm run lint` / `npm test` | oxlint (tip duyarlı, güvenlik kuralları) / birim testleri (Vitest) |
 | `npm run selftest -- "prompt"` | Arayüzsüz gerçek bir analiz → yazım turu (`--family`, `--surface`, `--engine`) |
 | `npm run selftest -- --discover` | Tanımlı key'leri doğrular, erişilen modelleri listeler |
 | `npx electron . --selftest --smoke` | Ağsız kontrol: uygulama açılıyor ve tüm bilgi kartlarını yüklüyor mu |

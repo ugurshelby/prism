@@ -78,8 +78,8 @@ const toc =
             <ul>
               <li>Key kaydedilince sağlayıcıya hafif bir istek gider ve o key’in kullanabildiği modeller listelenir. Geçersiz key açık bir mesajla reddedilir.</li>
               <li>Vertex AI için Google Cloud proje ID’si de gerekir ve projede Vertex AI API’si etkin olmalı. Konum <code>global</code> kalmalı.</li>
-              <li>Ayarlar → <i>Prism motoru</i>: “Otomatik” Vertex AI tanımlıysa onu, değilse doğrulanmış ilk sağlayıcıyı kullanır. Analiz ve yazım modelleri ayrı seçilebilir.</li>
-              <li>Key’ler ortam değişkeninden ya da kullanıcı klasöründeki <code>.env</code> dosyasından da okunabilir (<a href={`${REPO}/blob/main/.env.example`}>.env.example</a>).</li>
+              <li>Ayarlar → <i>Prism motoru</i>: “Otomatik” doğrulanmış sağlayıcıları (önce Vertex AI) tercih eder. Bir sağlayıcı seçtiysen ve key’i yoksa ya da okunamıyorsa Prism başka sağlayıcıya geçmez, hata verir. Analiz ve yazım modelleri ayrı seçilebilir.</li>
+              <li>Kurulu uygulama key’leri yalnızca şifreli depodan okur. Ortam değişkenleri ve <code>.env</code> dosyaları düz metin olduğu için yalnızca geliştirme sürümünde okunur (<a href={`${REPO}/blob/main/.env.example`}>.env.example</a>).</li>
             </ul>
 
             <h2 id="use">Kullanım</h2>
@@ -93,8 +93,11 @@ const toc =
 
             <h2 id="data">Veri ve gizlilik</h2>
             <ul>
-              <li>Key’ler işletim sisteminin güvenli deposuyla şifrelenir ve yalnızca kullanıcı klasöründe durur; arayüze gönderilmez, loglara yazılmaz.</li>
-              <li>Promptlar yalnızca seçtiğin motor sağlayıcısına HTTPS ile gider. Telemetri ya da başka bir sunucu yok.</li>
+              <li>Key’ler işletim sisteminin güvenli deposuyla şifrelenir ve yalnızca kullanıcı klasöründe durur; loglara yazılmaz. Key’leri ayırt edebilmen için arayüze yalnızca son dört karakter gelir.</li>
+              <li>Geçmiş de şifreli saklanır; eski sürümlerin düz metin geçmişi ilk açılışta taşınıp silinir. Geçmişi kapatabilir, pencereyi ekran görüntüsünden gizleyebilirsin (Ayarlar → Gizlilik).</li>
+              <li>Promptlar yalnızca seçtiğin motor sağlayıcısına HTTPS ile gider. Telemetri, hata raporu, Prism sunucusu ve otomatik güncelleme yok.</li>
+              <li>Sağlayıcının ne sakladığını onun koşulları belirler. Google AI Studio’nun ücretsiz kullanımında promptlar ürün geliştirmede kullanılabilir ve insanlar tarafından okunabilir; gizli içerik için faturalandırılan bir proje ya da Vertex AI kullan.</li>
+              <li>İndirdiğin dosyayı sürümdeki <code>SHA256SUMS.txt</code> ile doğrula: macOS <code>shasum -a 256 -c SHA256SUMS.txt --ignore-missing</code>, Linux <code>sha256sum -c SHA256SUMS.txt --ignore-missing</code>, Windows <code>Get-FileHash</code>.</li>
               <li>
                 Kullanıcı klasörü: <code>%APPDATA%\Prism</code> (Windows), <code>~/Library/Application Support/Prism</code> (macOS),
                 <code>~/.config/Prism</code> (Linux). Prompter’dan güncellediysen aynı yerdeki <code>Prompter</code> klasörü.
@@ -111,7 +114,8 @@ const toc =
                 <tr><td><code>401</code> / “key reddedildi”</td><td>Key yanlış ya da ilgili API etkin değil. Key’i yeniden gir ve Doğrula’ya bas.</td></tr>
                 <tr><td>Vertex <code>404</code></td><td>Konum <code>global</code> olmalı; proje ID’sini ve Vertex AI API’sinin etkin olduğunu kontrol et.</td></tr>
                 <tr><td><code>429</code></td><td>Hız sınırı ya da kota. Prism iki kez dener, sonra hatayı gösterir.</td></tr>
-                <tr><td>Linux: “Sistem anahtarlığı bulunamadı”</td><td>GNOME Keyring ya da KWallet kur, ya da key’i kullanıcı klasöründeki <code>.env</code> dosyasına yaz.</td></tr>
+                <tr><td>Linux: “Sistem anahtarlığı bulunamadı”</td><td>GNOME Keyring ya da KWallet kurup aç, sonra Prism’i yeniden başlat. Anahtarlık olmadan key kaydedilemez.</td></tr>
+                <tr><td>“key’i .env dosyasında”</td><td>Eski sürüm key’leri <code>.env</code>’den okuyordu. Key’i Ayarlar → Sağlayıcılar’dan kaydet, sonra <code>.env</code> dosyasını sil.</td></tr>
                 <tr><td>macOS: “açılamıyor” uyarısı</td><td>Sistem Ayarları → Gizlilik ve Güvenlik → Yine de Aç.</td></tr>
               </tbody>
             </table>
@@ -148,8 +152,8 @@ const toc =
             <ul>
               <li>Saving a key sends a lightweight request to the provider and lists the models that key can use. Invalid keys are rejected with a clear message.</li>
               <li>Vertex AI also needs your Google Cloud project ID with the Vertex AI API enabled. Keep the location <code>global</code>.</li>
-              <li>Settings → <i>Prism motoru</i> (engine): “Auto” prefers Vertex AI when configured, otherwise the first verified provider. Analysis and writing models can be set separately.</li>
-              <li>Keys can also come from environment variables or a <code>.env</code> file in the user data folder (<a href={`${REPO}/blob/main/.env.example`}>.env.example</a>).</li>
+              <li>Settings → <i>Prism motoru</i> (engine): “Auto” prefers a verified provider (Vertex AI first). If you pick a provider and its key is missing or unreadable, Prism stops with an error instead of switching. Analysis and writing models can be set separately.</li>
+              <li>The installed app reads keys only from encrypted storage. Environment variables and <code>.env</code> files are plain text, so only development builds read them (<a href={`${REPO}/blob/main/.env.example`}>.env.example</a>).</li>
             </ul>
 
             <h2 id="use">Everyday use</h2>
@@ -164,8 +168,11 @@ const toc =
 
             <h2 id="data">Data and privacy</h2>
             <ul>
-              <li>Keys are encrypted with your operating system’s secure storage and kept only in your user data folder; never sent to the interface or written to logs.</li>
-              <li>Prompts go only to the engine provider you chose, over HTTPS. No telemetry, no other servers.</li>
+              <li>Keys are encrypted with your operating system’s secure storage and kept only in your user data folder; never written to logs. The interface sees only the last four characters so you can tell keys apart.</li>
+              <li>History is encrypted too; plain-text history from older versions is moved and deleted on first launch. You can turn history off and hide the window from screenshots (Settings → Gizlilik).</li>
+              <li>Prompts go only to the engine provider you chose, over HTTPS. No telemetry, no crash reports, no Prism server, no auto-updater.</li>
+              <li>What the provider keeps is up to its terms. On Google AI Studio’s free tier, prompts may be used to improve Google’s products and read by human reviewers; use a billed project or Vertex AI for confidential work.</li>
+              <li>Verify downloads against the release’s <code>SHA256SUMS.txt</code>: macOS <code>shasum -a 256 -c SHA256SUMS.txt --ignore-missing</code>, Linux <code>sha256sum -c SHA256SUMS.txt --ignore-missing</code>, Windows <code>Get-FileHash</code>.</li>
               <li>
                 User data folder: <code>%APPDATA%\Prism</code> (Windows), <code>~/Library/Application Support/Prism</code> (macOS),
                 <code>~/.config/Prism</code> (Linux); if you upgraded from Prompter, the same folder named <code>Prompter</code>.
@@ -182,7 +189,8 @@ const toc =
                 <tr><td><code>401</code> / “key rejected”</td><td>Wrong key or the API isn’t enabled for it. Re-enter the key and press Verify.</td></tr>
                 <tr><td>Vertex <code>404</code></td><td>Location must be <code>global</code>; check the project ID and that the Vertex AI API is enabled.</td></tr>
                 <tr><td><code>429</code></td><td>Rate limit or quota. Prism retries twice, then shows the error.</td></tr>
-                <tr><td>Linux: “Sistem anahtarlığı bulunamadı”</td><td>Install GNOME Keyring or KWallet, or put the key in the user data folder’s <code>.env</code> file.</td></tr>
+                <tr><td>Linux: “Sistem anahtarlığı bulunamadı”</td><td>Install and unlock GNOME Keyring or KWallet, then restart Prism. Without a keyring, keys can’t be saved.</td></tr>
+                <tr><td>“key’i .env dosyasında”</td><td>An older version read keys from <code>.env</code>. Save the key in Settings → Sağlayıcılar, then delete the <code>.env</code> file.</td></tr>
                 <tr><td>macOS: “can’t be opened” warning</td><td>System Settings → Privacy &amp; Security → Open Anyway.</td></tr>
               </tbody>
             </table>

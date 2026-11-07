@@ -15,9 +15,9 @@ export const asset = (path: string) => `${import.meta.env.BASE_URL.replace(/\/$/
 // --- Sürümler (edition) ---------------------------------------------------------
 
 export type GenId = 'ray' | 'spectrum' | 'lens' | 'iris'
-export type GenStatus = 'available' | 'current' | 'planned'
+export type GenStatus = 'available' | 'legacy' | 'current' | 'planned'
 export const GENERATIONS: { id: GenId; major: number; name: string; status: GenStatus }[] = [
-  { id: 'ray', major: 1, name: 'Ray', status: 'available' },
+  { id: 'ray', major: 1, name: 'Ray', status: 'legacy' },
   { id: 'spectrum', major: 2, name: 'Spectrum', status: 'current' },
   { id: 'lens', major: 3, name: 'Lens', status: 'planned' },
   { id: 'iris', major: 4, name: 'Iris', status: 'planned' }

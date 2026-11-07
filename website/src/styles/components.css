@@ -156,6 +156,9 @@
   border-color: color-mix(in srgb, var(--gpt) 50%, transparent);
   color: var(--gpt);
 }
+.badge.legacy {
+  color: var(--muted);
+}
 .badge.planned {
   border-style: dashed;
 }

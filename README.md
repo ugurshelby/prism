@@ -37,7 +37,8 @@ agent, chat app or API call. Bring your own API key; nothing runs on someone els
   right away and lists the models it can reach.
 - **Stays out of the way.** Always-on-top panel, global hotkey, collapsible orb, tray menu, a notification when a
   prompt is ready, optional start at login, and a searchable history.
-- **Private by design.** Keys are encrypted by your OS and never leave the main process. No telemetry, no backend.
+- **Private by design.** Keys and history are encrypted with your OS secure storage. No telemetry, no Prism server;
+  prompts go only to the provider you chose (see [Security and privacy](#security-and-privacy) for what that provider keeps).
 
 > The interface is in Turkish today; generated prompts are written in English. Translations are welcome.
 
@@ -47,7 +48,7 @@ Each major version of Prism has a name, following the path of light through a pr
 
 | Version | Name | What it does | Status |
 |---|---|---|---|
-| 1.x | **Ray** | A single beam: prompts for Claude only, one engine (Vertex AI); installs next to Spectrum | Available |
+| 1.x | **Ray** | A single beam: prompts for Claude only, one engine (Vertex AI); installs next to Spectrum | Legacy: still downloadable, no security fixes |
 | 2.x | **Spectrum** | Splits the beam: Claude, GPT, Gemini and Grok, your own keys, cross-family recommendation | **Current** |
 | 3.x | **Lens** | Focuses several models on one task: multi-model workflows | Planned |
 | 4.x | **Iris** | Beyond text: image, video, audio and 3D generation models | Planned |
@@ -75,8 +76,14 @@ The builds are open source but not signed with a paid developer certificate, so 
   **Debian/Ubuntu:** `sudo apt install ./Prism-*-linux-amd64.deb`.
   Key storage needs a keyring (GNOME Keyring or KWallet), which most desktops already have.
 
-Each release includes `SHA256SUMS.txt` so you can verify your download. Installing a new version over an old one keeps
-your settings, keys and history.
+Each release includes `SHA256SUMS.txt`. Download it next to the installer and check before running:
+
+- **Windows (PowerShell):** `Get-FileHash .\Prism-Setup-<version>-x64.exe -Algorithm SHA256` and compare with the line in `SHA256SUMS.txt`.
+- **macOS:** `shasum -a 256 -c SHA256SUMS.txt --ignore-missing`
+- **Linux:** `sha256sum -c SHA256SUMS.txt --ignore-missing`
+
+Prism has no auto-updater and never downloads code by itself. To update, download the new installer and install it
+over the old one; your settings, keys and history are kept.
 
 ### Build from source
 
@@ -117,14 +124,14 @@ paste the prompt into). The engine runs on whichever provider you add a key for;
 
 - **Verification:** saving a key sends a lightweight request to the provider and lists the text models that key can
   use. Invalid keys are rejected with a clear message. **Doğrula ve modelleri getir** (Verify) repeats the check.
-- **Engine choice:** Settings → *Prism motoru*. "Auto" prefers Vertex AI when configured, otherwise the first
-  verified provider. Analysis and writing models can be set separately; **Motoru test et** sends a short test request.
-- **Vertex AI** also needs your Google Cloud project ID (Settings or `VERTEX_PROJECT_ID`) with the Vertex AI API
+- **Engine choice:** Settings → *Prism motoru*. "Auto" prefers a verified provider (Vertex AI first). If you pick a
+  provider and its key is missing or unreadable, Prism stops with an error instead of switching to another provider. Analysis and writing models can be set separately; **Motoru test et** sends a short test request.
+- **Vertex AI** also needs your Google Cloud project ID (Settings, or `VERTEX_PROJECT_ID` in `.env`) with the Vertex AI API
   enabled. Keep the location `global`, since some models (such as `gemini-4-argon`) are not served from regional endpoints.
-- **Without the UI:** keys can also come from environment variables or a `.env` file (see [`.env.example`](.env.example)).
-  Order: key saved in Settings → environment variable → `.env`. The installed app reads `.env` from its user data
-  folder: `%APPDATA%\Prism` (Windows), `~/Library/Application Support/Prism` (macOS), `~/.config/Prism` (Linux);
-  if you upgraded from Prompter, the same folder named `Prompter`.
+- **Keys are read only from encrypted storage** in the installed app. Environment variables and `.env` files are plain
+  text, so only the development build (`npm run dev`, `npm run selftest`) reads them (see [`.env.example`](.env.example)).
+  If an older version left a `.env` with keys in the user data folder, Settings tells you to save the key there
+  and then delete the file.
 
 ## How it works
 
@@ -146,18 +153,35 @@ your rough prompt ──► engine (your key) ──► analysis: task, best mod
 - Closing the window keeps Prism in the tray (menu bar on macOS). The tray menu opens history, settings and shows
   the active engine.
 - The pin keeps the panel on top; the collapse button turns it into a small draggable orb.
-- History keeps your last 200 prompts on this computer, tagged with family, model, level and engine; search and filter
-  by family, copy again or rewrite.
+- History keeps your last 200 prompts on this computer, encrypted, tagged with family, model, level and engine; search
+  and filter by family, copy again or rewrite. Turn it off in Settings → *Gizlilik* (Privacy).
 
 ## Security and privacy
 
-- Keys are encrypted with the OS secure storage (Windows DPAPI, macOS Keychain, Linux Secret Service/KWallet), stored
-  only in your user data folder, and never sent to the interface or written to logs. Linux without a keyring:
-  Prism refuses to save keys rather than storing them weakly.
-- Prompts go only to the engine provider you chose, over HTTPS. OpenAI and xAI requests are sent with `store: false`.
-  No telemetry, no other servers.
-- The app is hardened: sandboxed renderer, strict CSP, blocked navigation and permissions, Electron fuses in packaged
-  builds. CI actions are pinned, and the repository uses secret scanning with push protection, Dependabot and CodeQL.
+- **Keys** are encrypted with the OS secure storage (Windows DPAPI, macOS Keychain, Linux Secret Service/KWallet) and
+  stored only in your user data folder. They are never written to logs or error messages; the interface sees only
+  the last four characters so you can tell keys apart. Linux without a keyring: Prism refuses to save keys rather
+  than storing them weakly.
+- **History** is encrypted the same way. Older plain-text history files are moved into encrypted storage on first
+  launch, then overwritten and deleted. Without a keyring, history stays in memory for the session only. You can turn
+  history off, and you can hide the window from screenshots and screen sharing (macOS, and Windows 10 2004 or later); both are in
+  Settings → *Gizlilik*.
+- **Prompts go only to the engine provider you chose**, over HTTPS, and only to that provider's API hosts. What the
+  provider keeps depends on its terms, not on Prism:
+  - **Google AI Studio, free tier:** Google may use prompts and responses to improve its products, and human reviewers
+    may read them ([terms](https://aistudio.google.com/docs/terms)). Don't send confidential material with a free
+    key; use a billed project or Vertex AI.
+  - **OpenAI and xAI:** requests are sent with `store: false`, so responses are not kept as application state.
+    Providers may still keep data for abuse monitoring (OpenAI: up to 30 days,
+    [details](https://developers.openai.com/api/docs/guides/your-data)).
+  - **Anthropic, Vertex AI and paid Gemini API:** see each provider's data usage terms.
+- No telemetry, no crash reports, no Prism server, no auto-updater.
+- **Hardening:** sandboxed renderer, strict CSP, blocked navigation and permissions, every request from the interface
+  validated, and Electron fuses in packaged builds. CI runs lint, type checks, tests, a dependency audit and a Semgrep
+  scan. Actions are pinned, and the repository uses secret scanning with push protection, Dependabot and CodeQL.
+- **Local threat model:** OS secure storage protects your data from other user accounts and from copies of the files.
+  It does not protect against malware running under your own account (on Windows, DPAPI decrypts for any program in
+  your session). See [SECURITY.md](SECURITY.md#scope).
 
 See [SECURITY.md](SECURITY.md) for details and how to report a vulnerability privately.
 
@@ -169,7 +193,8 @@ See [SECURITY.md](SECURITY.md) for details and how to report a vulnerability pri
 | Vertex `404` | Location must be `global`; check the project ID and that the Vertex AI API is enabled. |
 | `429` | Rate limit or quota. Prism retries twice, then shows the error. |
 | Engine "yapılandırılmamış" (not configured) | Add at least one key; Vertex also needs a project ID. |
-| Linux: "Sistem anahtarlığı bulunamadı" | Install/unlock GNOME Keyring or KWallet, or put the key in `~/.config/Prism/.env`. |
+| Linux: "Sistem anahtarlığı bulunamadı" | Install and unlock GNOME Keyring or KWallet, then restart Prism. Without a keyring, keys cannot be saved. |
+| "key'i .env dosyasında" | An older version read keys from `.env`. Save the key in Settings → Sağlayıcılar, then delete the `.env` file. |
 | `npm run dev` can't find Electron | Run `npm run setup`. |
 
 ## Development
@@ -179,6 +204,7 @@ See [SECURITY.md](SECURITY.md) for details and how to report a vulnerability pri
 | `npm run dev` | Run with hot reload |
 | `npm run mock` | Open the interface in a browser with fake data (`#setup` shows the first-run screen) |
 | `npm run typecheck` / `npm run build` | Type-check / build into `out/` |
+| `npm run lint` / `npm test` | oxlint (type-aware, security rules) / unit tests (Vitest) |
 | `npm run selftest -- "prompt"` | One real analyze → write round trip without the UI (`--family`, `--surface`, `--engine`) |
 | `npm run selftest -- --discover` | Verify configured keys and list reachable models |
 | `npx electron . --selftest --smoke` | Offline check that the app boots and loads every knowledge card |

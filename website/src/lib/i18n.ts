@@ -86,13 +86,13 @@ const en = {
   },
   privacy: {
     title: 'Your keys stay on your computer',
-    body: 'Keys are encrypted by your operating system and never reach the interface. Prompts go straight to the provider you picked. We don’t run a server, so there’s nothing on our side to log.',
+    body: 'Keys and history are encrypted by your operating system. Prompts go straight to the provider you picked, and what that provider keeps is up to its terms. We don’t run a server, so there’s nothing on our side to log.',
     link: 'Security policy'
   },
   editions: {
     title: 'Four editions',
     lead: 'Prism grows one edition at a time. Each is named after something light does inside a prism.',
-    status: { available: 'Available', current: 'Latest', planned: 'In the works' } satisfies Record<GenStatus, string>,
+    status: { available: 'Available', legacy: 'Legacy, no security fixes', current: 'Latest', planned: 'In the works' } satisfies Record<GenStatus, string>,
     items: {
       ray: { tagline: 'One beam', body: 'The first Prism. Claude only, one engine. Small and focused, and it still works.' },
       spectrum: {
@@ -253,13 +253,13 @@ const tr: Dict = {
   },
   privacy: {
     title: 'Key’lerin bilgisayarında kalır',
-    body: 'Key’ler işletim sisteminin şifrelemesiyle saklanır ve arayüze hiç gelmez. Promptlar doğrudan seçtiğin sağlayıcıya gider. Bizim bir sunucumuz yok; bizim tarafta kaydedilecek bir şey de yok.',
+    body: 'Key’ler ve geçmiş işletim sisteminin şifrelemesiyle saklanır. Promptlar doğrudan seçtiğin sağlayıcıya gider; sağlayıcının ne sakladığını onun koşulları belirler. Bizim bir sunucumuz yok; bizim tarafta kaydedilecek bir şey de yok.',
     link: 'Güvenlik politikası'
   },
   editions: {
     title: 'Dört sürüm',
     lead: 'Prism her sürümde biraz büyüyor. Adlarını, ışığın bir prizmanın içinde yaptıklarından alıyorlar.',
-    status: { available: 'İndirilebilir', current: 'En yeni', planned: 'Yolda' },
+    status: { available: 'İndirilebilir', legacy: 'Eski sürüm, güvenlik desteği yok', current: 'En yeni', planned: 'Yolda' },
     items: {
       ray: { tagline: 'Tek ışın', body: 'İlk Prism. Yalnızca Claude, tek motor. Küçük, derli toplu ve hâlâ çalışıyor.' },
       spectrum: {
