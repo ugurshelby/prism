@@ -27,6 +27,7 @@ import { logError, logWarn } from './log'
 import { clearKey, engineGenerate, resolveEngine, saveKey, settingsView, verify, verifyPending } from './providers'
 import { selftest } from './selftest'
 import {
+  applyContentProtection,
   applyPin,
   createWindow,
   dragEnd,
@@ -180,14 +181,23 @@ function refreshTray() {
 }
 
 /** Uzun süren analiz/yazım sırasında tray ipucunu günceller. */
+/** Tray yenilenemezse (ör. okunamayan bir dosya) yürüyen ya da biten iş bundan etkilenmez. */
+function safeRefreshTray() {
+  try {
+    refreshTray()
+  } catch (e) {
+    logWarn('tray', 'tray menüsü yenilenemedi', e)
+  }
+}
+
 async function tracked<T>(work: () => Promise<T>): Promise<T> {
   active++
-  refreshTray()
+  safeRefreshTray()
   try {
     return await work()
   } finally {
     active--
-    refreshTray()
+    safeRefreshTray()
   }
 }
 
@@ -273,6 +283,7 @@ function applySettings(patch: z.infer<typeof SettingsPatchSchema>) {
     throw e
   }
   if (patch.alwaysOnTop !== undefined) applyPin(next.alwaysOnTop)
+  if (patch.contentProtection !== undefined) applyContentProtection(next.contentProtection)
   refreshTray()
   return settingsView()
 }
@@ -321,11 +332,13 @@ function registerIpc() {
     if (running.has(req.id)) throw new Error('Bu istek zaten çalışıyor.')
     const controller = new AbortController()
     running.set(req.id, controller)
+    // Geçmiş ayarı istek başladığı anki değeriyle uygulanır: kapalıyken başlatılan prompt sonradan açılsa da kaydedilmez.
+    const save = getSettings().saveHistory
     try {
       const analysis = await tracked(() => analyze(req, controller.signal))
       // İptal edilmiş analiz geçmişe yazılmaz; yanıt sağlayıcıdan gelmiş olsa bile arayüz onu artık beklemiyor.
       if (controller.signal.aborted) throw new LlmError('İptal edildi.')
-      return { ...analysis, historyId: keepRecord('analiz', () => recordAnalysis(req, analysis)) }
+      return { ...analysis, historyId: save ? keepRecord('analiz', () => recordAnalysis(req, analysis)) : undefined }
     } finally {
       running.delete(req.id)
     }
@@ -335,6 +348,7 @@ function registerIpc() {
     if (running.has(req.id)) throw new Error('Bu istek zaten çalışıyor.')
     const controller = new AbortController()
     running.set(req.id, controller)
+    const save = getSettings().saveHistory
     const send = (ev: StreamEvent) => {
       if (!e.sender.isDestroyed()) e.sender.send('engine:stream', ev)
     }
@@ -343,7 +357,7 @@ function registerIpc() {
         generatePrompt(req, (text) => send({ id: req.id, type: 'chunk', text }), controller.signal)
       )
       // Bittikten hemen sonra iptal edilmiş yazım geçmişe yazılmaz; kullanıcı onu artık istemiyor.
-      if (!controller.signal.aborted) keepRecord('yazım', () => recordOutput(req, result))
+      if (save && !controller.signal.aborted) keepRecord('yazım', () => recordOutput(req, result))
       send({ id: req.id, type: 'done', result })
       notifyDone(req)
     } catch (err) {

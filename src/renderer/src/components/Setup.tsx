@@ -42,8 +42,7 @@ export function Setup({
           />
         ))}
         <span className="hint">
-          Key’ler bu bilgisayarda işletim sisteminin şifrelemesiyle saklanır ve arayüze geri gönderilmez. İstersen proje kökündeki
-          .env dosyasını da kullanabilirsin.
+          Key’ler yalnızca bu bilgisayarda, işletim sisteminin şifrelemesiyle saklanır; arayüze yalnızca son dört karakteri gelir.
         </span>
       </div>
 

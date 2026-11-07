@@ -7,7 +7,7 @@ import { copyFileSync, existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { HistoryEntrySchema } from '@shared/schemas'
 import type { Analysis, AnalyzeRequest, GenerateRequest, GenerateResult, HistoryEntry, HistoryList, HistoryStorage } from '@shared/types'
-import { userFile, writeFileAtomic } from './config'
+import { getSettings, userFile, writeFileAtomic } from './config'
 import { logWarn } from './log'
 import { seal, unseal, vaultState, wipeFile } from './vault'
 
@@ -139,10 +139,13 @@ function persist() {
 }
 
 export function listHistory(): HistoryList {
-  return { entries: [...load()].sort((a, b) => b.updatedAt - a.updatedAt), storage }
+  const list = [...load()].sort((a, b) => b.updatedAt - a.updatedAt)
+  return { entries: list, storage: getSettings().saveHistory ? storage : 'off' }
 }
 
-export function recordAnalysis(req: AnalyzeRequest, analysis: Analysis): string {
+/** Geçmiş kaydı kapalıysa hiçbir şey yazılmaz ve kimlik dönmez. */
+export function recordAnalysis(req: AnalyzeRequest, analysis: Analysis): string | undefined {
+  if (!getSettings().saveHistory) return undefined
   const now = Date.now()
   const entry: HistoryEntry = {
     id: randomUUID(),
@@ -161,6 +164,7 @@ export function recordAnalysis(req: AnalyzeRequest, analysis: Analysis): string 
 }
 
 export function recordOutput(req: GenerateRequest, result: GenerateResult) {
+  if (!getSettings().saveHistory) return
   const now = Date.now()
   if (req.historyId && deleted.has(req.historyId)) return
   // Arayüzün verdiği kimliğe yalnızca aynı promptun girdisiyse güvenilir; başka bir kaydın üzerine yazılmaz.

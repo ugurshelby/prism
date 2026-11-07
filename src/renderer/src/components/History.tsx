@@ -205,7 +205,11 @@ export function History({
             <motion.div className="h-empty" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}>
               <Logo size={34} />
               <b>Henüz geçmiş yok</b>
-              <span>Analiz ettiğin ve yazdırdığın promptlar burada birikir.</span>
+              <span>
+                {storage === 'off'
+                  ? 'Geçmiş kaydı kapalı; yeni promptlar kaydedilmez. Ayarlar → Gizlilik’ten açabilirsin.'
+                  : 'Analiz ettiğin ve yazdırdığın promptlar burada birikir.'}
+              </span>
             </motion.div>
           )}
           {items && items.length > 0 && shown.length === 0 && (
@@ -232,7 +236,9 @@ export function History({
             <span className="hint">
               {storage === 'encrypted'
                 ? 'Son 200 kayıt bu bilgisayarda şifreli saklanır.'
-                : 'Sistem anahtarlığı yok: geçmiş diske yazılmaz, uygulama kapanınca silinir.'}
+                : storage === 'off'
+                  ? 'Geçmiş kaydı kapalı: yeni promptlar kaydedilmez (Ayarlar → Gizlilik).'
+                  : 'Sistem anahtarlığı yok ya da kilitli: geçmiş diske yazılmaz, uygulama kapanınca silinir.'}
             </span>
             <button
               className={`link ${confirmClear ? 'bad-text' : ''}`}

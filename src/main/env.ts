@@ -3,10 +3,11 @@
 // davranışını ortamı değiştiren biri yönlendiremesin.
 
 import { app } from 'electron'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { z } from 'zod'
 import { PROVIDERS, PROVIDER_INFO } from '@shared/catalog'
+import { logWarn } from './log'
 
 const optional = z
   .string()
@@ -51,9 +52,37 @@ export function appImagePath(): string | undefined {
   return path && existsSync(path) ? path : undefined
 }
 
-// --- Sağlayıcı key'leri ve Vertex hedefi --------------------------------------------
-// Sıra: süreç ortamı → kullanıcı klasöründeki .env → proje kökündeki .env (yalnızca geliştirmede paketin içinde olur).
+// --- Sağlayıcı key'leri ve Vertex hedefi (yalnızca geliştirme) ----------------------
+// Kurulu sürüm key'leri yalnızca şifreli kasadan okur: ortam değişkeni ve .env dosyaları düz metindir.
+// Geliştirmede sıra: süreç ortamı → kullanıcı klasöründeki .env → proje kökündeki .env.
 // Değerler belgelenen tırnak temizliği dışında değiştirilmez; key biçimi kullanılırken doğrulanır.
+
+/**
+ * Kurulu sürümde kullanıcı klasöründe eski bir .env kalmışsa içindeki key adları (değerleri değil).
+ * Arayüz "key'i Ayarlar'dan yeniden kaydet" diyebilsin diye; değerler hiçbir zaman okunup kullanılmaz.
+ */
+let leftover: { stamp: string; names: string[] } | null = null
+
+export function leftoverEnvNames(): string[] {
+  if (!app.isPackaged) return []
+  const path = join(app.getPath('userData'), '.env')
+  // Dosya değişmedikçe yeniden okunmaz: ayar görünümü sağlayıcı başına birkaç kez sorar.
+  let stamp = 'none'
+  try {
+    if (existsSync(path)) {
+      const st = statSync(path)
+      stamp = `${st.mtimeMs}:${st.size}`
+    }
+  } catch (e) {
+    logWarn('env', '.env bilgisi alınamadı', e)
+  }
+  if (leftover?.stamp === stamp) return leftover.names
+  const names = Object.entries(parseEnvFile(path))
+    .filter(([k, v]) => v !== '' && !PUBLIC_ENV.includes(k))
+    .map(([k]) => k)
+  leftover = { stamp, names }
+  return names
+}
 
 export const ENV_NAMES = [...PROVIDERS.map((p) => PROVIDER_INFO[p].env), 'GOOGLE_API_KEY', 'VERTEX_PROJECT_ID', 'VERTEX_LOCATION'] as const
 const isEnvName = (k: string) => (ENV_NAMES as readonly string[]).includes(k)
@@ -63,8 +92,16 @@ export type EnvMap = Record<string, string>
 
 function parseEnvFile(path: string): EnvMap {
   if (!existsSync(path)) return {}
+  let text: string
+  try {
+    text = readFileSync(path, 'utf8')
+  } catch (e) {
+    // Okunamayan .env (klasör, izin) uygulamayı düşürmez; key yokmuş gibi davranılır, sorun günlüğe düşer.
+    logWarn('env', '.env okunamadı, yok sayıldı', e)
+    return {}
+  }
   const out: EnvMap = {}
-  for (const line of readFileSync(path, 'utf8').split(/\r?\n/)) {
+  for (const line of text.split(/\r?\n/)) {
     const m = /^\s*([A-Z0-9_]+)\s*=(.*)$/.exec(line)
     const name = m?.[1]
     const raw = m?.[2]
@@ -77,7 +114,14 @@ function parseEnvFile(path: string): EnvMap {
   return out
 }
 
+/** Gizli olmayan Vertex hedefi; kurulu sürümde de kullanıcı klasöründeki .env'den okunabilir. */
+const PUBLIC_ENV = ['VERTEX_PROJECT_ID', 'VERTEX_LOCATION']
+
 export function envValues(): EnvMap {
+  if (app.isPackaged) {
+    const fromUserData = parseEnvFile(join(app.getPath('userData'), '.env'))
+    return Object.fromEntries(Object.entries(fromUserData).filter(([k]) => PUBLIC_ENV.includes(k)))
+  }
   const files = [join(app.getAppPath(), '.env'), join(app.getPath('userData'), '.env')]
   const out: EnvMap = {}
   for (const file of files) Object.assign(out, parseEnvFile(file))

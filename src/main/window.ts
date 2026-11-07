@@ -119,6 +119,7 @@ export function createWindow(opts: { hidden?: boolean } = {}): BrowserWindow {
   })
 
   applyPin(getSettings().alwaysOnTop)
+  applyContentProtection(getSettings().contentProtection)
   if (process.platform === 'darwin') win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
   win.on('ready-to-show', () => !opts.hidden && win?.show())
@@ -152,6 +153,11 @@ export function applyPin(on: boolean) {
   if (!win) return
   win.setAlwaysOnTop(on, process.platform === 'darwin' ? 'floating' : 'screen-saver')
   win.webContents.send('window:pinned', on)
+}
+
+/** Pencere içeriği ekran görüntüsünde ve ekran paylaşımında görünmez (Windows, macOS; Linux'ta etkisiz). */
+export function applyContentProtection(on: boolean) {
+  win?.setContentProtection(on)
 }
 
 export function setMode(next: WindowMode) {

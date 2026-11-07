@@ -224,8 +224,8 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
             <div className="group">
               <span className="label">Sağlayıcılar</span>
               <span className="hint">
-                Key’ler bu bilgisayarda işletim sisteminin şifrelemesiyle saklanır, arayüze inmez. Kaydedince bağlantı ve erişilen
-                modeller doğrulanır.
+                Key’ler yalnızca bu bilgisayarda, işletim sisteminin şifrelemesiyle saklanır; arayüze yalnızca son dört karakteri
+                gelir. Kaydedince bağlantı ve erişilen modeller doğrulanır.
               </span>
               {PROVIDERS.map((id) => (
                 <ProviderCard
@@ -390,6 +390,23 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
                 />
               </label>
               {error && <span className="hint bad-text">{error}</span>}
+            </div>
+
+            <div className="group">
+              <span className="label">Gizlilik</span>
+              <div className="toggle-row">
+                Geçmişi kaydet (bu bilgisayarda şifreli)
+                <Toggle on={v.saveHistory} onChange={(saveHistory) => apply({ saveHistory })} />
+              </div>
+              {window.prism.platform !== 'linux' && (
+                <div className="toggle-row">
+                  Pencereyi ekran görüntüsü ve ekran paylaşımından gizle
+                  <Toggle on={v.contentProtection} onChange={(contentProtection) => apply({ contentProtection })} />
+                </div>
+              )}
+              <span className="hint">
+                Geçmiş kapalıyken yeni promptlar hiçbir yere yazılmaz; önceki kayıtlar Geçmiş ekranından silinebilir.
+              </span>
             </div>
 
             <div className="group">

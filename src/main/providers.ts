@@ -16,18 +16,20 @@ import {
 import { ApiKeySchema, ModelsCacheSchema, VertexLocationSchema, VertexProjectSchema, describeIssues } from '@shared/schemas'
 import type { EngineRef, ProviderStatus, ProviderView, SettingsView, TargetAccess } from '@shared/types'
 import { getSettings, readUserJson, userFile, writeFileAtomic, writeJson } from './config'
-import { envValues } from './env'
+import { envValues, leftoverEnvNames } from './env'
 import { LlmError, client, generate, type Credentials, type LlmCall, type LlmResult } from './llm'
 import { logWarn } from './log'
 import { seal, unseal, vaultState, wipeFile } from './vault'
 
 // --- Key saklama ------------------------------------------------------------------
 // Arayüzden girilen key işletim sisteminin anahtarlığıyla şifrelenip userData/<sağlayıcı>.key'e yazılır (vault.ts).
-// Sıra: kayıtlı key → ortam değişkeni → .env. Kayıtlı key okunamıyorsa sessizce .env'e düşülmez; açık hata verilir.
+// Sıra: kayıtlı key → (yalnızca geliştirmede) ortam değişkeni → .env. Kayıtlı key okunamıyorsa sessizce .env'e
+// düşülmez; açık hata verilir. Kurulu sürüm .env'i okumaz, eski bir .env kalmışsa kullanıcıya söyler.
 
 const keyFile = (p: ProviderId) => userFile(`${p}.key`)
 
-type KeyState = { key: string; source: 'saved' | 'env' } | { key: null; source: 'none'; problem?: string }
+/** unreadable: kayıtlı key var ama çözülemiyor; otomatik motor seçimi bu durumda durur. */
+type KeyState = { key: string; source: 'saved' | 'env' } | { key: null; source: 'none'; problem?: string; unreadable?: boolean }
 
 // Çözülmüş kayıtlı key bellekte tutulur: her ayar görünümünde anahtarlığa tekrar tekrar gidilmez (macOS ve Linux'ta
 // her çözme bir kilit açma isteğine dönüşebilir). Key kaydedilince ya da silinince geçersiz kılınır (forget).
@@ -42,7 +44,7 @@ function savedKey(p: ProviderId): KeyState | null {
       state = { key: unseal(readFileSync(path)), source: 'saved' }
     } catch (e) {
       logWarn('providers', `${p} için kayıtlı key çözülemedi`, e)
-      state = { key: null, source: 'none', problem: `${PROVIDER_INFO[p].label} için kayıtlı key okunamadı. Key'i yeniden kaydet.` }
+      state = { key: null, source: 'none', unreadable: true, problem: `${PROVIDER_INFO[p].label} için kayıtlı key okunamadı. Key'i yeniden kaydet.` }
     }
   }
   savedCache.set(p, state)
@@ -54,11 +56,23 @@ function envKey(p: ProviderId): string | undefined {
   return env[PROVIDER_INFO[p].env] || (p === 'gemini' ? env.GOOGLE_API_KEY : undefined) || undefined
 }
 
+/** Kurulu sürümde kullanıcı klasöründeki .env'de bu sağlayıcının key'i kalmış mı (yalnızca ad). */
+const leftoverKey = (p: ProviderId) =>
+  leftoverEnvNames().some((n) => n === PROVIDER_INFO[p].env || (p === 'gemini' && n === 'GOOGLE_API_KEY'))
+
 function keyOf(p: ProviderId): KeyState {
   const saved = savedKey(p)
   if (saved) return saved
   const env = envKey(p)
-  return env ? { key: env, source: 'env' } : { key: null, source: 'none' }
+  if (env) return { key: env, source: 'env' }
+  if (leftoverKey(p)) {
+    return {
+      key: null,
+      source: 'none',
+      problem: `${PROVIDER_INFO[p].label} key'i .env dosyasında; kurulu sürüm .env'i artık okumuyor. Key'i buradan kaydet, sonra .env'i sil.`
+    }
+  }
+  return { key: null, source: 'none' }
 }
 
 function vertexTarget() {
@@ -73,14 +87,14 @@ export function credentials(p: ProviderId): Credentials {
   const state = keyOf(p)
   const label = PROVIDER_INFO[p].label
   if (state.key === null) {
-    throw new LlmError(state.problem ?? `${label} API key bulunamadı. Ayarlardan ekle ya da .env dosyasına ${PROVIDER_INFO[p].env} yaz.`)
+    throw new LlmError(state.problem ?? `${label} API key bulunamadı. Ayarlar → Sağlayıcılar bölümünden ekle.`)
   }
   // .env'den gelen key de aynı biçim kuralından geçer; bozuk key sağlayıcıya hiç gönderilmez.
   const format = ApiKeySchema.safeParse(state.key)
   if (!format.success) throw new LlmError(`${label} key'i geçersiz (${state.source === 'env' ? PROVIDER_INFO[p].env : 'kayıtlı key'}): ${describeIssues(format.error)}`)
   if (p !== 'vertex') return { key: state.key }
   const t = vertexTarget()
-  if (!t.project) throw new LlmError("Vertex AI için proje ID'si eksik. Ayarlardan gir ya da .env dosyasına VERTEX_PROJECT_ID yaz.")
+  if (!t.project) throw new LlmError("Vertex AI için proje ID'si eksik. Ayarlar → Sağlayıcılar → Vertex AI bölümünden gir.")
   // .env'deki proje ve konum da istek adresine girer; ayarlarla aynı kuraldan geçer.
   const project = VertexProjectSchema.safeParse(t.project)
   const location = VertexLocationSchema.safeParse(t.location)
@@ -169,9 +183,16 @@ function hint(key: string | null) {
 export function providerViews(): ProviderView[] {
   return PROVIDERS.map((id) => {
     const state = keyOf(id)
+    // Key kaydedilmiş olsa da .env'de düz metin kopyası kaldıysa kullanıcıya silmesi söylenir.
+    const problem =
+      state.key === null
+        ? state.problem
+        : state.source === 'saved' && leftoverKey(id)
+          ? "Key kayıtlı; .env dosyasındaki eski düz metin kopyasını sil."
+          : undefined
     return {
       id,
-      key: { present: !!state.key, source: state.source, hint: hint(state.key), ...(state.key === null && state.problem ? { problem: state.problem } : {}) },
+      key: { present: !!state.key, source: state.source, hint: hint(state.key), ...(problem ? { problem } : {}) },
       ready: isReady(id),
       status: statuses()[id] ?? null
     }
@@ -231,7 +252,7 @@ function autoProvider(): ProviderId | undefined {
 function savedKeyProblem(): string | undefined {
   for (const p of PROVIDERS) {
     const k = keyOf(p)
-    if (k.key === null && k.problem) return k.problem
+    if (k.key === null && k.unreadable && k.problem) return k.problem
   }
   return undefined
 }

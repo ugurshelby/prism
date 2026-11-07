@@ -84,6 +84,11 @@ describe('SettingsPatchSchema', () => {
     expect(SettingsPatchSchema.safeParse({ version: 99 }).success).toBe(false)
   })
 
+  it('gizlilik ayarlarını kabul eder, yanlış tipi reddeder', () => {
+    expect(SettingsPatchSchema.safeParse({ saveHistory: false, contentProtection: true }).success).toBe(true)
+    expect(SettingsPatchSchema.safeParse({ saveHistory: 'no' }).success).toBe(false)
+  })
+
   it('Vertex proje ve konumu ayrı ayrı gönderilebilir', () => {
     expect(SettingsPatchSchema.safeParse({ vertex: { project: 'my-proj-1' } }).success).toBe(true)
     expect(SettingsPatchSchema.safeParse({ vertex: { location: 'global' } }).success).toBe(true)

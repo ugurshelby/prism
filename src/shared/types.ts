@@ -105,8 +105,8 @@ export interface HistoryEntry {
   outputs: HistoryOutput[]
 }
 
-/** encrypted: işletim sisteminin anahtarlığıyla şifreli dosyada; memory: anahtarlık yok, yalnızca bu oturumda. */
-export type HistoryStorage = 'encrypted' | 'memory'
+/** encrypted: diskte şifreli; memory: yalnızca bu oturumda (anahtarlık yok ya da kilitli); off: kayıt kapalı. */
+export type HistoryStorage = 'encrypted' | 'memory' | 'off'
 
 export interface HistoryList {
   entries: HistoryEntry[]
@@ -136,6 +136,10 @@ export interface Settings {
   launchAtLogin: boolean
   /** Pencere gizliyken biten yazım için sistem bildirimi. */
   notifyWhenHidden: boolean
+  /** Kapalıysa yeni analiz ve yazımlar geçmişe hiç yazılmaz (bellekte de tutulmaz). */
+  saveHistory: boolean
+  /** Pencerenin ekran görüntüsü ve ekran paylaşımında görünmesini engeller (Windows, macOS). */
+  contentProtection: boolean
 }
 
 /** Arayüzün gönderdiği ayar yaması (SettingsPatchSchema ile aynı biçim): Vertex proje ve konumu ayrı ayrı değişebilir. */

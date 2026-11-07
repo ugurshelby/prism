@@ -21,7 +21,9 @@ const DEFAULTS: Settings = {
   alwaysOnTop: true,
   hotkey: 'CommandOrControl+Shift+Space',
   launchAtLogin: false,
-  notifyWhenHidden: true
+  notifyWhenHidden: true,
+  saveHistory: true,
+  contentProtection: false
 }
 
 /** userData içindeki sabit dosya adları; dışarıdan gelen bir ad buraya hiç girmez. */
@@ -143,7 +145,9 @@ function sanitize(raw: Record<string, unknown>): Settings {
     alwaysOnTop: field('alwaysOnTop', s.alwaysOnTop, d.alwaysOnTop),
     hotkey: field('hotkey', s.hotkey, d.hotkey),
     launchAtLogin: field('launchAtLogin', s.launchAtLogin, d.launchAtLogin),
-    notifyWhenHidden: field('notifyWhenHidden', s.notifyWhenHidden, d.notifyWhenHidden)
+    notifyWhenHidden: field('notifyWhenHidden', s.notifyWhenHidden, d.notifyWhenHidden),
+    saveHistory: field('saveHistory', s.saveHistory, d.saveHistory),
+    contentProtection: field('contentProtection', s.contentProtection, d.contentProtection)
   }
   if (bad.length) logWarn('config', `settings.json içindeki geçersiz alanlar varsayılana döndü: ${bad.join(', ')}`)
   return out

@@ -62,7 +62,9 @@ export const SettingsSchema = z.object({
   alwaysOnTop: z.boolean(),
   hotkey: HotkeySchema,
   launchAtLogin: z.boolean(),
-  notifyWhenHidden: z.boolean()
+  notifyWhenHidden: z.boolean(),
+  saveHistory: z.boolean(),
+  contentProtection: z.boolean()
 })
 
 /**

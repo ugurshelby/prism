@@ -74,6 +74,8 @@ let settings: SettingsView = {
   hotkey: 'CommandOrControl+Shift+Space',
   launchAtLogin: false,
   notifyWhenHidden: true,
+  saveHistory: true,
+  contentProtection: false,
   providers: PROVIDERS.map(provider),
   engine: { provider: 'vertex', analysis: 'gemini-4-argon', generation: 'gemini-4-argon' },
   targets: {
@@ -214,7 +216,7 @@ export function installMock() {
       onStream: (cb) => (streamListeners.add(cb), () => streamListeners.delete(cb))
     },
     history: {
-      list: async () => ({ entries: structuredClone(history), storage: 'encrypted' as const }),
+      list: async () => ({ entries: structuredClone(history), storage: settings.saveHistory ? ('encrypted' as const) : ('off' as const) }),
       remove: async (id) => void (history = history.filter((e) => e.id !== id)),
       clear: async () => void (history = [])
     },
