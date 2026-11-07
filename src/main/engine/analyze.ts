@@ -6,14 +6,16 @@ import {
   clampEffort,
   defaultEffortFor,
   isEffort,
+  preferredModel,
   surfaceInfo,
-  type Effort,
   type Family,
   type ModelId
 } from '@shared/catalog'
+import { z } from 'zod'
 import type { Analysis, AnalyzeRequest } from '@shared/types'
-import { parseJson } from '../llm'
-import { candidatePool, engineGenerate, fallbackModel } from '../providers'
+import { LlmError, parseJson } from '../llm'
+import { logWarn } from '../log'
+import { candidatePool, engineGenerate } from '../providers'
 import { card, familyCard, surfaceCard } from './knowledge'
 
 export const TASK_TYPES = [
@@ -136,7 +138,8 @@ function candidateLine(id: ModelId, req: AnalyzeRequest) {
 function systemPrompt(req: AnalyzeRequest, pool: ModelId[]) {
   const families = FAMILIES.filter((f) => pool.some((m) => MODELS[m].family === f))
   const cross = families.length > 1
-  const target = cross ? 'target AI model (Claude, GPT, Gemini or Grok)' : `${NOUN[families[0]]} model`
+  const only = families[0]
+  const target = cross || !only ? 'target AI model (Claude, GPT, Gemini or Grok)' : `${NOUN[only]} model`
   const manual = req.manual
     ? `\nThe person has already chosen ${MODELS[req.manual.model].name} at \`${req.manual.effort}\` effort and will use that. Still give your honest recommendation (it is shown only as a hint), but your main job here is the clarifying questions.\n`
     : ''
@@ -176,46 +179,60 @@ ${req.prompt}
 </raw_prompt>`
 }
 
-interface RawAnalysis {
-  intent: string
-  task_type: string
-  complexity: Analysis['complexity']
-  recommendation: { model: string; effort: string; confidence: number; reasoning: string; factors: string[] }
-  alternatives: { model: string; effort: string; label: string; tradeoff: string }[]
-  questions: { id: string; question: string; why: string; options: string[] }[]
-}
+// Modelin yapılandırılmış çıktısı da dış veridir: eksik ya da bozuk alan varsayılana döner, model ve effort
+// aşağıda aday havuzuna göre ayrıca denetlenir.
+const RawAnalysisSchema = z.object({
+  intent: z.string().catch(''),
+  task_type: z.string().max(64).catch('other'),
+  complexity: z.enum(['trivial', 'moderate', 'complex', 'frontier']).catch('moderate'),
+  recommendation: z
+    .object({
+      model: z.string().catch(''),
+      effort: z.string().catch(''),
+      confidence: z.number().catch(0.7),
+      reasoning: z.string().catch(''),
+      factors: z.array(z.string()).catch([])
+    })
+    .catch({ model: '', effort: '', confidence: 0.7, reasoning: '', factors: [] }),
+  alternatives: z
+    .array(z.object({ model: z.string(), effort: z.string(), label: z.string().catch(''), tradeoff: z.string().catch('') }))
+    .catch([]),
+  questions: z
+    .array(z.object({ id: z.string().catch(''), question: z.string(), why: z.string().catch(''), options: z.array(z.string()).catch([]) }))
+    .catch([])
+})
+type RawAnalysis = z.infer<typeof RawAnalysisSchema>
 
 function normalize(raw: RawAnalysis, pool: ModelId[], req: AnalyzeRequest): Analysis {
   const inPool = (m: string): m is ModelId => (pool as string[]).includes(m)
-  const rec = raw.recommendation ?? ({} as RawAnalysis['recommendation'])
-  const model: ModelId = inPool(rec.model) ? rec.model : fallbackModel(pool)
+  const rec = raw.recommendation
+  const model: ModelId = inPool(rec.model) ? rec.model : preferredModel(pool)
   const effort = clampEffort(model, isEffort(rec.effort) ? rec.effort : defaultEffortFor(model, req.surface))
   const confidence = rec.confidence > 1 ? rec.confidence / 10 : rec.confidence
   return {
-    intent: raw.intent ?? '',
-    taskType: raw.task_type ?? 'other',
-    complexity: raw.complexity ?? 'moderate',
+    intent: raw.intent,
+    taskType: raw.task_type,
+    complexity: raw.complexity,
     recommendation: {
       model,
       effort,
       confidence: Math.min(1, Math.max(0, Number.isFinite(confidence) ? confidence : 0.7)),
-      reasoning: rec.reasoning ?? '',
-      factors: (rec.factors ?? []).slice(0, 4)
+      reasoning: rec.reasoning,
+      factors: rec.factors.slice(0, 4)
     },
-    alternatives: (raw.alternatives ?? [])
-      .filter((a) => inPool(a.model) && isEffort(a.effort))
-      .map((a) => ({ ...a, model: a.model as ModelId, effort: clampEffort(a.model as ModelId, a.effort as Effort) }))
+    alternatives: raw.alternatives
+      .flatMap((a) => (inPool(a.model) && isEffort(a.effort) ? [{ ...a, model: a.model, effort: clampEffort(a.model, a.effort) }] : []))
       .filter((a) => !(a.model === model && a.effort === effort))
       .slice(0, 2),
-    questions: (raw.questions ?? [])
+    questions: raw.questions
       .filter((q) => q.question)
       .slice(0, 3)
-      .map((q, i) => ({ id: q.id || `q${i + 1}`, question: q.question, why: q.why ?? '', options: (q.options ?? []).slice(0, 4) })),
+      .map((q, i) => ({ id: q.id || `q${i + 1}`, question: q.question, why: q.why, options: q.options.slice(0, 4) })),
     pool
   }
 }
 
-export async function analyze(req: AnalyzeRequest): Promise<Analysis> {
+export async function analyze(req: AnalyzeRequest, signal?: AbortSignal): Promise<Analysis> {
   const started = Date.now()
   const pool = candidatePool(req.family)
   if (req.manual && !pool.includes(req.manual.model)) pool.push(req.manual.model)
@@ -223,16 +240,19 @@ export async function analyze(req: AnalyzeRequest): Promise<Analysis> {
     system: systemPrompt(req, pool),
     user: userPrompt(req),
     schema: schemaFor(pool),
-    temperature: 0.3
+    temperature: 0.3,
+    signal
   }
   let lastError: unknown
   for (let attempt = 0; attempt < 2; attempt++) {
     const { text, usage, engine } = await engineGenerate('analysis', call)
     try {
-      return { ...normalize(parseJson<RawAnalysis>(text), pool, req), usage, engine, elapsedMs: Date.now() - started }
+      return { ...normalize(RawAnalysisSchema.parse(parseJson(text)), pool, req), usage, engine, elapsedMs: Date.now() - started }
     } catch (e) {
+      // Model şemaya uymayan JSON döndürdü; bir kez daha denenir, olmazsa açık bir hata verilir.
+      logWarn('analyze', `deneme ${attempt + 1}: model yanıtı beklenen biçimde değil`, e)
       lastError = e
     }
   }
-  throw lastError
+  throw new LlmError(`Model yanıtı beklenen biçimde değil. Tekrar dene ya da başka bir motor modeli seç.${lastError instanceof LlmError ? ` (${lastError.message})` : ''}`)
 }

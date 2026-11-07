@@ -1,12 +1,31 @@
 // Anthropic Messages API istemcisi (Claude modelleri Prism'in motoru olarak).
 
+import { z } from 'zod'
 import type { DiscoveredModel, Usage } from '@shared/types'
-import { readSse, send } from './http'
+import { readJson, readSse, send } from './http'
 import { toStrict } from './schema'
 import { LlmError, emptyUsage, type Credentials, type LlmCall, type LlmResult, type ProviderClient } from './types'
 
 const BASE = 'https://api.anthropic.com/v1'
 const LABEL = 'Anthropic'
+
+const UsageSchema = z.object({ input_tokens: z.number().optional(), output_tokens: z.number().optional() }).optional()
+
+const MessageSchema = z.object({
+  stop_reason: z.string().nullish(),
+  content: z.array(z.object({ type: z.string(), text: z.string().optional() })).default([]),
+  usage: UsageSchema
+})
+
+const StreamEventSchema = z.object({
+  type: z.string(),
+  message: z.object({ usage: UsageSchema }).optional(),
+  delta: z.object({ type: z.string().optional(), text: z.string().optional(), stop_reason: z.string().nullish() }).optional(),
+  usage: UsageSchema,
+  error: z.object({ message: z.string().optional() }).optional()
+})
+
+const ModelsSchema = z.object({ data: z.array(z.object({ id: z.string(), display_name: z.string().optional() })).default([]) })
 
 const headers = (key: string) => ({
   'content-type': 'application/json',
@@ -32,7 +51,7 @@ function body(call: LlmCall, stream: boolean) {
   }
 }
 
-function checkStop(reason: string | undefined) {
+function checkStop(reason: string | null | undefined) {
   if (reason === 'max_tokens') throw new LlmError('Yanıt token sınırında kesildi.')
   if (reason === 'refusal') throw new LlmError('Model bu isteği yanıtlamayı reddetti.')
 }
@@ -41,17 +60,17 @@ async function post(call: LlmCall, cred: Credentials, stream: boolean) {
   return send(
     `${BASE}/messages`,
     { headers: headers(cred.key), body: body(call, stream) },
-    { label: LABEL, key: cred.key, signal: call.signal, timeoutMs: call.timeoutMs }
+    { label: LABEL, key: cred.key, signal: call.signal, timeoutMs: call.timeoutMs, stream }
   )
 }
 
 export const anthropic: ProviderClient = {
   async generate(call, cred): Promise<LlmResult> {
-    const data: any = await (await post(call, cred, false)).json()
+    const data = await readJson(await post(call, cred, false), MessageSchema, LABEL)
     checkStop(data.stop_reason)
-    const text = (data.content ?? [])
-      .filter((b: any) => b.type === 'text')
-      .map((b: any) => b.text)
+    const text = data.content
+      .filter((b) => b.type === 'text')
+      .map((b) => b.text ?? '')
       .join('')
       .trim()
     if (!text) throw new LlmError(`Boş yanıt (${data.stop_reason ?? 'bilinmiyor'}).`)
@@ -65,12 +84,13 @@ export const anthropic: ProviderClient = {
     const res = await post(call, cred, true)
     let text = ''
     const usage: Usage = emptyUsage()
-    let stop: string | undefined
+    let stop: string | null | undefined
     await readSse(
       res,
+      StreamEventSchema,
       (ev) => {
         if (ev.type === 'message_start') usage.promptTokens = ev.message?.usage?.input_tokens ?? 0
-        else if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+        else if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta' && ev.delta.text) {
           text += ev.delta.text
           onText(ev.delta.text)
         } else if (ev.type === 'message_delta') {
@@ -91,7 +111,7 @@ export const anthropic: ProviderClient = {
       { method: 'GET', headers: headers(cred.key) },
       { label: LABEL, key: cred.key, timeoutMs: 30_000, attempts: 2 }
     )
-    const data: any = await res.json()
-    return (data.data ?? []).map((m: any) => ({ id: m.id, label: m.display_name }))
+    const data = await readJson(res, ModelsSchema, LABEL)
+    return data.data.map((m) => ({ id: m.id, label: m.display_name }))
   }
 }

@@ -11,16 +11,17 @@ const TYPES: Record<string, string> = {
   boolean: 'BOOLEAN'
 }
 
+const isSchema = (v: unknown): v is JsonSchema => typeof v === 'object' && v !== null && !Array.isArray(v)
+
+const propertiesOf = (v: unknown): [string, JsonSchema][] =>
+  isSchema(v) ? Object.entries(v).flatMap(([k, p]): [string, JsonSchema][] => (isSchema(p) ? [[k, p]] : [])) : []
+
 /** Gemini (OpenAPI alt kümesi): büyük harfli tipler; propertyOrdering, minimum/maximum korunur. */
 export function toGemini(schema: JsonSchema): JsonSchema {
   const out: JsonSchema = { ...schema }
   if (typeof schema.type === 'string') out.type = TYPES[schema.type] ?? schema.type
-  if (schema.properties) {
-    out.properties = Object.fromEntries(
-      Object.entries(schema.properties as Record<string, JsonSchema>).map(([k, v]) => [k, toGemini(v)])
-    )
-  }
-  if (schema.items) out.items = toGemini(schema.items as JsonSchema)
+  if (schema.properties) out.properties = Object.fromEntries(propertiesOf(schema.properties).map(([k, v]) => [k, toGemini(v)]))
+  if (isSchema(schema.items)) out.items = toGemini(schema.items)
   return out
 }
 
@@ -29,24 +30,28 @@ export function toGemini(schema: JsonSchema): JsonSchema {
  * desteklenmeyen sınırlar açıklamaya taşınır. Alanlar propertyOrdering sırasına dizilir; üretim sırası korunur.
  */
 export function toStrict(schema: JsonSchema): JsonSchema {
-  const { propertyOrdering, minimum, maximum, ...rest } = schema as JsonSchema & {
-    propertyOrdering?: string[]
-    minimum?: number
-    maximum?: number
-  }
+  const { propertyOrdering, minimum, maximum, ...rest } = schema
   const out: JsonSchema = { ...rest }
-  if (minimum !== undefined || maximum !== undefined) {
-    const range = `Range: ${minimum ?? '-∞'} to ${maximum ?? '∞'}.`
-    out.description = rest.description ? `${rest.description} ${range}` : range
+  const min = typeof minimum === 'number' ? minimum : undefined
+  const max = typeof maximum === 'number' ? maximum : undefined
+  if (min !== undefined || max !== undefined) {
+    const range = `Range: ${min ?? '-∞'} to ${max ?? '∞'}.`
+    out.description = typeof rest.description === 'string' ? `${rest.description} ${range}` : range
   }
   if (rest.properties) {
-    const props = rest.properties as Record<string, JsonSchema>
-    const order = [...(propertyOrdering ?? []), ...Object.keys(props).filter((k) => !propertyOrdering?.includes(k))]
-    out.properties = Object.fromEntries(order.filter((k) => props[k]).map((k) => [k, toStrict(props[k])]))
-    out.required = order.filter((k) => props[k])
+    const props = new Map(propertiesOf(rest.properties))
+    const ordering = Array.isArray(propertyOrdering) ? propertyOrdering.filter((k): k is string => typeof k === 'string') : []
+    const order = [...ordering.filter((k) => props.has(k)), ...[...props.keys()].filter((k) => !ordering.includes(k))]
+    out.properties = Object.fromEntries(
+      order.flatMap((k) => {
+        const prop = props.get(k)
+        return prop ? [[k, toStrict(prop)]] : []
+      })
+    )
+    out.required = order
     out.additionalProperties = false
   }
-  if (rest.items) out.items = toStrict(rest.items as JsonSchema)
+  if (isSchema(rest.items)) out.items = toStrict(rest.items)
   return out
 }
 

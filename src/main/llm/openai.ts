@@ -1,7 +1,8 @@
 // OpenAI ve xAI istemcisi: ikisi de Responses API (POST /v1/responses) kullanır.
 
+import { z } from 'zod'
 import type { DiscoveredModel, Usage } from '@shared/types'
-import { readSse, send } from './http'
+import { readJson, readSse, send } from './http'
 import { toStrict } from './schema'
 import { LlmError, emptyUsage, type Credentials, type LlmCall, type LlmResult, type ProviderClient } from './types'
 
@@ -30,6 +31,40 @@ const CONF: Record<
   }
 }
 
+const UsageSchema = z
+  .object({
+    input_tokens: z.number().optional(),
+    output_tokens: z.number().optional(),
+    output_tokens_details: z.object({ reasoning_tokens: z.number().optional() }).nullish()
+  })
+  .nullish()
+
+const ResponseSchema = z.object({
+  status: z.string().optional(),
+  error: z.object({ message: z.string().optional() }).nullish(),
+  incomplete_details: z.object({ reason: z.string().optional() }).nullish(),
+  output: z
+    .array(
+      z.object({
+        type: z.string(),
+        content: z.array(z.object({ type: z.string(), text: z.string().optional(), refusal: z.string().optional() })).nullish()
+      })
+    )
+    .default([]),
+  usage: UsageSchema
+})
+type ResponseBody = z.infer<typeof ResponseSchema>
+
+const StreamEventSchema = z.object({
+  type: z.string(),
+  delta: z.string().optional(),
+  message: z.string().optional(),
+  error: z.object({ message: z.string().optional() }).nullish(),
+  response: ResponseSchema.partial().optional()
+})
+
+const ModelsSchema = z.object({ data: z.array(z.object({ id: z.string() })).default([]) })
+
 function body(kind: Kind, call: LlmCall, stream: boolean) {
   const c = CONF[kind]
   return {
@@ -39,6 +74,7 @@ function body(kind: Kind, call: LlmCall, stream: boolean) {
       { role: 'user', content: call.user }
     ],
     max_output_tokens: call.maxTokens ?? 32000,
+    // Prompt ve yanıt sağlayıcının tarafında saklanmasın.
     store: false,
     ...(c.reasoning.test(call.model) ? { reasoning: { effort: 'medium' } } : {}),
     // xAI örnekleme değerlerini her istekte açıkça göndermeyi öneriyor; OpenAI reasoning'de kabul etmiyor.
@@ -50,7 +86,7 @@ function body(kind: Kind, call: LlmCall, stream: boolean) {
   }
 }
 
-function usageOf(u: any): Usage {
+function usageOf(u: z.infer<typeof UsageSchema>): Usage {
   return {
     promptTokens: u?.input_tokens ?? 0,
     outputTokens: u?.output_tokens ?? 0,
@@ -58,16 +94,22 @@ function usageOf(u: any): Usage {
   }
 }
 
-function incomplete(response: any): LlmError {
+function incomplete(response: Partial<ResponseBody> | undefined): LlmError {
   const reason = response?.incomplete_details?.reason
   return new LlmError(reason === 'max_output_tokens' ? 'Yanıt token sınırında kesildi.' : `Yanıt yarım kaldı (${reason ?? 'bilinmiyor'}).`)
 }
 
-function textOf(response: any): { text: string; refusal: string } {
-  const parts = (response.output ?? []).filter((i: any) => i.type === 'message').flatMap((i: any) => i.content ?? [])
+function textOf(response: ResponseBody): { text: string; refusal: string } {
+  const parts = response.output.filter((i) => i.type === 'message').flatMap((i) => i.content ?? [])
   return {
-    text: parts.filter((p: any) => p.type === 'output_text').map((p: any) => p.text).join(''),
-    refusal: parts.filter((p: any) => p.type === 'refusal').map((p: any) => p.refusal).join('')
+    text: parts
+      .filter((p) => p.type === 'output_text')
+      .map((p) => p.text ?? '')
+      .join(''),
+    refusal: parts
+      .filter((p) => p.type === 'refusal')
+      .map((p) => p.refusal ?? '')
+      .join('')
   }
 }
 
@@ -79,12 +121,12 @@ function client(kind: Kind): ProviderClient {
       `${c.base}/responses`,
       { headers: headers(cred.key), body: body(kind, call, stream) },
       // xAI reasoning modelleri uzun sürebilir; zaman aşımı daha geniş.
-      { label: c.label, key: cred.key, signal: call.signal, timeoutMs: call.timeoutMs ?? (kind === 'xai' ? 600_000 : undefined) }
+      { label: c.label, key: cred.key, signal: call.signal, timeoutMs: call.timeoutMs ?? (kind === 'xai' ? 600_000 : undefined), stream }
     )
 
   return {
     async generate(call, cred): Promise<LlmResult> {
-      const data: any = await (await post(call, cred, false)).json()
+      const data = await readJson(await post(call, cred, false), ResponseSchema, c.label)
       if (data.status === 'incomplete') throw incomplete(data)
       if (data.status === 'failed') throw new LlmError(`${c.label}: ${data.error?.message ?? 'istek başarısız'}`)
       const { text, refusal } = textOf(data)
@@ -99,6 +141,7 @@ function client(kind: Kind): ProviderClient {
       let refusal = ''
       await readSse(
         res,
+        StreamEventSchema,
         (ev) => {
           if (ev.type === 'response.output_text.delta' && ev.delta) {
             text += ev.delta
@@ -121,11 +164,11 @@ function client(kind: Kind): ProviderClient {
         { method: 'GET', headers: headers(cred.key) },
         { label: c.label, key: cred.key, timeoutMs: 30_000, attempts: 2 }
       )
-      const data: any = await res.json()
-      return (data.data ?? [])
-        .map((m: any) => ({ id: String(m.id) }))
-        .filter((m: DiscoveredModel) => c.models.test(m.id) && !c.nonText.test(m.id))
-        .sort((a: DiscoveredModel, b: DiscoveredModel) => b.id.localeCompare(a.id))
+      const data = await readJson(res, ModelsSchema, c.label)
+      return data.data
+        .map((m): DiscoveredModel => ({ id: m.id }))
+        .filter((m) => c.models.test(m.id) && !c.nonText.test(m.id))
+        .sort((a, b) => b.id.localeCompare(a.id))
     }
   }
 }

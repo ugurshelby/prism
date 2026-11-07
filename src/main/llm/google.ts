@@ -1,8 +1,9 @@
 // Gemini istemcisi: Vertex AI (proje yolu, global konum) ve Google AI Studio (Gemini API).
 // İkisi aynı generateContent gövdesini kullanır; yalnızca uç nokta ve key türü farklı.
 
+import { z } from 'zod'
 import type { DiscoveredModel, Usage } from '@shared/types'
-import { readSse, send } from './http'
+import { readJson, readSse, send } from './http'
 import { toGemini } from './schema'
 import { LlmError, emptyUsage, type Credentials, type LlmCall, type LlmResult, type ProviderClient } from './types'
 
@@ -26,11 +27,35 @@ const VERTEX_PROBE = [
 // Yalnızca metin üreten Gemini modelleri listelenir.
 const NON_TEXT = /(tts|image|embedding|live|transcribe|robotics|omni|banana|aqa|imagen|veo|learnlm)/
 
+const UsageSchema = z
+  .object({ promptTokenCount: z.number().optional(), candidatesTokenCount: z.number().optional(), thoughtsTokenCount: z.number().optional() })
+  .optional()
+
+const CandidateSchema = z.object({
+  finishReason: z.string().optional(),
+  content: z.object({ parts: z.array(z.object({ text: z.string().optional(), thought: z.boolean().optional() })).default([]) }).optional()
+})
+
+const GenerateSchema = z.object({
+  candidates: z.array(CandidateSchema).default([]),
+  promptFeedback: z.object({ blockReason: z.string().optional() }).optional(),
+  usageMetadata: UsageSchema
+})
+
+const ModelsSchema = z.object({
+  models: z
+    .array(z.object({ name: z.string(), displayName: z.string().optional(), supportedGenerationMethods: z.array(z.string()).default([]) }))
+    .default([])
+})
+
+// Yol parçaları kodlanır; host ayrıca http.ts'teki izin listesinden geçer. Proje ve konum providers.ts'te doğrulanır.
 function endpoint(kind: Kind, cred: Credentials, model: string, method: string) {
-  if (kind === 'gemini') return `https://generativelanguage.googleapis.com/v1beta/models/${model}:${method}`
+  const m = encodeURIComponent(model)
+  if (kind === 'gemini') return `https://generativelanguage.googleapis.com/v1beta/models/${m}:${method}`
   const location = cred.location || 'global'
   const host = location === 'global' ? 'aiplatform.googleapis.com' : `${location}-aiplatform.googleapis.com`
-  return `https://${host}/v1/projects/${cred.project}/locations/${location}/publishers/google/models/${model}:${method}`
+  const project = encodeURIComponent(cred.project ?? '')
+  return `https://${host}/v1/projects/${project}/locations/${encodeURIComponent(location)}/publishers/google/models/${m}:${method}`
 }
 
 function body(call: LlmCall) {
@@ -47,7 +72,7 @@ function body(call: LlmCall) {
   }
 }
 
-function usageOf(meta: any): Usage {
+function usageOf(meta: z.infer<typeof UsageSchema>): Usage {
   return {
     promptTokens: meta?.promptTokenCount ?? 0,
     outputTokens: meta?.candidatesTokenCount ?? 0,
@@ -55,10 +80,10 @@ function usageOf(meta: any): Usage {
   }
 }
 
-function textOf(candidate: any): string {
+function textOf(candidate: z.infer<typeof CandidateSchema> | undefined): string {
   return (candidate?.content?.parts ?? [])
-    .filter((p: any) => typeof p.text === 'string' && !p.thought)
-    .map((p: any) => p.text)
+    .filter((p) => typeof p.text === 'string' && !p.thought)
+    .map((p) => p.text ?? '')
     .join('')
 }
 
@@ -69,13 +94,13 @@ async function post(kind: Kind, call: LlmCall, cred: Credentials, stream: boolea
   return send(
     endpoint(kind, cred, call.model, method),
     { headers: headers(cred.key), body: body(call) },
-    { label: LABEL[kind], key: cred.key, signal: call.signal, timeoutMs: call.timeoutMs }
+    { label: LABEL[kind], key: cred.key, signal: call.signal, timeoutMs: call.timeoutMs, stream }
   )
 }
 
 async function probe(cred: Credentials, model: string): Promise<boolean> {
   try {
-    await send(
+    const res = await send(
       endpoint('vertex', cred, model, 'generateContent'),
       {
         headers: headers(cred.key),
@@ -83,6 +108,7 @@ async function probe(cred: Credentials, model: string): Promise<boolean> {
       },
       { label: LABEL.vertex, key: cred.key, timeoutMs: 60_000, attempts: 1 }
     )
+    await res.body?.cancel()
     return true
   } catch (e) {
     if (!(e instanceof LlmError) || e.status === 401 || e.status === 403 || e.status === undefined) throw e
@@ -95,11 +121,11 @@ function client(kind: Kind): ProviderClient {
   return {
     async generate(call, cred): Promise<LlmResult> {
       const res = await post(kind, call, cred, false)
-      const data: any = await res.json()
-      const cand = data.candidates?.[0]
+      const data = await readJson(res, GenerateSchema, LABEL[kind])
+      const cand = data.candidates[0]
       if (cand?.finishReason === 'MAX_TOKENS') throw new LlmError('Yanıt token sınırında kesildi.')
       const text = textOf(cand).trim()
-      if (!text) throw new LlmError(`Boş yanıt (${cand?.finishReason ?? data?.promptFeedback?.blockReason ?? 'bilinmiyor'}).`)
+      if (!text) throw new LlmError(`Boş yanıt (${cand?.finishReason ?? data.promptFeedback?.blockReason ?? 'bilinmiyor'}).`)
       return { text, usage: usageOf(data.usageMetadata) }
     },
 
@@ -110,8 +136,9 @@ function client(kind: Kind): ProviderClient {
       let finish: string | undefined
       await readSse(
         res,
+        GenerateSchema,
         (data) => {
-          const cand = data.candidates?.[0]
+          const cand = data.candidates[0]
           const piece = textOf(cand)
           if (piece) {
             text += piece
@@ -135,7 +162,9 @@ function client(kind: Kind): ProviderClient {
         for (let i = 0; i < VERTEX_PROBE.length; i += 3) {
           const batch = VERTEX_PROBE.slice(i, i + 3)
           const ok = await Promise.all(batch.map((m) => probe(cred, m)))
-          batch.forEach((m, j) => ok[j] && found.push({ id: m }))
+          batch.forEach((m, j) => {
+            if (ok[j]) found.push({ id: m })
+          })
         }
         return found
       }
@@ -144,11 +173,11 @@ function client(kind: Kind): ProviderClient {
         { method: 'GET', headers: headers(cred.key) },
         { label: LABEL.gemini, key: cred.key, timeoutMs: 30_000, attempts: 2 }
       )
-      const data: any = await res.json()
-      return (data.models ?? [])
-        .filter((m: any) => (m.supportedGenerationMethods ?? []).includes('generateContent'))
-        .map((m: any) => ({ id: String(m.name).replace(/^models\//, ''), label: m.displayName }))
-        .filter((m: DiscoveredModel) => m.id.startsWith('gemini') && !NON_TEXT.test(m.id))
+      const data = await readJson(res, ModelsSchema, LABEL.gemini)
+      return data.models
+        .filter((m) => m.supportedGenerationMethods.includes('generateContent'))
+        .map((m): DiscoveredModel => ({ id: m.name.replace(/^models\//, ''), label: m.displayName }))
+        .filter((m) => m.id.startsWith('gemini') && !NON_TEXT.test(m.id))
     }
   }
 }

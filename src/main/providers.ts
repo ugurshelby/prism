@@ -1,11 +1,8 @@
 // Sağlayıcı key'leri, model keşfi, hedef erişimi ve Prism'in motor seçimi.
 // Key'ler ana süreçten çıkmaz: arayüze yalnızca maskeli hâli gider.
 
-import { safeStorage } from 'electron'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
 import {
-  FAMILY_DEFAULT_MODEL,
   MODELS,
   MODEL_IDS,
   PROVIDERS,
@@ -16,36 +13,52 @@ import {
   type ModelId,
   type ProviderId
 } from '@shared/catalog'
+import { ApiKeySchema, ModelsCacheSchema, VertexLocationSchema, VertexProjectSchema, describeIssues } from '@shared/schemas'
 import type { EngineRef, ProviderStatus, ProviderView, SettingsView, TargetAccess } from '@shared/types'
-import { envValues, getSettings, readUserJson, userFile, writeJson } from './config'
+import { getSettings, readUserJson, userFile, writeFileAtomic, writeJson } from './config'
+import { envValues } from './env'
 import { LlmError, client, generate, type Credentials, type LlmCall, type LlmResult } from './llm'
+import { logWarn } from './log'
+import { seal, unseal, vaultState, wipeFile } from './vault'
 
 // --- Key saklama ------------------------------------------------------------------
-// Arayüzden girilen key safeStorage (Windows DPAPI / macOS Keychain) ile şifrelenip userData/<sağlayıcı>.key'e yazılır.
-// Sıra: kayıtlı key → ortam değişkeni → .env.
+// Arayüzden girilen key işletim sisteminin anahtarlığıyla şifrelenip userData/<sağlayıcı>.key'e yazılır (vault.ts).
+// Sıra: kayıtlı key → ortam değişkeni → .env. Kayıtlı key okunamıyorsa sessizce .env'e düşülmez; açık hata verilir.
 
 const keyFile = (p: ProviderId) => userFile(`${p}.key`)
 
-function savedKey(p: ProviderId): string | null {
+type KeyState = { key: string; source: 'saved' | 'env' } | { key: null; source: 'none'; problem?: string }
+
+// Çözülmüş kayıtlı key bellekte tutulur: her ayar görünümünde anahtarlığa tekrar tekrar gidilmez (macOS ve Linux'ta
+// her çözme bir kilit açma isteğine dönüşebilir). Key kaydedilince ya da silinince geçersiz kılınır (forget).
+const savedCache = new Map<ProviderId, KeyState | null>()
+
+function savedKey(p: ProviderId): KeyState | null {
+  if (savedCache.has(p)) return savedCache.get(p) ?? null
   const path = keyFile(p)
-  if (!existsSync(path) || !safeStorage.isEncryptionAvailable()) return null
-  try {
-    return safeStorage.decryptString(readFileSync(path))
-  } catch {
-    return null
+  let state: KeyState | null = null
+  if (existsSync(path)) {
+    try {
+      state = { key: unseal(readFileSync(path)), source: 'saved' }
+    } catch (e) {
+      logWarn('providers', `${p} için kayıtlı key çözülemedi`, e)
+      state = { key: null, source: 'none', problem: `${PROVIDER_INFO[p].label} için kayıtlı key okunamadı. Key'i yeniden kaydet.` }
+    }
   }
+  savedCache.set(p, state)
+  return state
 }
 
-function envKey(p: ProviderId): string | null {
+function envKey(p: ProviderId): string | undefined {
   const env = envValues()
-  return env[PROVIDER_INFO[p].env] || (p === 'gemini' ? env.GOOGLE_API_KEY : '') || null
+  return env[PROVIDER_INFO[p].env] || (p === 'gemini' ? env.GOOGLE_API_KEY : undefined) || undefined
 }
 
-function keyOf(p: ProviderId): { key: string | null; source: 'saved' | 'env' | 'none' } {
+function keyOf(p: ProviderId): KeyState {
   const saved = savedKey(p)
-  if (saved) return { key: saved, source: 'saved' }
+  if (saved) return saved
   const env = envKey(p)
-  return { key: env, source: env ? 'env' : 'none' }
+  return env ? { key: env, source: 'env' } : { key: null, source: 'none' }
 }
 
 function vertexTarget() {
@@ -57,31 +70,36 @@ function vertexTarget() {
 const isReady = (p: ProviderId) => !!keyOf(p).key && (p !== 'vertex' || !!vertexTarget().project)
 
 export function credentials(p: ProviderId): Credentials {
-  const { key } = keyOf(p)
+  const state = keyOf(p)
   const label = PROVIDER_INFO[p].label
-  if (!key) throw new LlmError(`${label} API key bulunamadı. Ayarlardan ekle ya da .env dosyasına ${PROVIDER_INFO[p].env} yaz.`)
-  if (p !== 'vertex') return { key }
+  if (state.key === null) {
+    throw new LlmError(state.problem ?? `${label} API key bulunamadı. Ayarlardan ekle ya da .env dosyasına ${PROVIDER_INFO[p].env} yaz.`)
+  }
+  // .env'den gelen key de aynı biçim kuralından geçer; bozuk key sağlayıcıya hiç gönderilmez.
+  const format = ApiKeySchema.safeParse(state.key)
+  if (!format.success) throw new LlmError(`${label} key'i geçersiz (${state.source === 'env' ? PROVIDER_INFO[p].env : 'kayıtlı key'}): ${describeIssues(format.error)}`)
+  if (p !== 'vertex') return { key: state.key }
   const t = vertexTarget()
   if (!t.project) throw new LlmError("Vertex AI için proje ID'si eksik. Ayarlardan gir ya da .env dosyasına VERTEX_PROJECT_ID yaz.")
-  return { key, ...t }
+  // .env'deki proje ve konum da istek adresine girer; ayarlarla aynı kuraldan geçer.
+  const project = VertexProjectSchema.safeParse(t.project)
+  const location = VertexLocationSchema.safeParse(t.location)
+  if (!project.success) throw new LlmError(describeIssues(project.error))
+  if (!location.success) throw new LlmError(describeIssues(location.error))
+  return { key: state.key, project: project.data, location: location.data }
 }
 
 export function saveKey(p: ProviderId, key: string) {
-  if (!safeStorage.isEncryptionAvailable()) throw new Error('Bu sistemde güvenli depolama kullanılamıyor.')
-  // Linux'ta anahtarlık (Secret Service / KWallet) yoksa Electron sabit bir parolayla yazar; bu gerçek koruma değil.
-  if (process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text') {
-    throw new Error(
-      `Sistem anahtarlığı bulunamadı (GNOME Keyring / KWallet), key güvenle saklanamıyor. Anahtarlığı kur ya da key'i ${userFile('.env')} dosyasına yaz.`
-    )
-  }
-  const path = keyFile(p)
-  mkdirSync(dirname(path), { recursive: true })
-  writeFileSync(path, safeStorage.encryptString(key.trim()))
+  const format = ApiKeySchema.safeParse(key)
+  if (!format.success) throw new Error(describeIssues(format.error))
+  const vault = vaultState()
+  if (!vault.ok) throw new Error(`${vault.reason} Key güvenle saklanamıyor; sistem anahtarlığını kurup tekrar dene.`)
+  writeFileAtomic(`${p}.key`, seal(format.data))
   forget(p)
 }
 
 export function clearKey(p: ProviderId) {
-  rmSync(keyFile(p), { force: true })
+  wipeFile(keyFile(p))
   forget(p)
 }
 
@@ -89,25 +107,51 @@ export function clearKey(p: ProviderId) {
 
 type Cache = Partial<Record<ProviderId, ProviderStatus>>
 let cache: Cache | null = null
+// Key her değiştiğinde artar: eski key'le başlamış bir doğrulama geç biterse yeni sonucun üstüne yazmasın.
+const generation = new Map<ProviderId, number>()
 
-const statuses = (): Cache => (cache ??= readUserJson<Cache>('models.json', {}))
+const statuses = (): Cache => (cache ??= readUserJson('models.json', ModelsCacheSchema, {}))
 
 function forget(p: ProviderId) {
-  delete statuses()[p]
-  writeJson('models.json', statuses())
+  generation.set(p, (generation.get(p) ?? 0) + 1)
+  savedCache.delete(p)
+  inflight.delete(p)
+  const all = statuses()
+  delete all[p]
+  // Key kaydedildi ya da silindi; model önbelleği yazılamasa bile bu işlem başarısız sayılmaz.
+  try {
+    writeJson('models.json', all)
+  } catch (e) {
+    logWarn('providers', 'models.json güncellenemedi', e)
+  }
 }
 
+// Aynı sağlayıcı için süren doğrulama paylaşılır: art arda tıklama ücretli keşif isteklerini çoğaltmasın.
+const inflight = new Map<ProviderId, Promise<ProviderStatus>>()
+
 /** Key'i doğrular ve erişilen modelleri getirir; sonuç önbelleğe yazılır. */
-export async function verify(p: ProviderId): Promise<ProviderStatus> {
+export function verify(p: ProviderId): Promise<ProviderStatus> {
+  const running = inflight.get(p)
+  if (running) return running
+  const job = runVerify(p).finally(() => {
+    if (inflight.get(p) === job) inflight.delete(p)
+  })
+  inflight.set(p, job)
+  return job
+}
+
+async function runVerify(p: ProviderId): Promise<ProviderStatus> {
+  const started = generation.get(p) ?? 0
   let status: ProviderStatus
   try {
     const models = await client(p).discover(credentials(p))
     status = models.length
       ? { ok: true, checkedAt: Date.now(), models }
       : { ok: false, checkedAt: Date.now(), models, message: 'Bağlantı kuruldu ama erişilebilir metin modeli bulunamadı.' }
-  } catch (e: any) {
-    status = { ok: false, checkedAt: Date.now(), models: [], message: e?.message ?? String(e) }
+  } catch (e) {
+    status = { ok: false, checkedAt: Date.now(), models: [], message: e instanceof Error ? e.message : 'Doğrulama başarısız.' }
   }
+  if ((generation.get(p) ?? 0) !== started) return status
   statuses()[p] = status
   writeJson('models.json', statuses())
   return status
@@ -124,8 +168,13 @@ function hint(key: string | null) {
 
 export function providerViews(): ProviderView[] {
   return PROVIDERS.map((id) => {
-    const { key, source } = keyOf(id)
-    return { id, key: { present: !!key, source, hint: hint(key) }, ready: isReady(id), status: statuses()[id] ?? null }
+    const state = keyOf(id)
+    return {
+      id,
+      key: { present: !!state.key, source: state.source, hint: hint(state.key), ...(state.key === null && state.problem ? { problem: state.problem } : {}) },
+      ready: isReady(id),
+      status: statuses()[id] ?? null
+    }
   })
 }
 
@@ -152,8 +201,6 @@ export function targetAccess(): Partial<Record<ModelId, TargetAccess>> {
 
 export const candidatePool = (family: FamilyChoice): ModelId[] => poolFor(family, targetAccess())
 
-export const fallbackModel = (pool: ModelId[]) =>
-  pool.find((m) => (Object.values(FAMILY_DEFAULT_MODEL) as ModelId[]).includes(m)) ?? pool[0]
 
 // --- Motor ------------------------------------------------------------------------
 
@@ -166,22 +213,37 @@ export function overrideEngine(p: ProviderId | null) {
 
 function pickModel(p: ProviderId, role: 'analysis' | 'generation'): string {
   const prefs = PROVIDER_INFO[p].engine[role]
+  // Katalogda her sağlayıcının en az bir tercih modeli tanımlı.
+  const first = prefs[0] ?? ''
   const ids = verifiedModels(p).map((m) => m.id)
-  if (!ids.length) return prefs[0]
-  return prefs.find((m) => ids.includes(m)) ?? prefs.find((m) => ids.some((id) => id.startsWith(m))) ?? ids[0]
+  return prefs.find((m) => ids.includes(m)) ?? prefs.find((m) => ids.some((id) => id.startsWith(m))) ?? ids[0] ?? first
 }
 
-/** Vertex hazırsa Vertex (mevcut kurulum), değilse doğrulanmış ilk sağlayıcı. */
+/** Otomatik seçim: doğrulanmış sağlayıcılar önce (aralarında Vertex başta), sonra hazır olan ilk sağlayıcı. */
+function autoProvider(): ProviderId | undefined {
+  const ready = PROVIDERS.filter(isReady)
+  const verified = ready.filter((p) => statuses()[p]?.ok)
+  const pick = (list: ProviderId[]) => (list.includes('vertex') ? 'vertex' : list[0])
+  return pick(verified) ?? pick(ready)
+}
+
+/** Kayıtlı ama okunamayan ilk key'in sorunu (anahtarlık kilitli, başka hesaptan taşınmış dosya). */
+function savedKeyProblem(): string | undefined {
+  for (const p of PROVIDERS) {
+    const k = keyOf(p)
+    if (k.key === null && k.problem) return k.problem
+  }
+  return undefined
+}
+
+/**
+ * Kullanıcı bir sağlayıcı seçtiyse motor odur; key'i yoksa ya da okunamıyorsa çağrı açık bir hatayla durur.
+ * Başka bir sağlayıcıya geçilmez: prompt, kullanıcının seçmediği bir sunucuya başka bir key'le gitmesin.
+ */
 export function resolveEngine(): SettingsView['engine'] {
   const s = getSettings()
-  const ready = PROVIDERS.filter(isReady)
   const wanted = override ?? (s.engineProvider === 'auto' ? null : s.engineProvider)
-  const provider =
-    wanted && ready.includes(wanted)
-      ? wanted
-      : ready.includes('vertex')
-        ? 'vertex'
-        : (ready.find((p) => statuses()[p]?.ok) ?? ready[0])
+  const provider = wanted ?? autoProvider()
   if (!provider) return null
   const chosen = s.engineModels[provider]
   return {
@@ -192,11 +254,13 @@ export function resolveEngine(): SettingsView['engine'] {
 }
 
 function engineFor(role: 'analysis' | 'generation'): EngineRef & { cred: Credentials } {
+  const auto = !override && getSettings().engineProvider === 'auto'
+  // Otomatik seçimde okunamayan bir key varken başka sağlayıcıya geçilmez: kullanıcı o sağlayıcıyı kullandığını
+  // sanırken prompt başka bir firmaya gitmesin. Önce key yeniden kaydedilmeli.
+  const problem = auto ? savedKeyProblem() : undefined
+  if (problem) throw new LlmError(problem)
   const e = resolveEngine()
-  if (!e) {
-    if (keyOf('vertex').key) credentials('vertex')
-    throw new LlmError('Hiç sağlayıcı yapılandırılmamış. Ayarlar → Sağlayıcılar bölümünden bir API key ekle.')
-  }
+  if (!e) throw new LlmError(savedKeyProblem() ?? 'Hiç sağlayıcı yapılandırılmamış. Ayarlar → Sağlayıcılar bölümünden bir API key ekle.')
   return { provider: e.provider, model: e[role], cred: credentials(e.provider) }
 }
 

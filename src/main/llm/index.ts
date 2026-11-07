@@ -21,11 +21,15 @@ export async function generate(provider: ProviderId, call: LlmCall, cred: Creden
   }
 }
 
-/** JSON yanıtı savunmalı ayrıştırır: kod bloğu işaretlerini temizler, ilk { ile son } arasını alır. */
-export function parseJson<T>(text: string): T {
+/** JSON yanıtı savunmalı ayrıştırır: kod bloğu işaretlerini temizler, ilk { ile son } arasını alır. Sonuç şemayla doğrulanmalı. */
+export function parseJson(text: string): unknown {
   const cleaned = text.replace(/```(?:json)?/g, '')
   const start = cleaned.indexOf('{')
   const end = cleaned.lastIndexOf('}')
   if (start < 0 || end < start) throw new LlmError('Geçerli JSON bulunamadı.')
-  return JSON.parse(cleaned.slice(start, end + 1)) as T
+  try {
+    return JSON.parse(cleaned.slice(start, end + 1)) as unknown
+  } catch {
+    throw new LlmError('Model yanıtı geçerli JSON değil.')
+  }
 }
