@@ -1,6 +1,7 @@
 // İndirme sayfasındaki sürüm → yayın → sistem seçicisi. Veri, sayfaya derleme sırasında JSON olarak gömülür;
-// DOM yalnızca textContent ile kurulur.
+// DOM yalnızca textContent ile kurulur; veri kullanılmadan önce biçimce denetlenir, bağlantılar safeUrl'den geçer.
 import { detectOs } from './os'
+import { safeUrl } from './url'
 
 type Os = 'win' | 'mac' | 'linux'
 interface FileRow {
@@ -32,9 +33,74 @@ interface Data {
   steps: Record<Os, string>
 }
 
+// Gömülü JSON derlemede üretilir, yine de DOM'dan okunan veri güvenilmez sayılır: biçimi tutmazsa seçici kurulmaz.
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
+const isStr = (v: unknown): v is string => typeof v === 'string'
+const isStrOrNull = (v: unknown) => v === null || isStr(v)
+const isStrMap = (v: unknown, required: readonly string[] = []) =>
+  isObj(v) && Object.values(v).every(isStr) && required.every((k) => k in v)
+const OSES = ['win', 'mac', 'linux'] as const
+const isOs = (v: unknown): v is Os => OSES.some((o) => o === v)
+// Seçicinin kullandığı metinler; biri eksikse seçici kurulmaz, sayfadaki yedek bağlantılar kalır.
+const TEXT_KEYS = [
+  'changes',
+  'changesOnGitHub',
+  'checksum',
+  'firstLaunch',
+  'latest',
+  'noFiles',
+  'noReleases',
+  'notReleased',
+  'notReleasedBody',
+  'released',
+  'sums'
+] as const
+
+const isFile = (v: unknown): v is FileRow =>
+  isObj(v) && isStr(v.label) && isStr(v.name) && isStr(v.url) && isStr(v.size) && isStrOrNull(v.sha)
+const isFiles = (v: unknown) =>
+  isObj(v) &&
+  OSES.every((o) => {
+    const rows = v[o]
+    return Array.isArray(rows) && rows.every(isFile)
+  })
+const isVersion = (v: unknown): v is Version =>
+  isObj(v) &&
+  isStr(v.version) &&
+  isStr(v.date) &&
+  isStr(v.url) &&
+  isStrOrNull(v.sums) &&
+  Array.isArray(v.changes) &&
+  v.changes.every(isStr) &&
+  isFiles(v.files)
+const isEdition = (v: unknown): v is Edition =>
+  isObj(v) && isStr(v.id) && isStr(v.name) && isStr(v.status) && isStr(v.tagline) && Array.isArray(v.versions) && v.versions.every(isVersion)
+const isData = (v: unknown): v is Data =>
+  isObj(v) &&
+  Array.isArray(v.editions) &&
+  v.editions.length > 0 &&
+  v.editions.every(isEdition) &&
+  isStr(v.initial) &&
+  isStrMap(v.text, TEXT_KEYS) &&
+  isStrMap(v.steps, OSES)
+
+function readData(json: HTMLElement): Data | null {
+  try {
+    const raw: unknown = JSON.parse(json.textContent || 'null')
+    if (isData(raw)) return raw
+    console.warn('İndirme verisi beklenen biçimde değil')
+    return null
+  } catch (e) {
+    // Bozuk gömülü veri: seçici kurulmaz, sayfadaki betiksiz bağlantılar yerinde kalır.
+    console.warn('İndirme verisi okunamadı', e)
+    return null
+  }
+}
+
 const root = document.querySelector<HTMLElement>('[data-picker]')
 const json = document.getElementById('dl-data')
-if (root && json) init(root, JSON.parse(json.textContent || '{}') as Data)
+const data = json ? readData(json) : null
+if (root && data) init(root, data)
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) {
   const e = document.createElement(tag)
@@ -52,9 +118,10 @@ function init(root: HTMLElement, data: Data) {
 
   const params = new URLSearchParams(location.search)
   const fromHash = location.hash.slice(1)
-  let edition = data.editions.find((e) => e.id === fromHash) ?? data.editions.find((e) => e.id === data.initial)!
+  let edition = data.editions.find((e) => e.id === fromHash) ?? data.editions.find((e) => e.id === data.initial) ?? data.editions[0]!
   let version = edition.versions[0]
-  let os: Os = (['win', 'mac', 'linux'] as Os[]).find((o) => o === params.get('os')) ?? 'win'
+  const fromQuery = params.get('os')
+  let os: Os = isOs(fromQuery) ? fromQuery : 'win'
   let detected: Os | null = null
   let macArch: 'arm' | 'intel' = 'arm'
 
@@ -109,7 +176,8 @@ function init(root: HTMLElement, data: Data) {
       if (!rows.length) list.append(el('p', 'muted', data.text.noFiles))
       rows.forEach((f, i) => {
         const a = el('a', 'dl-file')
-        a.href = f.url
+        const href = safeUrl(f.url)
+        if (href) a.href = href
         a.style.setProperty('--i', String(i))
         const head = el('b')
         head.append(el('span', undefined, f.label), el('span', 'muted', f.size))
@@ -134,12 +202,16 @@ function init(root: HTMLElement, data: Data) {
         notes.append(ul)
       }
       const links = el('p', 'links')
-      const rel = el('a', 'text-link', data.text.changesOnGitHub)
-      rel.href = version.url
-      links.append(rel)
-      if (version.sums) {
+      const relHref = safeUrl(version.url)
+      if (relHref) {
+        const rel = el('a', 'text-link', data.text.changesOnGitHub)
+        rel.href = relHref
+        links.append(rel)
+      }
+      const sumsHref = safeUrl(version.sums)
+      if (sumsHref) {
         const s = el('a', 'text-link', data.text.sums)
-        s.href = version.sums
+        s.href = sumsHref
         links.append(s)
       }
       notes.append(links)
@@ -172,8 +244,8 @@ function init(root: HTMLElement, data: Data) {
   })
   osTabs.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-os-tab]')
-    if (!b) return
-    os = b.dataset.osTab as Os
+    if (!b || !isOs(b.dataset.osTab)) return
+    os = b.dataset.osTab
     renderTabs()
     renderBody()
   })
