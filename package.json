@@ -39,6 +39,9 @@
     "start": "electron-vite preview",
     "selftest": "electron-vite build && electron . --selftest",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "lint": "oxlint src scripts electron.vite.config.ts vite.mock.config.ts vitest.config.mts",
+    "test": "vitest run",
+    "precommit": "npm run -s lint && npm run -s typecheck && npm run -s test",
     "icons": "node scripts/make-icons.mjs",
     "dist:win": "electron-vite build && electron-builder --win",
     "dist:mac": "electron-vite build && electron-builder --mac",
@@ -54,11 +57,16 @@
     "electron": "^45.0.0",
     "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
+    "eslint-plugin-security": "^4.2.1",
     "lucide-react": "^1.61.0",
     "motion": "^14.6.0",
+    "oxlint": "^1.91.0",
+    "oxlint-tsgolint": "^7.0.2005",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "typescript": "^7.0.2",
-    "vite": "^8.3.5"
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0",
+    "zod": "^4.6.7"
   }
 }

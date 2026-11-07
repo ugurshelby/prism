@@ -1,0 +1,134 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "eslint",
+    "typescript",
+    "react",
+    "oxc",
+    "promise",
+    "import",
+    "unicorn"
+  ],
+  "jsPlugins": [
+    "eslint-plugin-security"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error"
+  },
+  "options": {
+    "typeAware": true,
+    "denyWarnings": true,
+    "reportUnusedDisableDirectives": "error"
+  },
+  "ignorePatterns": [
+    "out/**",
+    "release/**",
+    "dist/**",
+    "website/**",
+    "node_modules/**"
+  ],
+  "rules": {
+    "no-empty": "error",
+    "eqeqeq": [
+      "error",
+      "always"
+    ],
+    "no-eval": "error",
+    "no-new-func": "error",
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "process",
+        "property": "env",
+        "message": "Ortam değişkenleri yalnızca src/main/env.ts üzerinden okunur."
+      }
+    ],
+    "typescript/no-explicit-any": "error",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": [
+      "error",
+      {
+        "checksVoidReturn": {
+          "attributes": false
+        }
+      }
+    ],
+    "typescript/await-thenable": "error",
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-return": "error",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "error",
+    "react/no-danger": "error",
+    "security/detect-eval-with-expression": "error",
+    "security/detect-non-literal-require": "error",
+    "security/detect-child-process": "error",
+    "security/detect-unsafe-regex": "error",
+    "security/detect-buffer-noassert": "error",
+    "security/detect-new-buffer": "error",
+    "security/detect-pseudoRandomBytes": "error",
+    "security/detect-possible-timing-attacks": "error",
+    "security/detect-bidi-characters": "error",
+    "security/detect-disable-mustache-escape": "error",
+    "security/detect-no-csrf-before-method-override": "error",
+    "security/detect-non-literal-regexp": "error",
+    "security/detect-non-literal-fs-filename": "error",
+    "react/react-in-jsx-scope": "off",
+    "import/no-unassigned-import": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "unicorn/no-array-sort": "off",
+    "promise/always-return": "off",
+    "react/purity": "off",
+    "react/refs": "off",
+    "react/set-state-in-effect": "off",
+    "react/memo-dependencies": "off",
+    "react/exhaustive-effect-dependencies": "off",
+    "typescript/consistent-return": "off"
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/main/env.ts",
+        "electron.vite.config.ts",
+        "vite.mock.config.ts",
+        "scripts/**"
+      ],
+      "rules": {
+        "no-restricted-properties": "off"
+      }
+    },
+    {
+      "files": [
+        "src/main/config.ts",
+        "src/main/env.ts",
+        "src/main/vault.ts",
+        "src/main/history.ts",
+        "src/main/providers.ts",
+        "src/main/index.ts",
+        "src/main/engine/knowledge.ts",
+        "scripts/**"
+      ],
+      "rules": {
+        "security/detect-non-literal-fs-filename": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/**",
+        "**/*.mjs",
+        "**/*.js"
+      ],
+      "rules": {
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-return": "off",
+        "typescript/no-misused-spread": "off"
+      }
+    }
+  ]
+}
