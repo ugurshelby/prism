@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Check, Copy, RefreshCw, Search, Trash2, X } from 'lucide-react'
 import { FAMILIES, FAMILY_INFO, MODELS, PROVIDER_INFO, effortText, surfaceInfo, type Family } from '@shared/catalog'
-import type { HistoryEntry } from '@shared/types'
+import type { HistoryEntry, HistoryStorage } from '@shared/types'
 import { Logo } from './Prism'
 
 const rtf = new Intl.RelativeTimeFormat('tr', { numeric: 'auto' })
@@ -56,7 +56,7 @@ function Item({
     <motion.li
       layout
       className="h-item"
-      style={{ '--hue': model.hue } as CSSProperties}
+      style={{ '--hue': model.hue }}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0, transition: { delay: Math.min(index, 8) * 0.035, duration: 0.35, ease: [0.22, 1, 0.36, 1] } }}
       exit={{ opacity: 0, x: -24, scale: 0.98, transition: { duration: 0.2 } }}
@@ -116,12 +116,23 @@ export function History({
   onRewrite: (e: HistoryEntry) => void
 }) {
   const [items, setItems] = useState<HistoryEntry[] | null>(null)
+  const [storage, setStorage] = useState<HistoryStorage>('encrypted')
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [confirmClear, setConfirmClear] = useState(false)
   const [family, setFamily] = useState<Family | 'all'>('all')
 
   useEffect(() => {
-    window.prism.history.list().then(setItems)
+    window.prism.history
+      .list()
+      .then((list) => {
+        setItems(list.entries)
+        setStorage(list.storage)
+      })
+      .catch((e: unknown) => {
+        setItems([])
+        setLoadError(e instanceof Error ? e.message : 'Geçmiş okunamadı.')
+      })
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', esc)
     return () => window.removeEventListener('keydown', esc)
@@ -178,7 +189,7 @@ export function History({
               <button
                 key={f}
                 className={family === f ? 'on' : ''}
-                style={f === 'all' ? undefined : ({ '--hue': FAMILY_INFO[f].hue } as CSSProperties)}
+                style={f === 'all' ? undefined : { '--hue': FAMILY_INFO[f].hue }}
                 onClick={() => setFamily(f)}
               >
                 {f !== 'all' && <i />}
@@ -189,6 +200,7 @@ export function History({
         )}
 
         <div className="content">
+          {loadError && <span className="hint bad-text">{loadError}</span>}
           {items && items.length === 0 && (
             <motion.div className="h-empty" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}>
               <Logo size={34} />
@@ -217,7 +229,11 @@ export function History({
 
         {items && items.length > 0 && (
           <div className="h-foot">
-            <span className="hint">Son 200 kayıt bu bilgisayarda saklanır.</span>
+            <span className="hint">
+              {storage === 'encrypted'
+                ? 'Son 200 kayıt bu bilgisayarda şifreli saklanır.'
+                : 'Sistem anahtarlığı yok: geçmiş diske yazılmaz, uygulama kapanınca silinir.'}
+            </span>
             <button
               className={`link ${confirmClear ? 'bad-text' : ''}`}
               onClick={async () => {

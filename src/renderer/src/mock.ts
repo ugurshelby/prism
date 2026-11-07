@@ -87,8 +87,9 @@ let settings: SettingsView = {
   }
 }
 
-const SAMPLE_PROMPT = SAMPLE.split('<prompt>')[1].split('</prompt>')[0].trim()
-const SAMPLE_NOTES = SAMPLE.split('<notes>')[1].split('</notes>')[0].trim().split('\n').map((l) => l.slice(2))
+const between = (text: string, open: string, close: string) => text.split(open)[1]?.split(close)[0]?.trim() ?? ''
+const SAMPLE_PROMPT = between(SAMPLE, '<prompt>', '</prompt>')
+const SAMPLE_NOTES = between(SAMPLE, '<notes>', '</notes>').split('\n').map((l) => l.slice(2))
 
 function seedHistory(): HistoryEntry[] {
   const now = Date.now()
@@ -110,7 +111,7 @@ function seedHistory(): HistoryEntry[] {
       prompt: 'ayarlar paneline vertex bağlantısını test eden bir buton ekle, key arayüze inmesin, hata olursa mesajı göster',
       surface: 'agent',
       analysis: ANALYSIS,
-      answers: [{ question: ANALYSIS.questions[0].question, answer: 'Butonun altında' }],
+      answers: [{ question: ANALYSIS.questions[0]?.question ?? '', answer: 'Butonun altında' }],
       outputs: [output('claude-sonnet-5-5', 'medium', 6), output('claude-opus-5-5', 'medium', 5)]
     },
     {
@@ -157,7 +158,7 @@ export function installMock() {
   const api: PrismApi = {
     settings: {
       get: async () => settings,
-      set: async (patch) => (settings = { ...settings, ...patch }),
+      set: async (patch) => (settings = { ...settings, ...patch, vertex: { ...settings.vertex, ...patch.vertex } }),
       test: async () => (await wait(900), { ok: true, ms: 900, engine: { provider: 'vertex', model: 'gemini-4-argon' } }),
       openKnowledge: async () => '',
       onChanged: () => () => {}
@@ -213,7 +214,7 @@ export function installMock() {
       onStream: (cb) => (streamListeners.add(cb), () => streamListeners.delete(cb))
     },
     history: {
-      list: async () => structuredClone(history),
+      list: async () => ({ entries: structuredClone(history), storage: 'encrypted' as const }),
       remove: async (id) => void (history = history.filter((e) => e.id !== id)),
       clear: async () => void (history = [])
     },
@@ -229,9 +230,9 @@ export function installMock() {
       onMode: (cb) => (modeListeners.add(cb), () => modeListeners.delete(cb)),
       onPinned: () => () => {}
     },
-    clipboard: { write: async (t) => navigator.clipboard?.writeText(t).catch(() => {}) },
+    clipboard: { write: async (t) => navigator.clipboard.writeText(t).catch((e: unknown) => console.warn('[mock] pano yazılamadı', e)) },
     ui: { onOpen: () => () => {} },
     platform: 'win32'
   }
-  ;(window as any).prism = api
+  window.prism = api
 }

@@ -49,6 +49,8 @@ export interface Usage {
 }
 
 export interface AnalyzeRequest {
+  /** İptal için istek kimliği (engine.cancel). */
+  id: string
   prompt: string
   surface: Surface
   /** Hedef ekosistem; 'auto' ise doğrulanmış key'lerden ve uygulamalardan oluşan havuzdan seçilir. */
@@ -103,6 +105,14 @@ export interface HistoryEntry {
   outputs: HistoryOutput[]
 }
 
+/** encrypted: işletim sisteminin anahtarlığıyla şifreli dosyada; memory: anahtarlık yok, yalnızca bu oturumda. */
+export type HistoryStorage = 'encrypted' | 'memory'
+
+export interface HistoryList {
+  entries: HistoryEntry[]
+  storage: HistoryStorage
+}
+
 export type ReplyLanguage = 'tr' | 'en' | 'none'
 
 export interface EngineModels {
@@ -128,6 +138,9 @@ export interface Settings {
   notifyWhenHidden: boolean
 }
 
+/** Arayüzün gönderdiği ayar yaması (SettingsPatchSchema ile aynı biçim): Vertex proje ve konumu ayrı ayrı değişebilir. */
+export type SettingsPatch = Partial<Omit<Settings, 'version' | 'vertex'>> & { vertex?: Partial<Settings['vertex']> }
+
 export interface DiscoveredModel {
   id: string
   label?: string
@@ -143,7 +156,7 @@ export interface ProviderStatus {
 export interface ProviderView {
   id: ProviderId
   /** hint: maskeli gösterim (son 4 karakter); key'in kendisi arayüze inmez. */
-  key: { present: boolean; source: 'saved' | 'env' | 'none'; hint: string }
+  key: { present: boolean; source: 'saved' | 'env' | 'none'; hint: string; problem?: string }
   /** Vertex için proje ve konum tanımlı mı. */
   ready: boolean
   status: ProviderStatus | null

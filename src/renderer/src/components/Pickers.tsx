@@ -8,7 +8,6 @@ import {
   type ModelId
 } from '@shared/catalog'
 import type { TargetAccess } from '@shared/types'
-import type { CSSProperties } from 'react'
 
 export function Segment<T extends string>({
   id,
@@ -70,7 +69,8 @@ export function ModelPicker({
       {list.map((id, i) => {
         const m = MODELS[id]
         const selected = id === value
-        const first = grouped && (i === 0 || MODELS[list[i - 1]].family !== m.family)
+        const prev = list[i - 1]
+        const first = grouped && (!prev || MODELS[prev].family !== m.family)
         const a = access?.[id]
         return [
           first && (
@@ -81,7 +81,7 @@ export function ModelPicker({
           <motion.button
             key={id}
             className={`model-card ${selected ? 'selected' : ''}`}
-            style={{ '--hue': m.hue } as CSSProperties}
+            style={{ '--hue': m.hue }}
             onClick={() => onChange(id)}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}

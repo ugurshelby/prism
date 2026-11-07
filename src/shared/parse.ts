@@ -18,8 +18,9 @@ export function parseGenerated(text: string): ParsedOutput {
   prompt = prompt.replace(/^\s*\n/, '').replace(/\s+$/, '')
 
   const notesMatch = text.match(/<notes>([\s\S]*?)(?:<\/notes>|$)/)
-  const notes = notesMatch
-    ? notesMatch[1]
+  const notesBody = notesMatch?.[1]
+  const notes = notesBody
+    ? notesBody
         .split(/\r?\n/)
         .map((l) => l.replace(/^\s*[-*•]\s*/, '').trim())
         .filter(Boolean)

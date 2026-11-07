@@ -347,7 +347,7 @@ export function clampEffort(model: ModelId, effort: Effort): Effort {
   if (m.efforts.includes(effort)) return effort
   const i = EFFORTS.indexOf(effort)
   const dist = (e: Effort) => Math.abs(EFFORTS.indexOf(e) - i)
-  return [...m.efforts].sort((a, b) => dist(a) - dist(b) || EFFORTS.indexOf(b) - EFFORTS.indexOf(a))[0]
+  return [...m.efforts].sort((a, b) => dist(a) - dist(b) || EFFORTS.indexOf(b) - EFFORTS.indexOf(a))[0] ?? m.defaultEffort.api
 }
 
 /** Kısa gösterim: seviye sabitse "sabit". */
@@ -558,3 +558,7 @@ export const PROVIDER_INFO: Record<ProviderId, ProviderInfo> = {
 /** Keşfedilen bir model ID'si bu hedef modele mi karşılık geliyor (tarihli sürümler dahil)? */
 export const matchesTarget = (discovered: string, target: ModelId) =>
   discovered === target || discovered.startsWith(`${target}-`) || discovered.startsWith(`${target}@`)
+
+/** Havuzdaki ailelerin varsayılan modellerinden ilki; yoksa havuzun ilk modeli. Boş havuzda Claude varsayılanı. */
+export const preferredModel = (pool: ModelId[]): ModelId =>
+  pool.find((m) => Object.values(FAMILY_DEFAULT_MODEL).includes(m)) ?? pool[0] ?? FAMILY_DEFAULT_MODEL.claude

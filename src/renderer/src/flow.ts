@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { MODELS, type Effort, type FamilyChoice, type ModelId, type Surface } from '@shared/catalog'
 import type { Analysis, GenerateResult, HistoryEntry } from '@shared/types'
+import { cleanError, reportError } from './errors'
 
 export type Stage = 'compose' | 'analyzing' | 'review' | 'generating' | 'result'
 export type Choice = { model: ModelId; effort: Effort }
@@ -44,6 +45,7 @@ export function useFlow(onFinished?: () => void) {
   ref.current = s
   const analyzeSeq = useRef(0)
   const genId = useRef<string | null>(null)
+  const analyzeId = useRef<string | null>(null)
   const finished = useRef(onFinished)
   finished.current = onFinished
 
@@ -70,6 +72,8 @@ export function useFlow(onFinished?: () => void) {
   const write = useCallback((override?: Choice, base?: FlowState) => {
     const cur = base ?? ref.current
     const choice = override ?? cur.choice ?? cur.manual
+    // Önceki yazım hâlâ sürüyorsa (çift tıklama, Enter + tık) önce o durdurulur; iki ücretli istek birden koşmasın.
+    if (genId.current) window.prism.engine.cancel(genId.current).catch(reportError('engine'))
     const id = crypto.randomUUID()
     genId.current = id
     const answers = (cur.analysis?.questions ?? []).map((q) => {
@@ -89,8 +93,19 @@ export function useFlow(onFinished?: () => void) {
         : undefined,
       historyId: cur.analysis?.historyId,
       family: cur.family
+    }).catch((e: unknown) => {
+      if (genId.current !== id) return
+      genId.current = null
+      setS((prev) => ({ ...prev, stage: cur.analysis ? 'review' : 'compose', error: cleanError(e) }))
     })
   }, [])
+
+  // Arayüzdeki iptal ana süreçteki analizi de durdurur: ücret işlemeye devam etmesin, sonuç geçmişe yazılmasın.
+  const cancelAnalysis = () => {
+    analyzeSeq.current++
+    if (analyzeId.current) window.prism.engine.cancel(analyzeId.current).catch(reportError('engine'))
+    analyzeId.current = null
+  }
 
   const start = useCallback(async () => {
     const cur = ref.current
@@ -98,14 +113,18 @@ export function useFlow(onFinished?: () => void) {
     const seq = ++analyzeSeq.current
     const manual = cur.selectMode === 'manual' ? cur.manual : undefined
     patch({ stage: 'analyzing', error: null, analysis: null, answers: {}, result: null, startedAt: Date.now() })
+    if (analyzeId.current) window.prism.engine.cancel(analyzeId.current).catch(reportError('engine'))
+    const id = crypto.randomUUID()
+    analyzeId.current = id
     try {
-      const analysis = await window.prism.engine.analyze({ prompt: cur.prompt, surface: cur.surface, family: cur.family, manual })
+      const analysis = await window.prism.engine.analyze({ id, prompt: cur.prompt, surface: cur.surface, family: cur.family, manual })
       if (seq !== analyzeSeq.current) return
       const choice = manual ?? { model: analysis.recommendation.model, effort: analysis.recommendation.effort }
       setS((prev) => ({ ...prev, analysis, choice }))
-      if (manual && analysis.questions.length === 0) write(manual)
+      // Analiz henüz React durumuna işlenmedi; yazım analizi ve geçmiş kimliğini taşısın diye doğrudan verilir.
+      if (manual && analysis.questions.length === 0) write(manual, { ...ref.current, analysis, choice: manual })
       else setS((prev) => ({ ...prev, stage: 'review' }))
-    } catch (e: any) {
+    } catch (e) {
       if (seq !== analyzeSeq.current) return
       patch({ stage: 'compose', error: cleanError(e) })
     }
@@ -114,10 +133,10 @@ export function useFlow(onFinished?: () => void) {
   const cancel = useCallback(() => {
     const cur = ref.current
     if (cur.stage === 'analyzing') {
-      analyzeSeq.current++
+      cancelAnalysis()
       patch({ stage: 'compose' })
     } else if (cur.stage === 'generating' && genId.current) {
-      window.prism.engine.cancel(genId.current)
+      window.prism.engine.cancel(genId.current).catch(reportError('engine'))
       genId.current = null
       patch({ stage: cur.analysis ? 'review' : 'compose' })
     }
@@ -132,8 +151,8 @@ export function useFlow(onFinished?: () => void) {
   }, [])
 
   const stopRunning = () => {
-    analyzeSeq.current++
-    if (genId.current) window.prism.engine.cancel(genId.current)
+    cancelAnalysis()
+    if (genId.current) window.prism.engine.cancel(genId.current).catch(reportError('engine'))
     genId.current = null
   }
 
@@ -191,7 +210,3 @@ function fromEntry(entry: HistoryEntry, prev: FlowState): FlowState {
   }
 }
 
-function cleanError(e: any): string {
-  const msg = String(e?.message ?? e)
-  return msg.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
-}

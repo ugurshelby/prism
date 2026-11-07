@@ -4,8 +4,8 @@ import type {
   AnalyzeRequest,
   EngineRef,
   GenerateRequest,
-  HistoryEntry,
-  Settings,
+  HistoryList,
+  SettingsPatch,
   SettingsView,
   StreamEvent,
   WindowMode
@@ -14,7 +14,8 @@ import type {
 export interface PrismApi {
   settings: {
     get(): Promise<SettingsView>
-    set(patch: Partial<Settings>): Promise<SettingsView>
+    /** Ana süreç alanları doğrular; bilinmeyen alan ya da geçersiz değer hata ile reddedilir. */
+    set(patch: SettingsPatch): Promise<SettingsView>
     test(): Promise<{ ok: boolean; ms: number; message?: string; engine?: EngineRef }>
     openKnowledge(): Promise<string>
     /** Ana süreç ayarları kendisi değiştirdiğinde (ör. açılışta key doğrulaması bitince). */
@@ -32,7 +33,7 @@ export interface PrismApi {
     onStream(cb: (ev: StreamEvent) => void): () => void
   }
   history: {
-    list(): Promise<HistoryEntry[]>
+    list(): Promise<HistoryList>
     remove(id: string): Promise<void>
     clear(): Promise<void>
   }

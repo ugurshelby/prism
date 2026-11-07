@@ -9,10 +9,10 @@ import {
   surfaceInfo,
   SURFACES,
   type FamilyChoice,
-  type ProviderId,
   type Surface
 } from '@shared/catalog'
-import type { EngineRef, ProviderView, ReplyLanguage, Settings as SettingsT, SettingsView } from '@shared/types'
+import type { EngineRef, ProviderView, ReplyLanguage, SettingsPatch, SettingsView } from '@shared/types'
+import { cleanError } from '../errors'
 import { Segment } from './Pickers'
 
 export function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
@@ -23,7 +23,6 @@ export function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) =
   )
 }
 
-const clean = (e: any) => String(e?.message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
 
 function statusOf(p: ProviderView): { color: string; text: string } {
   const source = p.key.source === 'saved' ? 'kayıtlı' : '.env'
@@ -43,7 +42,7 @@ export function ProviderCard({
   view: ProviderView
   settings: SettingsView
   onChanged: (v: SettingsView) => void
-  onSettings: (patch: Partial<SettingsT>) => void
+  onSettings: (patch: SettingsPatch) => void
 }) {
   const info = PROVIDER_INFO[view.id]
   const [key, setKey] = useState('')
@@ -59,7 +58,7 @@ export function ProviderCard({
       onChanged(await fn())
       if (kind === 'save') setKey('')
     } catch (e) {
-      setError(clean(e))
+      setError(cleanError(e))
     } finally {
       setBusy(null)
     }
@@ -89,14 +88,14 @@ export function ProviderCard({
             style={{ flex: 1 }}
             placeholder="Proje ID"
             defaultValue={settings.vertex.project}
-            onBlur={(e) => e.target.value.trim() !== settings.vertex.project && onSettings({ vertex: { ...settings.vertex, project: e.target.value.trim() } })}
+            onBlur={(e) => e.target.value.trim() !== settings.vertex.project && onSettings({ vertex: { project: e.target.value.trim() } })}
           />
           <input
             className="input mono"
             style={{ width: 110 }}
             placeholder="global"
             defaultValue={settings.vertex.location}
-            onBlur={(e) => onSettings({ vertex: { ...settings.vertex, location: e.target.value.trim() || 'global' } })}
+            onBlur={(e) => onSettings({ vertex: { location: e.target.value.trim() || 'global' } })}
           />
         </div>
       )}
@@ -140,6 +139,7 @@ export function ProviderCard({
         </div>
       )}
 
+      {view.key.problem && <span className="hint bad-text">{view.key.problem}</span>}
       {view.status && !view.status.ok && <span className="hint bad-text">{view.status.message}</span>}
       {error && <span className="hint bad-text">{error}</span>}
 
@@ -168,10 +168,13 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    window.prism.settings.get().then((view) => {
-      setV(view)
-      setHotkey(view.hotkey)
-    })
+    window.prism.settings
+      .get()
+      .then((view) => {
+        setV(view)
+        setHotkey(view.hotkey)
+      })
+      .catch((e: unknown) => setError(cleanError(e)))
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', esc)
     return () => window.removeEventListener('keydown', esc)
@@ -182,12 +185,12 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
     onChanged(next)
   }
 
-  const apply = async (patch: Partial<SettingsT>) => {
+  const apply = async (patch: SettingsPatch) => {
     setError(null)
     try {
       changed(await window.prism.settings.set(patch))
     } catch (e) {
-      setError(clean(e))
+      setError(cleanError(e))
     }
   }
 
@@ -197,7 +200,7 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
   const setEngineModel = (role: 'analysis' | 'generation', model: string) => {
     if (!v || !engine || !model) return
     const cur = v.engineModels[engine.provider] ?? { analysis: engine.analysis, generation: engine.generation }
-    apply({ engineModels: { [engine.provider]: { ...cur, [role]: model } } as SettingsT['engineModels'] })
+    void apply({ engineModels: { [engine.provider]: { ...cur, [role]: model } } })
   }
 
   return (
@@ -243,7 +246,11 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
                 <select
                   className="input"
                   value={v.engineProvider}
-                  onChange={(e) => apply({ engineProvider: e.target.value as ProviderId | 'auto' })}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    const choice = value === 'auto' ? value : PROVIDERS.find((p) => p === value)
+                    if (choice) void apply({ engineProvider: choice })
+                  }}
                 >
                   <option value="auto">Otomatik{engine ? ` (${PROVIDER_INFO[engine.provider].label})` : ''}</option>
                   {ready.map((p) => (

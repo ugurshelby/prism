@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
   ArrowLeft,
@@ -26,10 +26,10 @@ import {
   defaultEffortFor,
   effortText,
   modelsOf,
+  preferredModel,
   setupNote,
   surfaceInfo,
   type FamilyChoice,
-  type ModelId,
   type Surface
 } from '@shared/catalog'
 import type { SettingsView, TargetAccess } from '@shared/types'
@@ -87,8 +87,6 @@ const familyOptions = (['auto', ...FAMILIES] as FamilyChoice[]).map((f) => ({
   hue: f === 'auto' ? undefined : FAMILY_INFO[f].hue
 }))
 
-const preferred = (pool: ModelId[]) =>
-  pool.find((m) => (Object.values(FAMILY_DEFAULT_MODEL) as ModelId[]).includes(m)) ?? pool[0]
 
 const ACCESS_TEXT: Record<TargetAccess, string> = { key: 'API', app: 'uygulama' }
 
@@ -129,13 +127,13 @@ export function Compose({ flow, targets = {} }: { flow: Flow; targets?: Settings
   const { s, patch, start } = flow
   const words = s.prompt.trim() ? s.prompt.trim().split(/\s+/).length : 0
   const pool = candidatePool(s.family, targets)
-  useCtrlEnter(start, !!s.prompt.trim())
+  useCtrlEnter(() => void start(), !!s.prompt.trim())
 
   // Ekosistem değişince elle seçilen model yeni havuzda yoksa havuzun önerilen modeline geçer.
   const setFamily = (family: FamilyChoice) => {
     const next = candidatePool(family, targets)
     const keep = next.includes(s.manual.model)
-    const model = keep ? s.manual.model : family === 'auto' ? preferred(next) : FAMILY_DEFAULT_MODEL[family]
+    const model = keep ? s.manual.model : family === 'auto' ? preferredModel(next) : FAMILY_DEFAULT_MODEL[family]
     patch({ family, manual: { model, effort: keep ? s.manual.effort : defaultEffortFor(model, s.surface) } })
   }
 
@@ -300,7 +298,7 @@ export function Review({ flow, targets }: { flow: Flow; targets?: SettingsView['
   useCtrlEnter(() => write())
 
   return (
-    <motion.div className="view" {...viewMotion} style={{ '--hue': m.hue } as CSSProperties}>
+    <motion.div className="view" {...viewMotion} style={{ '--hue': m.hue }}>
       <motion.div className="intent" {...stagger(0)}>
         <b>Anladığım:</b> {a.intent}
       </motion.div>
@@ -369,7 +367,7 @@ export function Review({ flow, targets }: { flow: Flow; targets?: SettingsView['
               <button
                 key={`${alt.model}-${alt.effort}`}
                 className="alt"
-                style={{ '--hue': MODELS[alt.model].hue } as CSSProperties}
+                style={{ '--hue': MODELS[alt.model].hue }}
                 onClick={() => choose({ model: alt.model, effort: alt.effort })}
               >
                 <span className="dot" />
@@ -479,9 +477,10 @@ function Highlighted({ text }: { text: string }) {
 }
 
 function Sparks({ burst }: { burst: number }) {
+  // Her yeni burst yeni bir kıvılcım dizisi üretir.
   const sparks = useMemo(
     () =>
-      Array.from({ length: 12 }, (_, i) => {
+      Array.from({ length: burst ? 12 : 0 }, (_, i) => {
         const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.4
         const dist = 38 + Math.random() * 36
         return { x: Math.cos(angle) * dist, y: Math.sin(angle) * dist * 0.6, c: ['#4fe3c1', '#ffd36e', '#ff8a4c', '#6cc9ff'][i % 4] }
@@ -554,7 +553,7 @@ export function Result({ flow }: { flow: Flow }) {
   const shown = generating ? live.prompt : text
 
   return (
-    <motion.div className="view" {...viewMotion} style={{ '--hue': m.hue } as CSSProperties}>
+    <motion.div className="view" {...viewMotion} style={{ '--hue': m.hue }}>
       <div className="row between">
         <div className="target">
           <span className="dot" />

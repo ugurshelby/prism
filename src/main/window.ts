@@ -1,7 +1,11 @@
-import { BrowserWindow, screen, type Rectangle } from 'electron'
+import { app, BrowserWindow, screen, type Rectangle } from 'electron'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import { WindowStateSchema } from '@shared/schemas'
 import type { WindowMode } from '@shared/types'
 import { getSettings, readUserJson, writeJson } from './config'
+import { devEnv } from './env'
+import { logError, logWarn } from './log'
 
 const PANEL = { width: 440, height: 640, minWidth: 380, minHeight: 480 }
 const PILL = 84
@@ -10,14 +14,38 @@ const SNAP = 24
 interface WindowState {
   panel?: Rectangle
   pill?: { x: number; y: number }
-  mode?: WindowMode
 }
 
 let win: BrowserWindow | null = null
 let state: WindowState = {}
 let mode: WindowMode = 'panel'
 
-const save = () => writeJson('window-state.json', state)
+// Konum kaydı sürükleme olaylarından gelir: her fare hareketinde diske yazmamak için yarım saniye toplanır.
+// Yazılamazsa (disk dolu, dosya kilidi) uygulama düşmez, yalnızca konum hatırlanmaz.
+let saveTimer: ReturnType<typeof setTimeout> | undefined
+const save = () => {
+  clearTimeout(saveTimer)
+  saveTimer = setTimeout(flushWindowState, 500)
+}
+
+/** Bekleyen konum kaydını hemen yazar; bekleyen kayıt yoksa dosyaya dokunmaz. */
+export function flushWindowState() {
+  if (saveTimer === undefined) return
+  clearTimeout(saveTimer)
+  saveTimer = undefined
+  try {
+    writeJson('window-state.json', state)
+  } catch (e) {
+    logWarn('window', 'pencere konumu kaydedilemedi', e)
+  }
+}
+
+// Çerçevesiz pencere Alt+F4 / Cmd+W ile kapatılınca yok edilmez, gizlenir; uygulama tray'de yaşar.
+// Gerçek çıkışta (tray menüsü, app.quit) kapanmasına izin verilir.
+let quitting = false
+app.on('before-quit', () => {
+  quitting = true
+})
 
 /** Pencere en az bir ekranın çalışma alanı içinde kalsın. */
 function onScreen(b: Rectangle): Rectangle {
@@ -46,8 +74,22 @@ export function getWindow() {
   return win
 }
 
+const RENDERER_FILE = () => join(__dirname, '../renderer/index.html')
+
+/** Uygulamanın kendi arayüzü mü: paketli dosya ya da (yalnızca geliştirmede) electron-vite sunucusu. */
+export function isAppUrl(raw: string): boolean {
+  // Ayrıştırılamayan adres uygulamanın kendisi olamaz.
+  if (!URL.canParse(raw)) return false
+  const url = new URL(raw)
+  const dev = devEnv().rendererUrl
+  if (dev) return url.origin === new URL(dev).origin
+  const expected = pathToFileURL(RENDERER_FILE())
+  return url.protocol === 'file:' && url.pathname === expected.pathname
+}
+
 export function createWindow(opts: { hidden?: boolean } = {}): BrowserWindow {
-  state = readUserJson<WindowState>('window-state.json', {})
+  state = readUserJson('window-state.json', WindowStateSchema, {})
+  mode = 'panel'
   const panel = onScreen(state.panel ?? defaultPanel())
 
   win = new BrowserWindow({
@@ -69,7 +111,10 @@ export function createWindow(opts: { hidden?: boolean } = {}): BrowserWindow {
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
-      spellcheck: false
+      // Yazım denetimi kapalı: prompt metni hiçbir sözlük servisine gitmez.
+      spellcheck: false,
+      // Kurulu sürümde geliştirici araçları açılamaz; arayüzdeki prompt ve geçmiş bu yoldan okunamasın.
+      devTools: !app.isPackaged
     }
   })
 
@@ -79,9 +124,18 @@ export function createWindow(opts: { hidden?: boolean } = {}): BrowserWindow {
   win.on('ready-to-show', () => !opts.hidden && win?.show())
   win.on('moved', remember)
   win.on('resized', remember)
+  win.on('close', (e) => {
+    if (quitting) return
+    e.preventDefault()
+    win?.hide()
+  })
+  win.on('closed', () => {
+    win = null
+  })
 
-  if (process.env.ELECTRON_RENDERER_URL) win.loadURL(process.env.ELECTRON_RENDERER_URL)
-  else win.loadFile(join(__dirname, '../renderer/index.html'))
+  const dev = devEnv().rendererUrl
+  const loaded = dev ? win.loadURL(dev) : win.loadFile(RENDERER_FILE())
+  loaded.catch((e: unknown) => logError('window', 'arayüz yüklenemedi', e))
 
   return win
 }
@@ -121,7 +175,6 @@ export function setMode(next: WindowMode) {
     win.setBounds(onScreen({ x, y: current.y, width: panel.width, height: panel.height }))
   }
   mode = next
-  state.mode = next
   save()
   win.webContents.send('window:mode', next)
 }
@@ -173,7 +226,11 @@ export function dragEnd() {
 }
 
 export function toggleVisible() {
-  if (!win) return
+  // Pencere bir yoldan yok edildiyse (ör. arayüzün kendisi kapattıysa) kısayol ve tray onu yeniden açar.
+  if (!win) {
+    createWindow()
+    return
+  }
   if (win.isVisible() && win.isFocused()) win.hide()
   else {
     win.show()

@@ -1,5 +1,5 @@
 import { AnimatePresence } from 'motion/react'
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { History as HistoryIcon, Minimize2, Pin, PinOff, Settings2, X } from 'lucide-react'
 import { FAMILY_INFO, FAMILY_SHORT, MODELS } from '@shared/catalog'
 import type { SettingsView, WindowMode } from '@shared/types'
@@ -10,6 +10,7 @@ import { Logo } from './components/Prism'
 import { Settings } from './components/Settings'
 import { Setup } from './components/Setup'
 import { Analyzing, Compose, Result, Review, stageKey } from './components/Views'
+import { reportError } from './errors'
 
 export default function App() {
   const [mode, setMode] = useState<WindowMode>('panel')
@@ -36,15 +37,20 @@ export default function App() {
 
   useEffect(() => {
     const w = window.prism.window
-    w.getState().then((st) => {
-      setMode(st.mode)
-      setPinned(st.pinned)
-    })
-    window.prism.settings.get().then((v) => {
-      applySettings(v)
-      setSetup(!v.engine)
-      patch({ surface: v.defaultSurface, family: v.defaultFamily })
-    })
+    w.getState()
+      .then((st) => {
+        setMode(st.mode)
+        setPinned(st.pinned)
+      })
+      .catch(reportError('window'))
+    window.prism.settings
+      .get()
+      .then((v) => {
+        applySettings(v)
+        setSetup(!v.engine)
+        patch({ surface: v.defaultSurface, family: v.defaultFamily })
+      })
+      .catch(reportError('settings'))
     const offMode = w.onMode((m) => {
       setMode(m)
       if (m === 'panel') setUnseen(false)
@@ -54,7 +60,9 @@ export default function App() {
       setHistoryOpen(target === 'history')
       setSettingsOpen(target === 'settings')
     })
-    const offChanged = window.prism.settings.onChanged(() => window.prism.settings.get().then(applySettings))
+    const offChanged = window.prism.settings.onChanged(() => {
+      window.prism.settings.get().then(applySettings).catch(reportError('settings'))
+    })
     return () => {
       offMode()
       offPin()
@@ -73,7 +81,7 @@ export default function App() {
   }
 
   return (
-    <div className={`shell ${busy ? 'busy' : ''}`} style={{ '--aura-b': hue } as CSSProperties}>
+    <div className={`shell ${busy ? 'busy' : ''}`} style={{ '--aura-b': hue }}>
       <div className="grain" />
       <div className="aura a" />
       <div className="aura b" />

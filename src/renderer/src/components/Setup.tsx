@@ -1,7 +1,7 @@
 import { motion } from 'motion/react'
 import { ArrowRight } from 'lucide-react'
 import { FAMILIES, FAMILY_INFO, PROVIDERS } from '@shared/catalog'
-import type { Settings as SettingsT, SettingsView } from '@shared/types'
+import type { SettingsPatch, SettingsView } from '@shared/types'
 import { Logo } from './Prism'
 import { ProviderCard, Toggle } from './Settings'
 import { viewMotion } from './Views'
@@ -16,7 +16,7 @@ export function Setup({
   onChanged: (v: SettingsView) => void
   onDone: () => void
 }) {
-  const apply = async (patch: Partial<SettingsT>) => onChanged(await window.prism.settings.set(patch))
+  const apply = async (patch: SettingsPatch) => onChanged(await window.prism.settings.set(patch))
   const ready = !!view.engine
 
   return (
