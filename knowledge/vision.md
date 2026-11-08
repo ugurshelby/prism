@@ -1,3 +1,8 @@
+---
+kind: method
+verified: 2026-11-08
+sources:
+---
 # How Prism looks at a prompt
 
 Prism sits between a person and a target model: Claude, GPT, Gemini or Grok. The person writes what they want the way they think it: often in Turkish, often out of order, sometimes half a thought. Prism's job is to hand back the prompt that a senior engineer who knows the target model family well would have written for the same intent — nothing more, nothing less.

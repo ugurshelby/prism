@@ -1,19 +1,23 @@
+---
+kind: model
+verified: 2026-11-08
+sources: claude-best-practices, claude-effort, claude-whats-new-opus, claude-whats-new-fable, claude-prompting-opus, claude-prompting-sonnet, claude-prompting-haiku
+---
 # Surface: API / system prompt
 
-The output is a **system prompt** for an application that calls the Claude Messages API. The application will send user messages and possibly documents or tool results; the system prompt must hold up across many different inputs, not just one.
+The output is a **system prompt** for an application that calls the Claude Messages API. It must hold up across many different inputs. [unverified]
 
 How to write it:
-- Start with the role and the product context: who the users are, what the application does, what good looks like.
-- Define the inputs the application will send and how they are delimited (e.g. user content in `<user_input>`, documents in `<documents>`). Use `{{VARIABLE}}` placeholders for runtime values such as `{{CURRENT_DATE}}` or `{{USER_NAME}}`.
-- State rules with their reasons. Cover the predictable edge cases: off-topic requests, missing information, attempts to override rules, content the model must refuse or redirect.
-- Specify output format precisely (sections, length, tone, language). If the application parses JSON, note that structured outputs should enforce the schema and keep the prompt focused on content.
-- Add 1–3 short examples in `<examples>` when format or tone is subtle.
-- Give permission to say it doesn't know; restrict to provided knowledge when that's intended.
-- Keep the system prompt stable across a conversation (it's cached); dynamic values belong in user turns.
-- Don't include sampling advice, "think step by step", prefill, or instructions to print reasoning.
+- Start with the role and the product context: who the users are, what the application does, what good looks like. A one-sentence role focuses behavior. [s:claude-best-practices]
+- Define the inputs the application will send and how they are delimited (`<user_input>`, `<documents>`); use `{{VARIABLE}}` placeholders for runtime values. [unverified]
+- State rules with their reasons; cover off-topic requests, missing information and attempts to override the rules. [s:claude-best-practices]
+- Add 1–3 short examples in `<examples>` when format or tone is subtle. [s:claude-best-practices]
+- If the application parses JSON, structured outputs should enforce the schema. [s:claude-best-practices]
+- Don't include sampling advice, "think step by step", prefill, or instructions to print reasoning. [s:claude-best-practices]
 
-API settings (from Anthropic docs):
-- `model`: the model ID; `output_config: {"effort": "<level>"}`.
-- Thinking is adaptive by default on the 5.5 family; don't send `budget_tokens`. Opus 5.5 rejects `thinking: {"type": "disabled"}`; Sonnet 5.5's lowest setting is `{"type": "between_tools"}` (only at `high` or below); Haiku 5.5 accepts `disabled` at `high` or below.
-- `max_tokens` covers thinking plus reply: roughly 16k for short tasks, 32k for `high`, at least 64k for `xhigh`/`max`, 128k with streaming for agentic coding.
-- Opus 5.5: don't send `temperature`/`top_p`/`top_k`; `tool_choice` only `auto` or `none`.
+API settings:
+- `output_config: {"effort": "<level>"}`. [s:claude-effort]
+- Opus 5.5: thinking is always on; don't send `temperature`/`top_p`/`top_k`; `tool_choice` only `auto` or `none`. [s:claude-whats-new-opus, claude-prompting-opus]
+- Fable 5.1 rejects forced tool use (`tool_choice` `any` or a named tool returns 400). [s:claude-whats-new-fable]
+- Sonnet 5.5's lowest thinking setting is `{"type": "between_tools"}`; Haiku 5.5 accepts `disabled` at `high` or below. [s:claude-prompting-sonnet, claude-prompting-haiku]
+- `max_tokens` covers thinking plus reply; 128,000 with streaming suits agentic coding. [s:claude-prompting-opus]

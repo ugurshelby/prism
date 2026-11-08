@@ -1,13 +1,23 @@
+---
+kind: model
+verified: 2026-11-08
+sources: xai-grok-build-model, xai-models, grok-build-settings
+---
 # Writing for Grok Build 0.1
 
-Strengths: xAI's coding-agent model behind the Grok Build CLI; trained to act as an autonomous engineering agent — refactoring, invoking tools, producing structured outputs and iterating through multi-step tasks until completion. 256k context. Reasoning is always on at a fixed level (no effort setting). Early access.
+## How it reads prompts
+- An engineering brief: goal and why, relevant files and commands, what done looks like, the verification command, scope limits. [unverified]
+- In the Grok Build agent, repository rules from `CLAUDE.md` and Cursor rules are already loaded; don't repeat them. [s:grok-build-settings]
 
-## Patterns that work
+## Strengths and weaknesses
+- Strong: agentic software, engineering and workflow tasks; 256k context; low price. [s:xai-grok-build-model, xai-models]
+- Weak fit: writing, research or chat; recommend Grok 4.7. [unverified]
 
-- Write a clear engineering brief: goal and why, relevant files and commands, what done looks like, the verification command, and scope limits.
-- Because it iterates until it considers the task complete, define the finish line precisely and say when to stop and report.
-- Ask before destructive or irreversible actions.
+## Effort
+- Reasoning is supported but no effort control is documented; treat the level as fixed. [s:xai-grok-build-model]
 
-## Things to avoid
-- Prompts that depend on an effort setting — there is none.
-- Non-coding tasks (writing, research, chat): recommend Grok 4.7 instead.
+## Tested patterns
+- Define the finish line precisely and when to stop and report. [unverified]
+
+## Failure modes
+- Prompts that depend on an effort setting. [s:xai-grok-build-model]

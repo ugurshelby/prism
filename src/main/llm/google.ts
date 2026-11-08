@@ -58,13 +58,17 @@ function endpoint(kind: Kind, cred: Credentials, model: string, method: string) 
   return `https://${host}/v1/projects/${project}/locations/${encodeURIComponent(location)}/publishers/google/models/${m}:${method}`
 }
 
+// Gemini 4 ve 3.6+ temperature/topP/topK'yı yok sayıp kullanımdan kalkma başlığı döndürüyor; ileride 400 olacak.
+const NO_SAMPLING = /^gemini-(4|3\.[6-9])/
+
 function body(call: LlmCall) {
+  const sampling = NO_SAMPLING.test(call.model) ? {} : { temperature: call.temperature ?? 0.7, topP: 0.95 }
   return {
-    systemInstruction: { parts: [{ text: call.system }] },
+    ...(call.system ? { systemInstruction: { parts: [{ text: call.system }] } } : {}),
     contents: [{ role: 'user', parts: [{ text: call.user }] }],
     generationConfig: {
-      temperature: call.temperature ?? 0.7,
-      topP: 0.95,
+      ...sampling,
+      ...(call.effort ? { thinkingConfig: { thinkingLevel: call.effort } } : {}),
       maxOutputTokens: call.maxTokens ?? 32768,
       responseMimeType: call.schema ? 'application/json' : 'text/plain',
       ...(call.schema ? { responseSchema: toGemini(call.schema) } : {})

@@ -1,13 +1,23 @@
+---
+kind: model
+verified: 2026-11-08
+sources: gemini-models, gemini-thinking, gemini-prompting, antigravity-models
+---
 # Writing for Gemini 3.5 Flash-Lite
 
-Strengths: the fastest, most cost-effective Gemini 3.5 model, for high-throughput work: classification, extraction, routing, summaries of short texts, simple transformations. Thinking levels `minimal` (default), `low`, `medium`, `high`.
+## How it reads prompts
+- One focused job per prompt with an exact output format. [s:gemini-prompting]
+- Few-shot examples with identical formatting fix format and category boundaries most reliably. [s:gemini-prompting]
 
-## Patterns that work
+## Strengths and weaknesses
+- Strong: fastest, most cost-effective 3.5 model for high-throughput work: classification, extraction, routing, short answers. [s:gemini-models]
+- Weak fit: multi-step, judgment-heavy or long agentic work; recommend 3.8 Flash. Not offered in Antigravity. [s:antigravity-models]
 
-- One focused job per prompt with an exact output format.
-- Few-shot examples with identical formatting are the most reliable way to fix format and category boundaries; Google recommends them.
-- Spell out edge-case rules (what to return when a field is missing or the input is off-topic).
-- Raise thinking to `low` or `medium` only when the task needs a bit of reasoning.
+## Effort
+- `minimal` (default), `low`, `medium`, `high`. Raise to `low` or `medium` only when the task needs some reasoning. [s:gemini-thinking]
 
-## Things to avoid
-- Multi-step, judgment-heavy or long agentic tasks: recommend Gemini 3.8 Flash instead.
+## Tested patterns
+- Spell out edge-case rules: what to return when a field is missing or the input is off-topic. [s:gemini-prompting]
+
+## Failure modes
+- Vague, multi-part prompts: split them or move to 3.8 Flash. [unverified]

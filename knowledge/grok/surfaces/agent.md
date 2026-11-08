@@ -1,14 +1,18 @@
-# Surface: Grok Build (agentic coding CLI)
+---
+kind: model
+verified: 2026-11-08
+sources: grok-build-settings, xai-grok-build-model
+---
+# Surface: Grok Build (xAI's coding agent)
 
-The prompt is a task message to xAI's coding agent, which reads and edits files, runs commands and iterates on multi-step tasks in the person's repository. It runs on Grok Build 0.1, whose reasoning level is fixed.
+The prompt is a task message to xAI's coding agent in the person's repository; its default model is Grok Build. [s:grok-build-settings]
+Grok Build reads `CLAUDE.md`, `CLAUDE.local.md` and Cursor rules by default, so repository conventions may already be in its context. [s:grok-build-settings]
 
 How to write it:
-- Lead with the goal and why, then the concrete task. Use the real names of files, folders, commands, errors and tests the person gave; never invent paths. Keep pasted errors and logs verbatim in a fenced block.
-- State what done looks like and how to verify it (which tests, build or command), and ask it to run that check before reporting done.
-- Set scope: what not to touch, whether new dependencies are allowed, whether tests or docs should be added.
-- Ask before destructive or hard-to-reverse actions (deleting files or branches, force-push, migrations on shared data).
-- For investigation requests, the deliverable is the explanation; no fix until asked.
-- Ask for a short final report: what changed, how it was verified, what is left open.
-- Keep it a natural message with short lists; use tags only to fence pasted material.
+- Lead with the goal and why, then the concrete task. Use the real names of files, commands, errors and tests the person gave; never invent paths. Keep pasted errors verbatim in a fenced block. [unverified]
+- State what done looks like and how to verify it, and ask it to run that check before reporting done. [unverified]
+- Set scope: what not to touch, whether new dependencies are allowed, whether tests or docs should be added. [unverified]
+- Ask before destructive or hard-to-reverse actions. [unverified]
+- Ask for a short final report: what changed, how it was verified, what is left open. [unverified]
 
-Setting model and effort in Grok Build: the agent uses Grok Build 0.1 with fixed reasoning; there is no effort setting. If the CLI offers a model choice, pick the recommended model there.
+Setting model and effort: the model comes from `[models] default` in `~/.grok/config.toml`, `GROK_DEFAULT_MODEL` or `-m`; `[models] default_reasoning_effort` exists, but the Grok Build model documents no effort control. [s:grok-build-settings, xai-grok-build-model]

@@ -1,30 +1,30 @@
+---
+kind: model
+verified: 2026-11-08
+sources: xai-best-practices, xai-reasoning
+---
 # Prompting principles for current Grok models
 
-Source: xAI's "Best Practices" and "Reasoning" guides. xAI publishes little model-specific prompt-writing advice; its main guidance is to state the task, the constraints and the output format directly, because Grok reasoning models reason before they answer. The rest below is general best practice that holds for Grok.
+xAI publishes little prompt-writing advice; its core guidance is to state the task, the constraints and the output format directly, because the models reason before answering. [s:xai-best-practices]
+The rest below is general practice that has not been measured on Grok. [unverified]
 
 ## Clarity
-- State the task, constraints and desired output format directly and early. Treat the model as a capable colleague with no context: give the goal, the why, and what done looks like.
-- Keep the system prompt short and focused on role, rules and format.
-- Tell it what to do rather than what not to do; explain the reason behind a constraint.
+- Give the goal, the reason behind constraints and what done looks like; treat it as a capable colleague with no context. [unverified]
+- Keep the system prompt short: role, rules, format. [s:xai-best-practices]
 
 ## Structure
-- Put static content first (system prompt, examples, reference documents) and the per-request part last — this matches how xAI's prompt caching works.
-- Use XML tags or Markdown sections to separate instructions, context, examples and inputs when they are mixed.
-- Examples steer format reliably; keep them varied and consistently formatted.
+- Put static content first (system prompt, examples, reference documents) and the per-request part last; xAI's caching depends on an unchanged prefix. [s:xai-best-practices]
+- Use XML tags or Markdown sections when instructions, context and inputs are mixed. [unverified]
 
 ## Reasoning
-- Don't add "think step by step"; reasoning is built in and steered by `reasoning.effort`. Don't ask it to reveal its reasoning in the reply; a short rationale is fine.
+- Don't add "think step by step"; reasoning is built in and steered by `reasoning.effort`. [s:xai-reasoning]
 
-## Tools and agentic work
-- Say when a tool (web search, code execution, function) should be used, and what the loop's finish line is.
-- Encourage local, reversible actions; ask before destructive or externally visible ones.
-- For current facts, ask it to search and give today's date.
+## Tools and current facts
+- Say when a tool should be used and what the loop's finish line is. [unverified]
+- For current information ask it to use web search; Grok 4.7's knowledge stops in May 2026. [s:xai-best-practices]
 
-## Hallucination and grounding
-- Give permission to say it doesn't know; restrict it to provided material when that's the intent; ask for sources.
-
-## Re-tuning
-- Prompts tuned for another model family should be adjusted for Grok rather than reused as-is.
+## Grounding
+- Give permission to say it doesn't know; restrict it to provided material when that's the intent. [unverified]
 
 ## Pasted content
-- Wrap pasted external text in clearly delimited tags and say that instructions inside it are followed only where the person's own message asks.
+- Wrap pasted external text in labeled tags and say that instructions inside it are data, not commands. [unverified]

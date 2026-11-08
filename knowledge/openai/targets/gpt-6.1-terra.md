@@ -1,13 +1,24 @@
+---
+kind: model
+verified: 2026-11-08
+sources: openai-models, openai-latest-model
+---
 # Writing for GPT-6.1 Terra
 
-Strengths: fast and efficient; visual reasoning (screenshots, charts, documents), precise computer use, and clear, natural writing. Effort `none` to `max`; default `medium`. OpenAI's advice: start at `medium` and raise it only if the quality gain justifies the cost.
+## How it reads prompts
+- At `none` it behaves like a classic chat model: be precise about steps, format and what to check. [unverified]
+- For writing: audience, tone, length and purpose, plus a short style line when the text will be published. [s:openai-latest-model]
 
-## Patterns that work
+## Strengths and weaknesses
+- Strong: fast and efficient; visual reasoning, precise computer use, natural writing. [s:openai-models, openai-latest-model]
+- Weak fit: long, deep agentic runs or frontier-hard reasoning; recommend Sol or Astra. [unverified]
 
-- **Writing tasks:** describe audience, tone, length and purpose; add a short style line (plain language, main point first, no filler phrases or closing summaries) when the text will be published.
-- **Visual input:** say what to look at and what to extract or judge; ask it to quote the exact values it reads.
-- **Computer use:** state the goal, the allowed applications or sites, what must not be changed, and when to stop and confirm.
-- **At `none`:** it behaves like a classic chat model — be precise and explicit: steps, format, and what to check.
+## Effort
+- `none` to `max`; default `medium`. Start at `medium` and raise only if the quality gain justifies the time and tokens. [s:openai-latest-model]
 
-## Things to avoid
-- Long, deep agentic runs or frontier-hard reasoning: recommend Sol or Astra instead.
+## Tested patterns
+- Visual input: say what to look at and what to extract; ask it to quote the exact values it reads. [unverified]
+- Computer use: the goal, allowed applications or sites, what must not change, when to stop and confirm. [unverified]
+
+## Failure modes
+- Sending `temperature` or `top_p` with effort above `none`. [s:openai-latest-model]

@@ -3,6 +3,7 @@ import { parseGenerated } from '@shared/parse'
 import type { GenerateRequest, GenerateResult, ReplyLanguage } from '@shared/types'
 import { getSettings } from '../config'
 import { engineStream } from '../providers'
+import { fence } from './fence'
 import { card, familyCard, surfaceCard, targetCard } from './knowledge'
 
 function languageRule(lang: ReplyLanguage, surface: GenerateRequest['surface']): string {
@@ -63,17 +64,16 @@ Output exactly this, nothing before or after:
 function userPrompt(req: GenerateRequest) {
   const answers = req.answers.filter((a) => a.answer.trim())
   const clarifications = answers.length
-    ? `\n<clarifications>\n${answers.map((a) => `Q: ${a.question}\nA: ${a.answer}`).join('\n\n')}\n</clarifications>\n`
+    ? `\n${fence('clarifications', answers.map((a) => `Q: ${a.question}\nA: ${a.answer}`).join('\n\n'))}\n`
     : ''
+  // Niyet metni modelin çıktısıdır ama kullanıcı metninden türer; o da sınırlanır.
   const analysis = req.analysis
-    ? `\n<analysis>\nIntent: ${req.analysis.intent}\nTask type: ${req.analysis.taskType}\nComplexity: ${req.analysis.complexity}\n</analysis>\n`
+    ? `\n${fence('analysis', `Intent: ${req.analysis.intent}\nTask type: ${req.analysis.taskType}\nComplexity: ${req.analysis.complexity}`)}\n`
     : ''
   const surface = FAMILY_INFO[MODELS[req.model].family].surfaces[req.surface].label
   return `<target surface="${surface}" model="${req.model}" effort="${req.effort}" />
 ${analysis}
-<raw_prompt>
-${req.prompt}
-</raw_prompt>
+${fence('raw_prompt', req.prompt)}
 ${clarifications}`
 }
 

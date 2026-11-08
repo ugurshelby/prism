@@ -16,6 +16,7 @@ import type { Analysis, AnalyzeRequest } from '@shared/types'
 import { LlmError, parseJson } from '../llm'
 import { logWarn } from '../log'
 import { candidatePool, engineGenerate } from '../providers'
+import { fence } from './fence'
 import { card, familyCard, surfaceCard } from './knowledge'
 
 export const TASK_TYPES = [
@@ -174,9 +175,7 @@ Language: every human-readable field is in Turkish. Keep model names, effort nam
 function userPrompt(req: AnalyzeRequest) {
   return `<surface>${surfaceInfo(req.family, req.surface).label}</surface>
 
-<raw_prompt>
-${req.prompt}
-</raw_prompt>`
+${fence('raw_prompt', req.prompt)}`
 }
 
 // Modelin yapılandırılmış çıktısı da dış veridir: eksik ya da bozuk alan varsayılana döner, model ve effort

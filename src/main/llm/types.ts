@@ -1,3 +1,4 @@
+import type { Effort } from '@shared/catalog'
 import type { DiscoveredModel, Usage } from '@shared/types'
 
 /** Sağlayıcıdan bağımsız JSON Schema (küçük harfli tipler; isteğe bağlı propertyOrdering). */
@@ -13,6 +14,8 @@ export interface LlmCall {
   signal?: AbortSignal
   timeoutMs?: number
   maxTokens?: number
+  /** Hedef modelin düşünme seviyesi (eval'deki hedef çağrıları). Verilmezse modelin varsayılanı kullanılır; şimdilik yalnızca Gemini istemcisi uygular. */
+  effort?: Effort
 }
 
 export interface LlmResult {
@@ -20,10 +23,14 @@ export interface LlmResult {
   usage: Usage
 }
 
+/** auth: key reddedildi; quota: 429; not_found: model yok; other: geri kalanı. */
+export type LlmErrorKind = 'auth' | 'quota' | 'not_found' | 'other'
+
 export class LlmError extends Error {
   constructor(
     message: string,
-    readonly status?: number
+    readonly status?: number,
+    readonly kind: LlmErrorKind = 'other'
   ) {
     super(message)
   }

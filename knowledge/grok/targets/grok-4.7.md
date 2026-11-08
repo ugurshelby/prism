@@ -1,14 +1,26 @@
+---
+kind: model
+verified: 2026-11-08
+sources: xai-models, xai-reasoning, xai-best-practices
+---
 # Writing for Grok 4.7
 
-Strengths: xAI's most capable model, recommended for both code and chat; 500k context; knowledge cutoff May 2026; low list price for a flagship. Reasoning is always on: `low`, `medium`, `high` (default), `xhigh`.
+## How it reads prompts
+- Direct briefs: task, constraints and output format up front; the model plans in its own reasoning. [s:xai-best-practices]
 
-## Patterns that work
+## Strengths and weaknesses
+- Strong: xAI's newest flagship at a low list price; 500k context; knowledge to May 2026. [s:xai-models]
+- Weak fit: very long inputs near or above 200k tokens cost double; Grok 4.3 has a 1M window and is cheaper. [s:xai-models]
 
-- **Direct briefs:** task, constraints and output format stated up front; reasoning handles the planning.
-- **Coding:** goal, relevant files, done criteria and the verification command; scope guards for narrow changes.
-- **Effort:** `low` for latency-sensitive agent steps and simple tool calls, `medium` for complex analysis, `high` for hard math and multi-step logic, `xhigh` when quality matters more than latency.
-- **Current information:** ask it to search and give today's date.
+## Effort
+- Always reasoning: `low`, `medium`, `high` (default), `xhigh`. [s:xai-reasoning]
+- `low` for latency-sensitive agent steps, `medium` for complex analysis, `high` for hard math and multi-step logic, `xhigh` when quality matters more than latency. [s:xai-reasoning]
 
-## Things to avoid
-- "Think step by step", requests to reveal reasoning, aggressive all-caps rules.
-- In API prompts: relying on `stop` sequences or penalties (rejected by reasoning models).
+## Tested patterns
+- Coding: goal, relevant files, done criteria and the verification command; scope guards for narrow changes. [unverified]
+- Current information: ask it to search and give today's date. [s:xai-best-practices]
+
+## Failure modes
+- "Think step by step" and requests to reveal reasoning add nothing. [s:xai-reasoning]
+- API prompts that rely on `stop` sequences or penalties fail on this model. [s:xai-reasoning]
+- High-effort requests can run long; short client timeouts look like failures. [s:xai-best-practices]

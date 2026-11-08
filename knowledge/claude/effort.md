@@ -1,27 +1,30 @@
-# Effort
+---
+kind: model
+verified: 2026-11-08
+sources: claude-effort, claude-prompting-opus, claude-prompting-sonnet, claude-prompting-haiku, claude-prompting-fable
+---
+# Effort (Claude)
 
-Effort is the main control over how much a Claude model thinks, and so over quality, latency and cost. Levels: `low`, `medium`, `high`, `xhigh`, `max`. Level names do not mean the same amount of thinking across models. Asking for "less thinking" in the prompt is unreliable; lower the effort instead. Thinking tokens count toward `max_tokens` and are billed as output.
-
-## What each level is for
+Effort is the main control over how much a Claude model thinks, and so over quality, latency and cost. Level names don't mean the same amount of thinking across models. [s:claude-effort, claude-prompting-opus]
+Asking for less thinking in the prompt is unreliable; lower the effort instead. Thinking counts toward `max_tokens` and is billed as output. [s:claude-prompting-opus, claude-prompting-haiku]
+On the API, effort can change mid-conversation with a per-message `system` entry (beta), which keeps the prompt cache. [s:claude-effort]
 
 | Level | Use it for |
 |---|---|
-| `low` | Quick exchanges where the person reviews each result: brainstorming, a first sketch, a small change like a rename, simple chat, short tool tasks, sub-agents. Fastest and cheapest; the model scopes tightly and may skip verification. |
-| `medium` | Day-to-day work with a clear scope, such as implementing a well-described feature. Default on Opus 5.5 and Haiku 5.5 (and on Sonnet 5.5 in Claude Code). |
-| `high` | Work where verification matters or edge cases are likely: fixing a bug in an existing codebase, knowledge work, strict instruction following, longer agent tasks. Default on Sonnet 5.5 (API) and Fable 5.1. |
-| `xhigh` | Long-horizon agentic and coding tasks (30+ minutes, large token budgets) where deeper reasoning pays off. |
-| `max` | Hard problems the model should work through alone, such as finding security vulnerabilities. Diminishing returns and prone to overthinking; reserve it. |
+| `low` | Quick exchanges the person reviews: brainstorming, a small change, simple chat, short tool tasks, subagents. The model scopes tightly and may skip verification. | [s:claude-effort]
+| `medium` | Day-to-day work with a clear scope. Default on Opus 5.5 and Haiku 5.5, and on Sonnet 5.5 in Claude Code. | [s:claude-effort]
+| `high` | Work where verification matters or edge cases are likely: bugs in an existing codebase, knowledge work, strict instruction following. Default on Sonnet 5.5 (API) and Fable 5.1. | [s:claude-effort]
+| `xhigh` | Long-horizon agentic and coding tasks where deeper reasoning pays off. | [s:claude-effort]
+| `max` | Hard problems to work through alone, such as finding security vulnerabilities. Diminishing returns; reserve it. | [s:claude-effort]
 
 ## Per model
-
-- **Opus 5.5:** start at `medium` (default). Thinking can't be turned off. Opus 5.5 thinks more than older Opus at the same level, especially at `xhigh`/`max`. Use `high` for hard debugging and verification-heavy work, `xhigh` for long autonomous coding, `low` for quick iterative work (coding at `low` is still close to `medium`). At `xhigh`/`max`, `max_tokens` should be at least 64k.
-- **Sonnet 5.5:** default `high` on the API. Agentic coding and multi-step tool use: `medium` for well-specified tasks, `high` for harder or longer ones. Chat and latency-sensitive work: `medium` or `low` (above `medium` it briefly thinks before almost every reply, which delays the first token). Use `xhigh`/`max` only where there is a clear quality gain; at those levels it tends to start extra review/hardening rounds and launch reviewer sub-agents. For agentic coding via the API: `max_tokens` 128000 and streaming.
-- **Haiku 5.5:** start at `medium` for most work including agentic coding. `low` for chat, short tool tasks and simple high-volume requests (risk: skips a search, stops early, skips a check in long agent prompts). `high` for knowledge work, longer agent tasks, strict instruction following. `xhigh`/`max` rarely make sense — compare with Sonnet 5.5 instead.
-- **Fable 5.1:** start at `high` (default). Step up to `xhigh`/`max` for the most capability-sensitive agentic and coding work; step down to `medium`/`low` for routine or latency-sensitive work. At `low` it searches less often. At `xhigh`/`max` it may draft long deliverables in its thinking and then write them again, so prefer `high` for single long deliverables.
+- **Opus 5.5:** start at `medium`; thinking can't be turned off. It thinks more than Opus 5 at the same level, especially at `xhigh`/`max`; reserve those for measured gains. For agentic coding, `max_tokens` of 128,000 works well. [s:claude-prompting-opus]
+- **Sonnet 5.5:** from `medium` up it thinks briefly before almost every reply, which delays the first token; use `medium` or `low` for chat. At `xhigh`/`max` it starts extra review rounds and reviewer subagents. [s:claude-prompting-sonnet]
+- **Haiku 5.5:** start at `medium`. At `xhigh` in multi-turn chat it sometimes ends a turn with no visible text; if a task seems to need `xhigh`/`max`, compare with Sonnet 5.5. [s:claude-prompting-haiku]
+- **Fable 5.1:** start at `high`. At `low` it searches less. At `xhigh`/`max` it may draft long deliverables in its thinking and write them again; prefer `high` for single long deliverables. [s:claude-prompting-fable]
 
 ## How the prompt should change with effort
-
-- **low:** Be explicit and complete; the model won't fill gaps. Use a short checklist when the task has several parts. If the work must be verified (tests, build), say so explicitly — at low effort the model may report done without a real check. If the task needs multistep reasoning, one plain sentence such as "This task involves multistep reasoning; work through it carefully before answering." helps. Keep the prompt short; no long background.
-- **medium:** State the goal, the scope, and what done looks like. Name the verification step for code changes. Mention the riskiest edge case if there is one. In long agentic tasks, models at low/medium are more likely to stop and check in; if the person wants it to run to completion, say so.
-- **high:** Give the model room for judgment: context, goal, constraints and the finish line matter more than steps. Describe the outcome, not the procedure. Add scope guards if the person wants a narrow change, because the model will otherwise add tests, docs and small extras that fit repo conventions.
-- **xhigh / max:** Spend words on boundaries and stopping conditions: what is in scope, what must not be touched, when to stop and report, and that extra review rounds or reviewer sub-agents are not wanted unless asked. For long autonomous runs, define the completion condition and which actions still need confirmation (destructive or irreversible ones). For a single long deliverable, consider recommending `high` instead.
+- **low:** explicit and complete; the model won't fill gaps. If the work must be verified, say so; at low effort it may report done without a real check. [s:claude-prompting-sonnet]
+- **medium:** goal, scope, what done looks like; name the verification step for code changes. [unverified]
+- **high:** context, goal, constraints and the finish line matter more than steps; add scope guards for narrow changes. [s:claude-prompting-sonnet]
+- **xhigh / max:** spend words on boundaries and stopping conditions, and say extra review rounds or reviewer subagents are not wanted unless asked. [s:claude-prompting-sonnet]

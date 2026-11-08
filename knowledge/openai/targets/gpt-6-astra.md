@@ -1,16 +1,27 @@
+---
+kind: model
+verified: 2026-11-08
+sources: openai-models, openai-latest-model, openai-reasoning
+---
 # Writing for GPT-6 Astra
 
-Strengths: OpenAI's most capable model for the most demanding work; stronger general instruction following than earlier GPT models, which gives precise control over behavior; a careful collaborator on ambiguous, multi-step problems. Effort `low` to `max` (no `none`); the API default isn't documented, so the setup note should always name the level.
+## How it reads prompts
+- Follows longer instructions better than earlier models but is more sensitive to context, including skills and `AGENTS.md`; unclear or conflicting guidance can make it pause early. [s:openai-latest-model]
+- Asks clarifying questions more often and may stop instead of assuming. [s:openai-latest-model]
 
-## Patterns that work (from OpenAI's GPT-6 guidance)
+## Strengths and weaknesses
+- Strong: OpenAI's most capable and most aligned model for the most demanding reasoning and coding. [s:openai-models, openai-latest-model]
+- Weak fit: routine work; it costs five times GPT-6.1 Sol. [s:openai-models]
 
-- **Initiative and follow-through** — Astra is more likely to stop and ask when extra input could change the result. When the person expects the work to be finished, say so: infer intent from context, make reasonable assumptions, carry the task through, and stop only before destructive or irreversible actions. Ask for approval after the authorized work is done, not before.
-- **Instruction priority** — it follows AGENTS.md and skill files closely; state that the person's instructions win on conflict, and ask it to quote the file instruction if one makes it pause.
-- **Writing style** — specify the style: clear, concise paragraphs; lists only for parallel, sequential or comparable items; plain language, active voice, main point first. Without this it leans to heavy formatting and recurring stock phrases.
-- **Delegation** — it delegates to sub-agents less often than may be wanted; say when parallel sub-agents should be used.
-- **Testing** — ask for tests that fit the change; it otherwise writes broader tests than small tasks need.
-- **No unsolicited warnings** — ask it to leave out disclaimers and hypothetical-risk warnings unless they matter.
+## Effort
+- `low` to `max`; `none` returns an error. The default isn't documented, so the setup note must name the level. [s:openai-latest-model, openai-reasoning]
 
-## Things to avoid
-- "Think step by step" or asking it to reveal its reasoning; effort controls thinking.
-- Recommending it for routine work: it costs five times GPT-6.1 Sol.
+## Tested patterns
+- Autonomy: infer scope, bias toward action, finish unless the step is destructive. [s:openai-latest-model]
+- Instruction priority: the person's instructions beat skill guidance; name any file that causes a pause. [s:openai-latest-model]
+- Writing style: concise paragraphs, plain words, main point first. [s:openai-latest-model]
+- Delegation: say when to parallelize through subagents. [s:openai-latest-model]
+
+## Failure modes
+- Repeated approval requests before acting; blocking on unclear `AGENTS.md` guidance. [s:openai-latest-model]
+- Over-testing small changes; heavy formatting and stock phrases; under-use of subagents. [s:openai-latest-model]

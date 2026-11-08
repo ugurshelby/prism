@@ -3,13 +3,13 @@
 //             --discover (yalnızca key'leri doğrulayıp erişilen modelleri listeler)
 //             --smoke (ağ ve key olmadan paketin bütünlüğünü dener; CI'da her platformda paketlenmiş uygulamayla çalışır)
 import { app } from 'electron'
-import { FAMILIES, SURFACES, modelsOf } from '@shared/catalog'
 import { FamilyChoiceSchema, ProviderIdSchema, SurfaceSchema } from '@shared/schemas'
 import { analyze } from './engine/analyze'
 import { generatePrompt } from './engine/generate'
-import { card } from './engine/knowledge'
+import { card, cardPaths } from './engine/knowledge'
 import { assertProviderUrl } from './llm/http'
 import { candidatePool, overrideEngine, providerViews, resolveEngine, targetAccess, verify } from './providers'
+import { runEval } from './eval/run'
 import { isAppUrl } from './window'
 
 const SAMPLE =
@@ -28,15 +28,8 @@ export async function selftest(argv: string[]) {
     if (engineFlag !== undefined) overrideEngine(ProviderIdSchema.parse(engineFlag))
 
     if (argv.includes('--smoke')) {
-      const paths = [
-        'routing.md',
-        'vision.md',
-        ...FAMILIES.flatMap((f) => [
-          ...['models', 'effort', 'principles'].map((n) => `${f}/${n}.md`),
-          ...SURFACES.map((s) => `${f}/surfaces/${s}.md`),
-          ...modelsOf(f).map((m) => `${f}/targets/${m}.md`)
-        ])
-      ]
+      // Her kart şemadan geçer (ön bilgi, kaynaklar); geçmeyen ilk kart açık bir hatayla durdurur.
+      const paths = cardPaths()
       const empty = paths.filter((p) => !card(p))
       if (empty.length) throw new Error(`Boş bilgi kartı: ${empty.join(', ')}`)
       // Paketli uygulamada da güvenlik sınırları yerinde mi: key yalnızca sağlayıcılara gider, IPC yalnızca kendi arayüzünden.
@@ -59,6 +52,12 @@ export async function selftest(argv: string[]) {
         cards: paths.length,
         providers: providerViews().map((p) => `${p.id}:${p.key.source}`)
       })
+      return app.exit(0)
+    }
+
+    // Eval kendi tavanı ve kaydıyla çalışır; ayrıntı eval/run.ts başında.
+    if (argv.includes('--eval')) {
+      await runEval(argv)
       return app.exit(0)
     }
 

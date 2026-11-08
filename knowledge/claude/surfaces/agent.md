@@ -1,19 +1,21 @@
-# Surface: Claude Code (agentic coding in a terminal / IDE)
+---
+kind: model
+verified: 2026-11-08
+sources: claude-code-model-config, claude-best-practices
+---
+# Surface: Claude Code (agentic coding in a terminal or IDE)
 
-The prompt is a user message to an agent that can read and edit files, run commands and tests in the person's repository. The person usually stays in the loop and can steer between turns.
+The prompt is a user message to an agent that reads and edits files and runs commands in the person's repository. The person usually stays in the loop and can steer between turns. [unverified]
 
 How to write it:
-- Lead with the goal and why, then the concrete task. Refer to files, folders, commands, error messages and tests by their real names when the person gave them; never invent paths.
-- If the person pasted an error or log, keep it verbatim in a fenced block.
-- State what done looks like and how to verify it (which tests, build or command to run). At `low`/`medium` add the explicit "run a real check before reporting done" instruction; at `high`+ one line naming the check is enough.
-- Set scope: what not to touch, whether new dependencies are allowed, whether tests/docs should be added. Add the target model's tested scope paragraph when the person wants a narrow change.
-- For investigation/diagnosis requests ("why does X happen?"), say the deliverable is the explanation and that no fix should be applied until asked.
-- For bigger features, it's often worth asking it to first look at the relevant code and propose a short plan before editing — but only if the person wants to approve the plan; otherwise let it proceed.
-- Ask before destructive or hard-to-reverse actions (deleting files/branches, force-push, migrations on shared databases).
-- Keep it as a natural message with short lists where useful. Avoid heavy XML templates; use tags only to fence pasted material.
-- Don't restate things Claude Code already does by default (reading files before editing, using its tools).
+- Lead with the goal and why, then the concrete task. Use real names of files, commands, errors and tests the person gave; never invent paths. Keep pasted errors verbatim in a fenced block. [unverified]
+- State what done looks like and how to verify it. At `low`/`medium` add the explicit "run a real check before reporting done"; at `high`+ one line naming the check is enough. [unverified]
+- Set scope: what not to touch, whether new dependencies are allowed, whether tests or docs should be added. [s:claude-best-practices]
+- For investigation requests, the deliverable is the explanation; no fix until asked. [s:claude-best-practices]
+- Ask before destructive or hard-to-reverse actions. [s:claude-best-practices]
+- Keep it a natural message with short lists; use tags only to fence pasted material. Don't restate what Claude Code does by default. [unverified]
 
 Setting model and effort in Claude Code:
-- Model: `/model claude-opus-5-5` (full IDs are unambiguous; aliases like `opus`/`sonnet` can resolve to older models on some providers). Fable: `/model claude-fable-5-1` (or the `fable` alias).
-- Effort: `/effort low|medium|high|xhigh|max`. `max` applies to the current session only. `/effort status` shows the active level.
-- Defaults in Claude Code: Opus 5.5, Sonnet 5.5 and Haiku 5.5 start at `medium`; Fable 5.1 at `high`.
+- Model: `/model claude-opus-5-5` (full IDs are unambiguous). [s:claude-code-model-config]
+- Effort: `/effort low|medium|high|xhigh|max`; `max` applies to the current session only; `/effort status` shows the active level. [s:claude-code-model-config]
+- Defaults: Opus 5.5, Sonnet 5.5 and Haiku 5.5 start at `medium`, Fable 5.1 at `high`. [s:claude-code-model-config]

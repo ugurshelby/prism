@@ -1,13 +1,24 @@
+---
+kind: model
+verified: 2026-11-08
+sources: openai-models, openai-latest-model, openai-reasoning
+---
 # Writing for GPT-6.1 Sol
 
-Strengths: near-Astra performance on complex work at one fifth of the price; a strong default for serious coding, debugging, analysis and writing when cost matters. Effort `low` to `max` (no `none`, no `minimal`); default `medium`.
+## How it reads prompts
+- Same family habits as Astra; when they would get in the way, say to carry the task through, state the writing style and scale testing to the change. [unverified]
+- Lean system prompts with each rule stated once score better. [s:openai-latest-model]
 
-## Patterns that work
+## Strengths and weaknesses
+- Strong: near-Astra performance for complex coding, computer use and professional work at one fifth of the price. [s:openai-models, openai-latest-model]
+- Weak fit: trivial or very high-volume tasks, where Luna or Terra cost far less. [s:openai-models]
 
-- It shares the GPT-6 habits: asks before finishing when unsure, formats heavily, follows AGENTS.md closely, tests broadly. Apply the same steering as for Astra when those habits would get in the way: say to carry the task through on reasonable assumptions, state the writing style, scale testing to the change, and give the person's instructions priority over context files.
-- At `medium`, name the verification step and the riskiest edge case; at `high` and above, spend words on scope and stopping conditions instead.
-- For long agentic tasks, ask it to keep a short TODO list and finish the whole task before yielding.
+## Effort
+- `low` to `max`; no `none` or `minimal`; default `medium`. [s:openai-latest-model, openai-reasoning]
 
-## Things to avoid
-- "Think step by step", requests to reveal reasoning, aggressive all-caps rules.
-- `none` / `minimal` effort — not supported; use `low`.
+## Tested patterns
+- At `medium`, name the verification step and the riskiest edge case; at `high` and above, spend words on scope and stopping conditions. [unverified]
+
+## Failure modes
+- Sending `none` or `minimal` effort. [s:openai-reasoning]
+- "Think step by step" and requests to reveal reasoning. [s:openai-reasoning]

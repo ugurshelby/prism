@@ -215,7 +215,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     latency: 'En hızlı',
     price: { input: 0.1, output: 0.5 },
     efforts: ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
-    defaultEffort: { api: 'low', agent: 'low' },
+    defaultEffort: { api: 'medium', agent: 'medium' },
     hue: '#9fb4ff'
   },
   'gemini-4-argon': {
@@ -433,8 +433,11 @@ export function setupNote(model: ModelId, effort: Effort, surface: Surface): Not
         return {
           title: 'Grok Build ayarı',
           lines: fixed
-            ? ['Grok Build ajanı bu modelle çalışır; reasoning sabit, effort ayarı yok.']
-            : [`Model seçimi sunuluyorsa ${m.id} seç.`, 'Grok Build ajanında effort ayarı yok; model varsayılanı kullanılır.']
+            ? ['Grok Build ajanı bu modelle çalışır; modelin belgelenmiş bir effort ayarı yok.']
+            : [
+                `Modeli \`~/.grok/config.toml\` içinde \`[models] default\` ile ya da \`-m ${m.id}\` ile seç.`,
+                `Effort için \`[models] default_reasoning_effort = "${effort}"\` kullanılabilir.`
+              ]
         }
       }
       if (surface === 'chat') {
@@ -529,6 +532,7 @@ export const PROVIDER_INFO: Record<ProviderId, ProviderInfo> = {
   gemini: {
     id: 'gemini',
     label: 'Google AI Studio',
+    // Motor listesi hedef katalogdan bağımsızdır: gemini-3.6-flash hedef olarak sunulmaz ama motor olabilir.
     family: 'gemini',
     env: 'GEMINI_API_KEY',
     keyUrl: 'https://aistudio.google.com/apikey',

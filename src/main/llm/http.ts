@@ -3,7 +3,7 @@
 
 import { z } from 'zod'
 import { logWarn } from '../log'
-import { LlmError } from './types'
+import { LlmError, type LlmErrorKind } from './types'
 
 export interface SendOptions {
   label: string
@@ -51,12 +51,18 @@ function errorMessage(data: unknown): string | undefined {
   return (typeof error === 'string' ? error : error?.message) ?? message ?? detail
 }
 
-function friendly(label: string, status: number, message: string): string {
-  if (status === 404) return `Model bulunamadı ya da erişim yok (404). Ayarlardaki model ID'sini kontrol et. ${message}`
-  // Google AI Studio ve xAI geçersiz key'e 401 yerine 400 döndürür.
-  const badKey = status === 401 || status === 403 || (status === 400 && /api key/i.test(message))
-  if (badKey) return `${label} API key'i reddedildi (${status}). Ayarlardan key'i kontrol et.`
-  if (status === 429) return `${label} kotası doldu (429). Biraz sonra tekrar dene.`
+function errorKind(status: number, message: string): LlmErrorKind {
+  if (status === 404) return 'not_found'
+  // Google AI Studio, Vertex ve xAI geçersiz key'e 401 yerine 400 döndürür.
+  if (status === 401 || status === 403 || (status === 400 && /api[ _-]?key/i.test(message))) return 'auth'
+  if (status === 429) return 'quota'
+  return 'other'
+}
+
+function friendly(label: string, status: number, message: string, kind: LlmErrorKind): string {
+  if (kind === 'not_found') return `Model bulunamadı ya da erişim yok (404). Ayarlardaki model ID'sini kontrol et. ${message}`
+  if (kind === 'auth') return `${label} API key'i reddedildi (${status}). Ayarlardan key'i kontrol et.`
+  if (kind === 'quota') return `${label} kotası doldu (429). Biraz sonra tekrar dene.`
   return `${label} ${status}: ${message}`
 }
 
@@ -132,7 +138,8 @@ export async function send(
       // Hata gövdesi JSON olmayabilir (ör. vekil sunucu sayfası); o durumda durum metni kullanılır.
       const data: unknown = await res.json().catch(() => null)
       const message = redact(errorMessage(data) ?? res.statusText, o.key).slice(0, MAX_ERROR_MESSAGE)
-      throw new LlmError(friendly(o.label, res.status, message), res.status)
+      const kind = errorKind(res.status, message)
+      throw new LlmError(friendly(o.label, res.status, message, kind), res.status, kind)
     }
     return res
   }

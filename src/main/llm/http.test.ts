@@ -83,6 +83,15 @@ describe('send', () => {
     expect(err.status).toBe(418)
   })
 
+  it('400 ile gelen key reddini auth olarak işaretler', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ error: { message: 'API key not valid. Please pass a valid API key.' } }, { status: 400 })))
+    const err = await failure(send('https://aiplatform.googleapis.com/v1/x', { headers: {} }, { label: 'Vertex', key: KEY, attempts: 1 }))
+    expect(err.kind).toBe('auth')
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ error: { message: 'Invalid JSON payload: responseSchema' } }, { status: 400 })))
+    const other = await failure(send('https://aiplatform.googleapis.com/v1/x', { headers: {} }, { label: 'Vertex', key: KEY, attempts: 1 }))
+    expect(other.kind).toBe('other')
+  })
+
   it('ağ hatası mesajındaki key’i ayıklar', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new Error(`connect failed ${KEY}`))))
     const err = await failure(send('https://api.openai.com/v1/x', { headers: {} }, { label: 'OpenAI', key: KEY }))

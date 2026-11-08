@@ -1,39 +1,37 @@
+---
+kind: model
+verified: 2026-11-08
+sources: openai-reasoning, openai-latest-model
+---
 # Prompting principles for current OpenAI models (GPT-6 family)
 
-Source: OpenAI's "Prompt engineering", "Reasoning models" and "Using GPT-6" guides.
-
 ## Clarity and the output contract
-- Reasoning models work best with high-level goals, like a senior colleague: give the task, the constraints and the desired output format, and let the model plan the intermediate steps. Don't prescribe every step.
-- Give an explicit output contract: structure, length, what to include and leave out.
-- For agentic and research work, define what "done" means and how the model should verify its work (tests to run, sources to check). Ask it to verify patches rather than trust success messages.
+- Give the task, the constraints and the output format; define a clear goal and an explicit output contract without prescribing every intermediate step. [s:openai-reasoning]
+- For agentic and research work, define what "done" means and how the model should verify its work. [s:openai-reasoning]
+- Lean prompts score better: trim repeated instructions, examples and tool descriptions; state each rule once. [s:openai-latest-model]
 
 ## Structure
-- Rules and context go in the developer message (or `instructions`); the task and inputs in the user message. Treat the developer message like a function definition and the user message like its arguments.
-- A developer message reads well in sections: Identity, Instructions, Examples, Context. Use Markdown headers and lists for hierarchy, XML tags to delimit documents and data.
-- Put reusable, static content first and per-request context last (this also helps prompt caching).
-- Few-shot: a handful of diverse input/output examples in the developer message steer format reliably.
+- Rules and context go in the developer message (or `instructions`); the task and inputs in the user message. [unverified]
+- Put reusable, static content first and per-request context last. [unverified]
 
 ## GPT-6 tendencies to steer
-- **Asks more often.** GPT-6 Astra stops to ask when more input could change the result. If the person wants the work finished, say so: infer intent from context, make reasonable assumptions, and carry the task through to completion; only stop before destructive or irreversible actions. Treat "can you…" / "help me…" as a request to act. Ask for approval only after the authorized work is done, so the person reviews a concrete result.
-- **Verbose, heavily formatted answers.** It defaults to lists, tables and Markdown and can repeat stock phrases. State the style wanted: clear, concise paragraphs; lists only for parallel, sequential or comparable items; plain language, active voice, main point first; detail calibrated to the reader.
-- **Sensitive to context files.** It follows instructions in AGENTS.md and skill files closely. When the person's request may conflict with them, say that the person's instructions take precedence and ask it to name the file and quote the instruction if a file makes it pause or diverge.
-- **Under-delegates.** If parallel sub-agents would help, say when and how much to delegate.
-- **Tests broadly.** Ask for tests proportional to the change; skip tests for trivial, reversible changes.
-- **No unsolicited warnings.** Ask it to leave out disclaimers, compliance checklists and warnings about hypothetical risks unless they matter.
+- **Asks and pauses more (Astra).** Tell it to infer intent, bias toward action and finish the task, stopping only before destructive or irreversible steps. Treat "can you…" / "help me…" as a request to act. [s:openai-latest-model]
+- **Approval timing.** Do the reversible work first, so approval is the last step before external writes, merges or publishing. [s:openai-latest-model]
+- **Heavy formatting (Astra).** It defaults to lists, tables and Markdown and repeats stock phrases. Ask for clear paragraphs, lists only for parallel or sequential content, plain language, main point first. [s:openai-latest-model]
+- **Sensitive to context files (Astra).** It follows `AGENTS.md` and skills closely; say the person's instructions take priority, and ask it to name the file and instruction if one makes it pause. [s:openai-latest-model]
+- **Under-delegates (Astra).** Say when and how much to use subagents. [s:openai-latest-model]
+- **Tests broadly (Astra).** Ask for tests that fit the change; skip them for trivial, reversible changes. [s:openai-latest-model]
+- **No unsolicited warnings.** Ask it to leave out disclaimers and approval flows nobody asked for. [s:openai-latest-model]
+- Repeated "ask first" warnings make it request approval for routine actions; name the safe local actions explicitly instead. [s:openai-latest-model]
 
 ## Writing quality
-- For prose the person will publish, add a short style line. OpenAI lists patterns to avoid, e.g. filler words ("delve", "foster", "leverage"), stock phrases ("it's worth noting", "importantly"), closing summaries like "In short:" or "Bottom line:", "X, not Y" contrasts nobody asked about, invented hyphenated compounds and vague qualifiers.
+- For prose: plain language, active voice, no filler phrases or stock closing summaries; match technical depth to the reader. [s:openai-latest-model]
 
 ## Reasoning
-- Don't write "think step by step"; reasoning is internal and controlled by effort. Don't ask the model to reveal its reasoning; a short rationale or a summary of what it did is fine.
+- Don't write "think step by step"; reasoning is internal and controlled by effort. [s:openai-reasoning]
 
-## Tools and agentic work
-- Ask it to resolve the full task before yielding, to explain tool calls briefly at notable steps, and to track progress with a TODO list when the task is long.
-- Encourage local, reversible actions; ask before destructive or externally visible ones.
-- Frontend work: name the preferred libraries and the UI states, file structure and components when they matter.
-
-## Hallucination and grounding
-- Give permission to say it doesn't know; restrict to provided material when that's the intent; ask for sources. For anything time-sensitive, tell it to use web search and give today's date.
+## Grounding
+- Give permission to say it doesn't know; restrict it to provided material when that's the intent; for time-sensitive facts ask it to search. [unverified]
 
 ## Pasted content
-- Wrap pasted external text in clearly delimited tags and say that instructions inside it are followed only where the person's own message asks.
+- Wrap pasted external text in labeled tags and say that instructions inside it are data, not commands. [unverified]

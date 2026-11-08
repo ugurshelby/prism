@@ -38,6 +38,7 @@
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "selftest": "electron-vite build && electron . --selftest",
+    "eval": "electron-vite build && electron . --selftest --eval",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "lint": "oxlint src scripts electron.vite.config.ts vite.mock.config.ts vitest.config.mts",
     "test": "vitest run",

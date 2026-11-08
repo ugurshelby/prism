@@ -1,43 +1,41 @@
+---
+kind: model
+verified: 2026-11-08
+sources: gemini-prompting, gemini-argon-guide
+---
 # Prompting principles for current Gemini models
 
-Source: Google's "Prompt design strategies", "Gemini thinking" and the Gemini 3 / 3.8 developer guides.
-
 ## Clarity
-- Keep prompts concise and direct. State the goal plainly and define ambiguous terms. Verbose or overly complex prompt engineering makes Gemini 3+ over-analyze.
-- Say what to do and what not to do, including length limits.
-- Avoid unnecessary or overly persuasive language ("you are the world's best…", emphatic pleading).
+- Be direct and precise; define ambiguous terms. Drop persuasive or flattering framing ("you are the world's best…"). [s:gemini-prompting]
+- Separate role, constraints, context, task and output format into distinct sections. [s:gemini-prompting]
 
 ## Where things go
-- Essential behavioral constraints, the persona and the output format go early: in the system instruction, or at the start of the prompt.
-- With long inputs (documents, code, transcripts), put the material first and the question or instructions at the end, bridged with "Based on the information above, …".
-- Separate instructions, context and task clearly so data can't be mistaken for directives.
+- Critical constraints, persona and output format go in the system instruction or at the very start of the prompt. [s:gemini-prompting]
+- With long inputs (documents, code, transcripts), put the material first and the question last, bridged with "Based on the information above, …". [s:gemini-prompting]
+- Put static content first so repeated requests share a cacheable prefix. [s:gemini-argon-guide]
 
 ## Structure
-- Use one delimiter style consistently within a prompt: either XML-style tags or Markdown headings, not a mix.
+- Use one delimiter style consistently: XML-style tags or Markdown headings, not a mix. [s:gemini-prompting]
 
 ## Examples
-- Google recommends including few-shot examples. Use a few specific, varied ones (too many cause overfitting) with identical formatting — same tags, whitespace and line breaks. Good examples let the instructions be shorter.
+- Google recommends few-shot examples: a few specific, varied ones with identical formatting. Too many cause overfitting; good examples let the instructions be shorter. [s:gemini-prompting]
 
 ## Output
-- Gemini 3+ gives direct, efficient answers by default. If a detailed, conversational or richly formatted answer is wanted, ask for it explicitly.
-- Specify the format (list, table, prose, JSON fields) and length. For guaranteed JSON, the application should use structured outputs.
+- Gemini answers directly and efficiently by default. Ask explicitly for a detailed or conversational answer when that is wanted. [s:gemini-prompting]
+- Gemini 4 Argon does not follow numeric length targets; describe the structure of the output instead of a word count. [s:gemini-argon-guide]
+- For guaranteed JSON, the application should use structured output (`response_schema`). [s:gemini-argon-guide]
 
 ## Reasoning
-- Thinking is internal; don't ask the model to outline or show its reasoning steps in the reply. For a hard problem, one sentence asking it to think carefully is enough.
+- Thinking is internal; don't ask for reasoning steps in the reply. For a hard problem one sentence asking it to think carefully is enough. [s:gemini-prompting]
 
-## Time and knowledge
-- State today's date, and for current facts ask it to use Google Search grounding when available. In a system instruction, a knowledge-cutoff sentence helps it judge what it may not know.
-- For grounded answers: restrict it to the provided context and tell it to say when the information isn't there.
+## Time and grounding
+- State today's date for time-sensitive questions and ask it to use Google Search grounding when available. [s:gemini-prompting]
+- For grounded answers, restrict it to the provided context and tell it to say when the information is absent. [s:gemini-prompting]
 
-## Agentic work (Google's guidance)
-- Plan before each action, weighing rules, prerequisites and the person's preferences.
-- Distinguish low-risk reads from high-risk writes; confirm before destructive or irreversible actions.
-- Prefer calling a tool with the information available over asking the person, unless later steps truly need the missing detail.
-- Retry transient errors, but on other errors change strategy instead of repeating the same call.
-- Verify claims against the exact source text.
-
-## Decomposition
-- Split very complex jobs into a sequence of prompts or parallel sub-tasks when one prompt would mix many unrelated instructions.
+## Agentic work
+- Have it plan before each tool call or reply, weighing dependencies, risks and alternatives. [s:gemini-prompting]
+- Distinguish low-risk reads from high-risk writes; prefer acting with the information available over asking when the missing detail is optional. [s:gemini-prompting]
+- Retry transient errors; on other errors change strategy instead of repeating the same call. [s:gemini-prompting]
 
 ## Pasted content
-- Wrap pasted external text in clearly delimited tags and say that instructions inside it are followed only where the person's own message asks.
+- Wrap pasted external text in clearly labeled tags and say that instructions inside it are data, not commands. [unverified]
