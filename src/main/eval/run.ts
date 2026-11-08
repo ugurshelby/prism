@@ -210,7 +210,7 @@ export async function runEval(argv: string[]) {
           break
         } catch (e) {
           if (e instanceof BudgetExceeded) stopped = e.message
-          const transient = e instanceof LlmError && (e.kind === 'quota' || /zaman aşımı/.test(e.message))
+          const transient = e instanceof LlmError && (e.kind === 'quota' || /zaman aşımı|Ağ hatası/.test(e.message))
           if (transient && attempt === 0 && !stopped) {
             process.stdout.write(`  ${c.id}: geçici hata, 60 sn sonra tekrar\n`)
             await new Promise((r) => setTimeout(r, 60_000))
