@@ -1,8 +1,9 @@
 // OpenAI ve xAI istemcisi: ikisi de Responses API (POST /v1/responses) kullanır.
 
 import { z } from 'zod'
+import { msg } from '@shared/messages'
 import type { DiscoveredModel, Usage } from '@shared/types'
-import { readJson, readSse, send } from './http'
+import { readJson, readSse, redact, send } from './http'
 import { toStrict } from './schema'
 import { LlmError, emptyUsage, type Credentials, type LlmCall, type LlmResult, type ProviderClient } from './types'
 
@@ -128,9 +129,9 @@ function client(kind: Kind): ProviderClient {
     async generate(call, cred): Promise<LlmResult> {
       const data = await readJson(await post(call, cred, false), ResponseSchema, c.label)
       if (data.status === 'incomplete') throw incomplete(data)
-      if (data.status === 'failed') throw new LlmError(`${c.label}: ${data.error?.message ?? 'istek başarısız'}`)
+      if (data.status === 'failed') throw new LlmError(msg('err.providerError', { label: c.label, detail: redact(data.error?.message ?? msg('err.requestFailed'), cred.key).slice(0, 500) }))
       const { text, refusal } = textOf(data)
-      if (!text.trim()) throw new LlmError(refusal ? `Model yanıtlamayı reddetti: ${refusal}` : `Boş yanıt (${data.status ?? 'bilinmiyor'}).`)
+      if (!text.trim()) throw new LlmError(refusal ? msg('err.refusedWith', { detail: refusal }) : msg('err.empty', { reason: data.status ?? msg('err.unknownReason') }))
       return { text: text.trim(), usage: usageOf(data.usage) }
     },
 
@@ -149,8 +150,8 @@ function client(kind: Kind): ProviderClient {
           } else if (ev.type === 'response.refusal.delta' && ev.delta) refusal += ev.delta
           else if (ev.type === 'response.completed') usage = usageOf(ev.response?.usage)
           else if (ev.type === 'response.incomplete') throw incomplete(ev.response)
-          else if (ev.type === 'response.failed') throw new LlmError(`${c.label}: ${ev.response?.error?.message ?? 'istek başarısız'}`)
-          else if (ev.type === 'error') throw new LlmError(`${c.label}: ${ev.message ?? ev.error?.message ?? 'akış hatası'}`)
+          else if (ev.type === 'response.failed') throw new LlmError(msg('err.providerError', { label: c.label, detail: redact(ev.response?.error?.message ?? msg('err.requestFailed'), cred.key).slice(0, 500) }))
+          else if (ev.type === 'error') throw new LlmError(msg('err.providerError', { label: c.label, detail: redact(ev.message ?? ev.error?.message ?? msg('err.streamError'), cred.key).slice(0, 500) }))
         },
         call.signal
       )

@@ -12,7 +12,11 @@
 // Saf modül: Node ya da Electron içe aktarmaz; ana süreç ve testler aynı denetimi kullanır.
 import { z } from 'zod'
 
-const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((d) => !Number.isNaN(Date.parse(d)), 'geçersiz tarih')
+// Takvimde olan bir gün (2026-02-30 geçmez); gidiş-dönüş denetimi.
+const IsoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((d) => !Number.isNaN(Date.parse(d)) && new Date(`${d}T00:00:00Z`).toISOString().startsWith(d), 'geçersiz tarih')
 
 export const SourceSchema = z.discriminatedUnion('kind', [
   z.object({
@@ -46,13 +50,15 @@ export interface ParsedCard {
   issues: string[]
 }
 
-const MARKER = / *\[s:([a-z0-9, -]+)\]/g
-const UNVERIFIED = /\s*\[unverified\]/g
+const MARKER = / {0,8}\[s:([a-z0-9, -]{1,200})\]/g
+const UNVERIFIED = / {0,8}\[unverified\]/g
 
 /** İddia sayılmayan satırlar: başlık, boş, tablo başlığı/ayracı, kod bloğu, iki noktayla biten giriş satırı. */
 function isClaimLine(line: string, next: string | undefined): boolean {
   const t = line.trim()
-  if (!t || t.startsWith('#') || t.startsWith('```') || t.endsWith(':')) return false
+  // Başlık ve giriş satırı kısa olmalı: uzun bir "başlık" ya da ":" ile biten paragraf kaynaksız iddia taşıyamasın.
+  if (!t || t.startsWith('```')) return false
+  if ((t.startsWith('#') || t.endsWith(':')) && t.length <= 90) return false
   if (/^\|?\s*:?-{3,}/.test(t)) return false
   // Tablo başlık satırı: altındaki satır ayraçtır.
   if (t.startsWith('|') && next !== undefined && /^\|?\s*:?-{3,}/.test(next.trim())) return false
@@ -78,7 +84,7 @@ export function parseCard(raw: string, registry: SourcesFile): ParsedCard {
   })
   const meta: CardMeta = metaParsed.success ? metaParsed.data : { kind: 'model', verified: '1970-01-01', sources: [] }
   if (!metaParsed.success) issues.push(`ön bilgi geçersiz: ${metaParsed.error.issues.map((i) => i.path.join('.')).join(', ')}`)
-  for (const id of meta.sources) if (!registry.sources[id]) issues.push(`bilinmeyen kaynak: ${id}`)
+  for (const id of meta.sources) if (!Object.hasOwn(registry.sources, id)) issues.push(`bilinmeyen kaynak: ${id}`)
   if (meta.kind === 'model' && !meta.sources.length) issues.push('model kartında kaynak listesi boş')
 
   const lines = raw.slice(m[0].length).split(/\r?\n/)
@@ -100,12 +106,18 @@ export function parseCard(raw: string, registry: SourcesFile): ParsedCard {
     if (isUnverified) unverified++
     else if (meta.kind === 'model' && !ids.length) issues.push(`satır ${i + 1}: kaynaksız iddia: ${line.trim().slice(0, 60)}`)
   })
+  if (inCode) issues.push('kod bloğu kapanmamış')
   for (const id of meta.sources) if (!used.has(id)) issues.push(`kaynak listelenmiş ama kullanılmamış: ${id}`)
+  if (Date.parse(meta.verified) > Date.now() + 86_400_000) issues.push('son doğrulama tarihi gelecekte')
 
+  // İşaretler yalnızca kod bloğu dışında silinir: kartlardaki örnek kod ve snippet'ler olduğu gibi kalır.
+  let code = false
   const body = lines
+    .map((line) => {
+      if (line.trim().startsWith('```')) code = !code
+      return code || line.trim().startsWith('```') ? line : line.replace(MARKER, '').replace(UNVERIFIED, ' (unverified)')
+    })
     .join('\n')
-    .replace(MARKER, '')
-    .replace(UNVERIFIED, ' (unverified)')
     .trim()
   return { meta, body, claims, unverified, issues }
 }

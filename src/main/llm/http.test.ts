@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 import { assertProviderUrl, readJson, redact, send } from './http'
 import { LlmError } from './types'
+import { msg } from '@shared/messages'
 
 const KEY = 'Fake_Test_Value_For_Http_0123456789'
 
@@ -108,7 +109,7 @@ describe('send: tekrar deneme', () => {
     const started = Date.now()
     const p = send('https://api.openai.com/v1/x', { headers: {} }, { label: 'OpenAI', key: KEY, signal: ctrl.signal })
     setTimeout(() => ctrl.abort(), 50)
-    await expect(p).rejects.toThrow('İptal edildi.')
+    await expect(p).rejects.toThrow(msg('err.cancelled'))
     expect(Date.now() - started).toBeLessThan(5_000)
   })
 })
@@ -116,8 +117,8 @@ describe('send: tekrar deneme', () => {
 describe('readJson', () => {
   it('şemaya uymayan yanıtı açık bir hatayla reddeder', async () => {
     const schema = z.object({ ok: z.literal(true) })
-    await expect(readJson(Response.json({ ok: false }), schema, 'Test')).rejects.toThrow(/beklenen biçimde değil/)
-    await expect(readJson(new Response('<html>'), schema, 'Test')).rejects.toThrow(/JSON değil/)
+    await expect(readJson(Response.json({ ok: false }), schema, 'Test')).rejects.toThrow(msg('err.badShape', { label: 'Test' }))
+    await expect(readJson(new Response('<html>'), schema, 'Test')).rejects.toThrow(msg('err.notJson', { label: 'Test' }))
     await expect(readJson(Response.json({ ok: true }), schema, 'Test')).resolves.toEqual({ ok: true })
   })
 })

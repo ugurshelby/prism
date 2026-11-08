@@ -4,32 +4,19 @@ import { closeSync, copyFileSync, existsSync, fsyncSync, mkdirSync, openSync, re
 import { join } from 'node:path'
 import type { z } from 'zod'
 import type { ProviderId } from '@shared/catalog'
+import { PRODUCT, validFamilies } from '@shared/product'
+import { msg, setMessageLanguage } from '@shared/messages'
 import { SettingsPatchSchema, SettingsSchema } from '@shared/schemas'
+import { SETTINGS_VERSION, conform, loadSettings, serializeSettings } from '@shared/settings'
 import type { Settings } from '@shared/types'
 import { envValues } from './env'
 import { logWarn } from './log'
-
-const DEFAULTS: Settings = {
-  version: 2,
-  engineProvider: 'auto',
-  engineModels: {},
-  vertex: { project: '', location: 'global' },
-  defaultFamily: 'auto',
-  appFamilies: [],
-  replyLanguage: 'tr',
-  defaultSurface: 'agent',
-  alwaysOnTop: true,
-  hotkey: 'CommandOrControl+Shift+Space',
-  launchAtLogin: false,
-  notifyWhenHidden: true,
-  saveHistory: true,
-  contentProtection: false
-}
+import { UserError } from './errors'
 
 /** userData içindeki sabit dosya adları; dışarıdan gelen bir ad buraya hiç girmez. */
 export type UserFileName =
   | 'settings.json'
-  | 'settings.v1.json'
+  | `settings.v${number}.json`
   | 'history.json'
   | 'history.v1.json'
   | 'history.enc'
@@ -41,7 +28,6 @@ export type UserFileName =
 
 export const userFile = (name: UserFileName) => join(app.getPath('userData'), name)
 
-const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
 
 /** Dosya yoksa null (beklenen durum). Bozuksa kayıt düşülür, dosya yedeklenir ve null döner. */
 export function readJsonFile(name: UserFileName): unknown {
@@ -118,64 +104,9 @@ export function readUserJson<S extends z.ZodType>(name: UserFileName, schema: S,
   return fallback
 }
 
-/**
- * Ayarlar alan alan doğrulanır: tek bir bozuk alan bütün ayarları sıfırlamasın.
- * Geçersiz alan varsayılana döner ve kaydı düşülür (değeri değil, yalnızca alan adı).
- */
-function sanitize(raw: Record<string, unknown>): Settings {
-  const bad: string[] = []
-  const field = <T>(key: keyof Settings, schema: z.ZodType<T>, fallback: T): T => {
-    if (raw[key] === undefined) return fallback
-    const parsed = schema.safeParse(raw[key])
-    if (parsed.success) return parsed.data
-    bad.push(key)
-    return fallback
-  }
-  const d = structuredClone(DEFAULTS)
-  const s = SettingsSchema.shape
-  const out: Settings = {
-    version: field('version', s.version, d.version),
-    engineProvider: field('engineProvider', s.engineProvider, d.engineProvider),
-    engineModels: field('engineModels', s.engineModels, d.engineModels),
-    vertex: field('vertex', s.vertex, d.vertex),
-    defaultFamily: field('defaultFamily', s.defaultFamily, d.defaultFamily),
-    appFamilies: field('appFamilies', s.appFamilies, d.appFamilies),
-    replyLanguage: field('replyLanguage', s.replyLanguage, d.replyLanguage),
-    defaultSurface: field('defaultSurface', s.defaultSurface, d.defaultSurface),
-    alwaysOnTop: field('alwaysOnTop', s.alwaysOnTop, d.alwaysOnTop),
-    hotkey: field('hotkey', s.hotkey, d.hotkey),
-    launchAtLogin: field('launchAtLogin', s.launchAtLogin, d.launchAtLogin),
-    notifyWhenHidden: field('notifyWhenHidden', s.notifyWhenHidden, d.notifyWhenHidden),
-    saveHistory: field('saveHistory', s.saveHistory, d.saveHistory),
-    contentProtection: field('contentProtection', s.contentProtection, d.contentProtection)
-  }
-  if (bad.length) logWarn('config', `settings.json içindeki geçersiz alanlar varsayılana döndü: ${bad.join(', ')}`)
-  return out
-}
-
-/**
- * v1 ayarları (yalnızca Claude hedefi + Vertex motoru) v2'ye taşınır. Mevcut kullanıcının akışı aynen sürsün diye
- * varsayılan ekosistem Claude kalır ve Claude, key gerektirmeyen (uygulama ile kullanılan) aile sayılır.
- */
-function migrate(raw: unknown): Settings {
-  if (!isRecord(raw)) return structuredClone(DEFAULTS)
-  const version = typeof raw.version === 'number' ? raw.version : 1
-  if (version >= 2) return sanitize({ ...raw, vertex: { ...DEFAULTS.vertex, ...(isRecord(raw.vertex) ? raw.vertex : {}) } })
-  const { analysisModel, generationModel, defaultSurface, ...rest } = raw
-  const model = (v: unknown) => (typeof v === 'string' && v ? v : 'gemini-4-argon')
-  return sanitize({
-    ...rest,
-    version: 2,
-    engineModels:
-      analysisModel || generationModel ? { vertex: { analysis: model(analysisModel), generation: model(generationModel) } } : {},
-    vertex: { ...DEFAULTS.vertex },
-    defaultFamily: 'claude',
-    appFamilies: ['claude'],
-    defaultSurface: !defaultSurface || defaultSurface === 'claude-code' ? 'agent' : defaultSurface
-  })
-}
-
 let settings: Settings | null = null
+/** Bu sürümün tanımadığı alanlar (daha yeni bir sürümden); her yazımda geri konur. */
+let extras: Record<string, unknown> = {}
 
 export function getSettings(): Settings {
   if (settings) return settings
@@ -186,24 +117,36 @@ export function getSettings(): Settings {
     raw === null &&
     !existsSync(userFile('models.json')) &&
     (['history.json', 'vertex.key'] as const).some((f) => existsSync(userFile(f)))
-  const rawVersion = isRecord(raw) && typeof raw.version === 'number' ? raw.version : 1
-  const next = migrate(legacy ? { version: 1 } : raw)
+  const loaded = loadSettings(legacy ? { version: 1 } : raw, PRODUCT)
+  if (loaded.invalid.length) logWarn('config', `settings.json içindeki geçersiz alanlar varsayılana döndü: ${loaded.invalid.join(', ')}`)
+  const next = loaded.settings
+  extras = loaded.extras
   // .env'deki Vertex projesi bir kez ayarlara yazılır; kurulu sürüm geliştirme .env'ini görmez.
   const envProject = envValues().VERTEX_PROJECT_ID
-  const fromV1 = legacy || (raw !== null && rawVersion < 2)
+  const migrated = loaded.from !== null && loaded.from < SETTINGS_VERSION
   const projectFromEnv = !next.vertex.project && !!envProject && SettingsSchema.shape.vertex.shape.project.safeParse(envProject).success
-  if (fromV1) backupV1()
+  // Yedek ya da göç yazımı başarısız olursa (dosya kilidi, salt okunur klasör) uygulama yine açılır; ayarlar bellekte sürer.
+  try {
+    if (migrated && loaded.from !== null) backup(loaded.from)
+  } catch (e) {
+    logWarn('config', 'ayar yedeği alınamadı', e)
+  }
   if (projectFromEnv && envProject) next.vertex.project = envProject
   settings = next
-  if (fromV1 || (raw !== null && projectFromEnv)) writeJson('settings.json', settings)
+  setMessageLanguage(next.uiLanguage)
+  try {
+    if (legacy || migrated || (raw !== null && projectFromEnv)) writeJson('settings.json', serializeSettings(settings, extras))
+  } catch (e) {
+    logWarn('config', 'taşınan ayarlar yazılamadı; bellekteki ayarlarla devam ediliyor', e)
+  }
   return settings
 }
 
-// v1 ayar dosyası göçten önce bir kez yedeklenir; eski sürüme dönülürse elle geri konabilir.
+// Göçten önce eski sürümün dosyası bir kez yedeklenir (settings.vN.json); eski sürüme dönülürse elle geri konabilir.
 // Geçmiş yedeği tutulmaz: geçmiş artık şifreli saklanıyor (history.ts) ve düz metin kopya bırakılmaz.
-function backupV1() {
-  const backup = userFile('settings.v1.json')
-  if (existsSync(userFile('settings.json')) && !existsSync(backup)) copyFileSync(userFile('settings.json'), backup)
+function backup(version: number) {
+  const target = userFile(`settings.v${version}.json`)
+  if (existsSync(userFile('settings.json')) && !existsSync(target)) copyFileSync(userFile('settings.json'), target)
 }
 
 /** Açıkça undefined gönderilen alan "değiştirme" demektir; mevcut değeri silmez. */
@@ -218,10 +161,13 @@ export function updateSettings(patch: z.infer<typeof SettingsPatchSchema>): Sett
     vertex: { ...cur.vertex, ...defined(patch.vertex) },
     engineModels: { ...cur.engineModels, ...defined(patch.engineModels) }
   }
+  // Ürün kuralı: Ray'de tam bir aile, diğerlerinde en az bir aile. Kurala uymayan seçim sessizce düzeltilmez, reddedilir.
+  if (patch.families && !validFamilies(PRODUCT, patch.families)) throw new UserError(msg('err.familiesInvalid', { product: PRODUCT.name }))
   // Birleşik sonuç da şemadan geçer; diske yalnızca geçerli ayar yazılır. Yazım başarısız olursa bellekteki ayar da değişmez.
-  const parsed = SettingsSchema.parse(next)
-  writeJson('settings.json', parsed)
+  const parsed = conform(SettingsSchema.parse(next), PRODUCT)
+  writeJson('settings.json', serializeSettings(parsed, extras))
   settings = parsed
+  setMessageLanguage(parsed.uiLanguage)
   return settings
 }
 

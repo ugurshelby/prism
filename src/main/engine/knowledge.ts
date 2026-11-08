@@ -4,18 +4,43 @@ import { FAMILIES, MODELS, SURFACES, modelsOf, type Family, type ModelId, type S
 import { SourcesFileSchema, parseCard, type ParsedCard, type SourcesFile } from '@shared/knowledge'
 import { knowledgeDir } from '../config'
 import { LlmError } from '../llm'
+import { logWarn } from '../log'
+import { msg } from '@shared/messages'
 
 // Kartlar her istekte diskten okunur: knowledge/ altındaki bir düzenleme bir sonraki istekte geçerli olur.
 // Kaynak kaydı ya da kart biçimi bozuksa motor açık bir hatayla durur; kaynaksız iddia modele gitmez.
+/** Dosya okunamazsa ya da JSON bozuksa ham hata (kurulum yolu, dosya parçası) arayüze gitmez; günlüğe düşer. */
+function readKnowledge(path: string): string {
+  try {
+    return readFileSync(join(knowledgeDir(), path), 'utf8')
+  } catch (e) {
+    logWarn('knowledge', `kart okunamadı: ${path}`, e)
+    throw new LlmError(msg('err.cardUnreadable', { path }))
+  }
+}
+
 function sources(): SourcesFile {
-  const parsed = SourcesFileSchema.safeParse(JSON.parse(readFileSync(join(knowledgeDir(), 'sources.json'), 'utf8')) as unknown)
-  if (!parsed.success) throw new LlmError('Bilgi tabanının kaynak kaydı bozuk (knowledge/sources.json).')
+  let raw: unknown
+  try {
+    raw = JSON.parse(readKnowledge('sources.json'))
+  } catch (e) {
+    if (e instanceof LlmError) throw e
+    logWarn('knowledge', 'sources.json geçerli JSON değil', e)
+    throw new LlmError(msg('err.sourcesInvalid'))
+  }
+  const parsed = SourcesFileSchema.safeParse(raw)
+  if (!parsed.success) throw new LlmError(msg('err.sourcesInvalid'))
   return parsed.data
 }
 
+/** Yalnızca Prism'in kendi yöntemini anlatan kart kaynaksız olabilir; kartın kendi beyanına güvenilmez. */
+const METHOD_CARDS = new Set(['vision.md'])
+
 export function parsedCard(path: string): ParsedCard {
-  const parsed = parseCard(readFileSync(join(knowledgeDir(), path), 'utf8'), sources())
-  if (parsed.issues.length) throw new LlmError(`Bilgi kartı geçersiz (${path}): ${parsed.issues[0] ?? ''}`)
+  const parsed = parseCard(readKnowledge(path), sources())
+  const expected = METHOD_CARDS.has(path) ? 'method' : 'model'
+  if (parsed.meta.kind !== expected) parsed.issues.push(`kart türü ${expected} olmalı`)
+  if (parsed.issues.length) throw new LlmError(msg('err.cardInvalid', { path, detail: parsed.issues[0] ?? '' }))
   return parsed
 }
 

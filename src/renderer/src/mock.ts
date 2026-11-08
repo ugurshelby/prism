@@ -1,7 +1,7 @@
 // Electron dışında, tarayıcıda arayüz geliştirmek için sahte köprü. Üretimde kullanılmaz.
 import type { PrismApi } from '../../preload/api'
 import { PROVIDERS, type Effort, type ModelId } from '@shared/catalog'
-import type { Analysis, HistoryEntry, ProviderView, SettingsView, StreamEvent, WindowMode } from '@shared/types'
+import type { Analysis, HistoryEntry, ProviderView, SettingsView, StreamEvent } from '@shared/types'
 
 const SAMPLE = `<prompt>
 I'm building Prism, an Electron desktop widget that rewrites raw prompts for Claude models. The settings sheet needs a connection test that tells the user, within a few seconds, whether their Vertex AI key works.
@@ -62,7 +62,11 @@ const provider = (id: ProviderView['id']): ProviderView =>
     : { id, key: { present: false, source: 'none', hint: '' }, ready: false, status: null }
 
 let settings: SettingsView = {
-  version: 2,
+  version: 3,
+  families: ['claude', 'openai', 'gemini', 'grok'],
+  uiLanguage: 'tr',
+  setup: { done: true, step: 'shortcut' },
+  hotkeyOk: true,
   engineProvider: 'auto',
   engineModels: {},
   vertex: { project: 'my-gcp-project', location: 'global' },
@@ -153,7 +157,6 @@ export function installMock() {
   }
   let history = location.hash.includes('empty') ? [] : seedHistory()
   const streamListeners = new Set<(ev: StreamEvent) => void>()
-  const modeListeners = new Set<(m: WindowMode) => void>()
   const timers = new Map<string, number>()
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -222,14 +225,15 @@ export function installMock() {
     },
     window: {
       getState: async () => ({ mode: 'panel', pinned: settings.alwaysOnTop }),
-      setMode: async (m) => modeListeners.forEach((l) => l(m)),
+      setMode: async () => {},
       togglePin: async () => (settings = { ...settings, alwaysOnTop: !settings.alwaysOnTop }).alwaysOnTop,
       hide: async () => {},
       quit: async () => {},
       dragStart: () => {},
       dragMove: () => {},
       dragEnd: () => {},
-      onMode: (cb) => (modeListeners.add(cb), () => modeListeners.delete(cb)),
+      onShown: () => () => {},
+      onPillState: () => () => {},
       onPinned: () => () => {}
     },
     clipboard: { write: async (t) => navigator.clipboard.writeText(t).catch((e: unknown) => console.warn('[mock] pano yazılamadı', e)) },

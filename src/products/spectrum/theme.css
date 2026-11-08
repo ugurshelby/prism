@@ -1,0 +1,7 @@
+/* Prism Spectrum: ayrışan renkler. Ana eylem sıcak ışındır; marka çizgisi dört ailenin renginden geçer. */
+:root[data-product='spectrum'] {
+  --accent: var(--warm);
+  --accent-2: var(--warm-2);
+  --accent-ink: var(--warm-ink);
+  --brand-line: linear-gradient(90deg, var(--claude), var(--gpt), var(--gemini), var(--grok));
+}

@@ -8,9 +8,20 @@
   --text: #eef0f4;
   --text-2: #b6bac6;
   --muted: #7d8292;
-  --accent: #ff8a4c;
-  --accent-2: #ffd36e;
+  /* Işın ve aile renkleri (sitedeki sembollerle aynı); vurgu ürün temasından gelir (src/products). */
+  --beam: #eef0f4;
+  --warm: #ff8a4c;
+  --warm-2: #ffd36e;
+  --warm-ink: #1a0d05;
+  --claude: #ff9a5a;
+  --gpt: #7fd6a6;
+  --gemini: #6cb0ff;
+  --grok: #c9d1dc;
+  --accent: var(--warm);
+  --accent-2: var(--warm-2);
+  --accent-ink: var(--warm-ink);
   --ok: #4fe3c1;
+  --warn: #ffd36e;
   --danger: #ff6b6b;
   --radius: 18px;
   --font: 'Bricolage Grotesque Variable', 'Segoe UI', sans-serif;
@@ -56,7 +67,7 @@ input {
 }
 
 ::selection {
-  background: rgba(255, 138, 76, 0.35);
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 ::-webkit-scrollbar {
@@ -80,7 +91,7 @@ input {
   inset: 6px;
   border-radius: var(--radius);
   background:
-    radial-gradient(120% 60% at 0% 0%, rgba(255, 138, 76, 0.07), transparent 60%),
+    radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 60%),
     radial-gradient(90% 50% at 100% 100%, rgba(108, 201, 255, 0.06), transparent 60%),
     linear-gradient(180deg, var(--bg-1), var(--bg-0));
   border: 1px solid var(--line-2);
@@ -193,7 +204,7 @@ input {
 }
 .icon-btn.on {
   color: var(--accent);
-  background: rgba(255, 138, 76, 0.12);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 .icon-btn.close:hover {
   background: rgba(255, 107, 107, 0.15);
@@ -284,8 +295,8 @@ input {
   flex: 1;
 }
 .composer:focus-within {
-  border-color: rgba(255, 138, 76, 0.45);
-  box-shadow: 0 0 0 4px rgba(255, 138, 76, 0.08);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 8%, transparent);
 }
 .composer textarea {
   flex: 1;
@@ -433,10 +444,10 @@ input {
   font-weight: 650;
   font-size: 14px;
   letter-spacing: 0.01em;
-  color: #1a0d05;
+  color: var(--accent-ink);
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   box-shadow:
-    0 8px 22px -8px rgba(255, 138, 76, 0.65),
+    0 8px 22px -8px color-mix(in srgb, var(--accent) 65%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.35);
   display: flex;
   align-items: center;
@@ -756,7 +767,7 @@ input {
   border-color: rgba(255, 255, 255, 0.2);
 }
 .option.on {
-  color: #1a0d05;
+  color: var(--accent-ink);
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   border-color: transparent;
 }
@@ -772,7 +783,7 @@ input {
   user-select: text;
 }
 .free:focus {
-  border-color: rgba(255, 138, 76, 0.45);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 /* ---------- Sonuç ---------- */
@@ -855,7 +866,7 @@ input {
   resize: none;
 }
 .prompt-box .ph {
-  color: #1a0d05;
+  color: var(--accent-ink);
   background: var(--accent-2);
   border-radius: 4px;
   padding: 0 3px;
@@ -1061,7 +1072,7 @@ input {
   font-size: 13px;
 }
 .input:focus {
-  border-color: rgba(255, 138, 76, 0.5);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
 }
 .input.mono {
   font-family: var(--mono);
@@ -1149,7 +1160,7 @@ input {
   flex: none;
 }
 .h-search:focus-within {
-  border-color: rgba(255, 138, 76, 0.5);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
 }
 .h-search input {
   flex: 1;
@@ -1297,20 +1308,6 @@ input {
 
 /* ---------- Boyutlandırma tutamacı ---------- */
 
-.grip {
-  position: absolute;
-  right: 2px;
-  bottom: 2px;
-  width: 16px;
-  height: 16px;
-  cursor: nwse-resize;
-  z-index: 5;
-  opacity: 0.35;
-  transition: opacity 0.2s;
-}
-.grip:hover {
-  opacity: 0.8;
-}
 
 /* ---------- Pill ---------- */
 
@@ -1358,7 +1355,7 @@ input {
   position: absolute;
   inset: -8px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 138, 76, 0.35), transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 35%, transparent), transparent 70%);
   animation: breathe 3.2s ease-in-out infinite;
   z-index: -1;
 }
@@ -1548,4 +1545,186 @@ select.input option {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* --- Pencere görünümü (window.ts → ?look=) ----------------------------------------
+   Panel artık işletim sisteminin kenarlığını taşıyan opak bir pencere: kabuk pencereyi doldurur, köşe ve gölge
+   sistemden gelir. Mica ve vibrancy'de yüzey yarı saydamdır, sistem malzemesi arkadan görünür. */
+:root[data-view='panel'] .shell {
+  inset: 0;
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+}
+:root[data-look='mica'] .shell,
+:root[data-look='vibrancy'] .shell {
+  background:
+    radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 60%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-1) 72%, transparent), color-mix(in srgb, var(--bg-0) 80%, transparent));
+}
+:root[data-look='solid'][data-view='panel'] body {
+  background: var(--bg-0);
+}
+
+/* Panel her gösterilişte yaslandığı köşeden gelir (Windows ve Linux; macOS'ta pencereyi sistem canlandırır). */
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+:root:not([data-platform='darwin'])[data-view='panel'] .shell {
+  animation: panel-in 0.32s var(--ease);
+}
+.shell.enter-top-left {
+  transform-origin: 0 0;
+}
+.shell.enter-top-right {
+  transform-origin: 100% 0;
+}
+.shell.enter-bottom-left {
+  transform-origin: 0 100%;
+}
+.shell.enter-bottom-right {
+  transform-origin: 100% 100%;
+}
+
+/* --- Kurulum sihirbazı --------------------------------------------------------------- */
+.steps {
+  display: flex;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+.steps li {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+  padding-top: 6px;
+  border-top: 2px solid var(--line-2);
+}
+.steps li.current {
+  color: var(--text);
+  border-top-color: var(--accent);
+}
+.steps li.done {
+  color: var(--text-2);
+  border-top-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.steps .n {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  background: var(--bg-3);
+}
+.steps li.current .n {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.setup-step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.choice-row {
+  display: flex;
+  gap: 8px;
+}
+.choice {
+  flex: 1;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--line-2);
+  background: var(--bg-2);
+  font-size: 14px;
+  transition:
+    border-color 0.2s var(--ease),
+    background 0.2s var(--ease);
+}
+.choice:hover {
+  background: var(--bg-3);
+}
+.choice.on {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-2));
+}
+
+/* --- Aile seçici ---------------------------------------------------------------------- */
+.families {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.family-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 8px;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line-2);
+  background: var(--bg-2);
+  transition:
+    border-color 0.2s var(--ease),
+    background 0.2s var(--ease);
+}
+.family-card:hover {
+  background: var(--bg-3);
+}
+.family-card .dot {
+  grid-row: span 2;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--hue);
+  box-shadow: 0 0 8px var(--hue);
+}
+.family-card .vendor {
+  font-size: 11px;
+  color: var(--muted);
+}
+.family-card.on {
+  border-color: var(--hue);
+  background: color-mix(in srgb, var(--hue) 10%, var(--bg-2));
+}
+.family-card .tick {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  color: var(--hue);
+}
+
+/* --- Odak halkası: klavyeyle gezinen her öğede görünür (prism-design: focus-visible accent ring) -- */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- Küre penceresi ------------------------------------------------------------------- */
+:root[data-view='pill'] .orb {
+  border: 0;
+  padding: 0;
+}
+
+/* --- Azaltılmış hareket ----------------------------------------------------------------
+   Sistem ayarı açıkken geçişler ve arka plan animasyonları durur (motion bileşenlerini MotionConfig kapatır).
+   !important bilinçli: bu blok her bileşen kuralını ezmek zorunda (prism-design → Motion). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

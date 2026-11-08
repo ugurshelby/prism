@@ -39,13 +39,18 @@ const api: PrismApi = {
     togglePin: () => ipcRenderer.invoke('window:togglePin'),
     hide: () => ipcRenderer.invoke('window:hide'),
     quit: () => ipcRenderer.invoke('window:quit'),
-    dragStart: (kind) => ipcRenderer.send('window:dragStart', kind),
+    dragStart: () => ipcRenderer.send('window:dragStart'),
     dragMove: () => ipcRenderer.send('window:dragMove'),
-    dragEnd: () => ipcRenderer.send('window:dragEnd'),
-    onMode: (cb) => {
-      const listener = (_e: unknown, mode: Parameters<typeof cb>[0]) => cb(mode)
-      ipcRenderer.on('window:mode', listener)
-      return () => ipcRenderer.off('window:mode', listener)
+    dragEnd: (animate) => ipcRenderer.send('window:dragEnd', animate),
+    onShown: (cb) => {
+      const listener = (_e: unknown, anchor: Parameters<typeof cb>[0]) => cb(anchor)
+      ipcRenderer.on('window:shown', listener)
+      return () => ipcRenderer.off('window:shown', listener)
+    },
+    onPillState: (cb) => {
+      const listener = (_e: unknown, st: Parameters<typeof cb>[0]) => cb(st)
+      ipcRenderer.on('pill:state', listener)
+      return () => ipcRenderer.off('pill:state', listener)
     },
     onPinned: (cb) => {
       const listener = (_e: unknown, on: boolean) => cb(on)

@@ -1,8 +1,9 @@
 // Anthropic Messages API istemcisi (Claude modelleri Prism'in motoru olarak).
 
 import { z } from 'zod'
+import { msg } from '@shared/messages'
 import type { DiscoveredModel, Usage } from '@shared/types'
-import { readJson, readSse, send } from './http'
+import { readJson, readSse, redact, send } from './http'
 import { toStrict } from './schema'
 import { LlmError, emptyUsage, type Credentials, type LlmCall, type LlmResult, type ProviderClient } from './types'
 
@@ -52,8 +53,8 @@ function body(call: LlmCall, stream: boolean) {
 }
 
 function checkStop(reason: string | null | undefined) {
-  if (reason === 'max_tokens') throw new LlmError('Yanıt token sınırında kesildi.')
-  if (reason === 'refusal') throw new LlmError('Model bu isteği yanıtlamayı reddetti.')
+  if (reason === 'max_tokens') throw new LlmError(msg('err.truncated'))
+  if (reason === 'refusal') throw new LlmError(msg('err.refused'))
 }
 
 async function post(call: LlmCall, cred: Credentials, stream: boolean) {
@@ -73,7 +74,7 @@ export const anthropic: ProviderClient = {
       .map((b) => b.text ?? '')
       .join('')
       .trim()
-    if (!text) throw new LlmError(`Boş yanıt (${data.stop_reason ?? 'bilinmiyor'}).`)
+    if (!text) throw new LlmError(msg('err.empty', { reason: data.stop_reason ?? msg('err.unknownReason') }))
     return {
       text,
       usage: { promptTokens: data.usage?.input_tokens ?? 0, outputTokens: data.usage?.output_tokens ?? 0, thoughtsTokens: 0 }
@@ -96,12 +97,12 @@ export const anthropic: ProviderClient = {
         } else if (ev.type === 'message_delta') {
           stop = ev.delta?.stop_reason ?? stop
           usage.outputTokens = ev.usage?.output_tokens ?? usage.outputTokens
-        } else if (ev.type === 'error') throw new LlmError(`${LABEL}: ${ev.error?.message ?? 'akış hatası'}`)
+        } else if (ev.type === 'error') throw new LlmError(msg('err.providerError', { label: LABEL, detail: redact(ev.error?.message ?? msg('err.streamError'), cred.key).slice(0, 500) }))
       },
       call.signal
     )
     checkStop(stop)
-    if (!text.trim()) throw new LlmError(`Boş yanıt (${stop ?? 'bilinmiyor'}).`)
+    if (!text.trim()) throw new LlmError(msg('err.empty', { reason: stop ?? msg('err.unknownReason') }))
     return { text, usage }
   },
 

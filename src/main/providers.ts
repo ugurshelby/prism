@@ -19,6 +19,9 @@ import { getSettings, readUserJson, userFile, writeFileAtomic, writeJson } from 
 import { envValues, leftoverEnvNames } from './env'
 import { LlmError, client, generate, type Credentials, type LlmCall, type LlmResult } from './llm'
 import { logWarn } from './log'
+import { msg } from '@shared/messages'
+import { UserError } from './errors'
+import { rendererMessage } from './ipc'
 import { seal, unseal, vaultState, wipeFile } from './vault'
 
 // --- Key saklama ------------------------------------------------------------------
@@ -44,7 +47,7 @@ function savedKey(p: ProviderId): KeyState | null {
       state = { key: unseal(readFileSync(path)), source: 'saved' }
     } catch (e) {
       logWarn('providers', `${p} için kayıtlı key çözülemedi`, e)
-      state = { key: null, source: 'none', unreadable: true, problem: `${PROVIDER_INFO[p].label} için kayıtlı key okunamadı. Key'i yeniden kaydet.` }
+      state = { key: null, source: 'none', unreadable: true, problem: msg('err.keyUnreadable', { label: PROVIDER_INFO[p].label }) }
     }
   }
   savedCache.set(p, state)
@@ -69,7 +72,7 @@ function keyOf(p: ProviderId): KeyState {
     return {
       key: null,
       source: 'none',
-      problem: `${PROVIDER_INFO[p].label} key'i .env dosyasında; kurulu sürüm .env'i artık okumuyor. Key'i buradan kaydet, sonra .env'i sil.`
+      problem: msg('err.keyLeftInEnv', { label: PROVIDER_INFO[p].label })
     }
   }
   return { key: null, source: 'none' }
@@ -87,14 +90,14 @@ export function credentials(p: ProviderId): Credentials {
   const state = keyOf(p)
   const label = PROVIDER_INFO[p].label
   if (state.key === null) {
-    throw new LlmError(state.problem ?? `${label} API key bulunamadı. Ayarlar → Sağlayıcılar bölümünden ekle.`)
+    throw new LlmError(state.problem ?? msg('err.keyMissing', { label }))
   }
   // .env'den gelen key de aynı biçim kuralından geçer; bozuk key sağlayıcıya hiç gönderilmez.
   const format = ApiKeySchema.safeParse(state.key)
-  if (!format.success) throw new LlmError(`${label} key'i geçersiz (${state.source === 'env' ? PROVIDER_INFO[p].env : 'kayıtlı key'}): ${describeIssues(format.error)}`)
+  if (!format.success) throw new LlmError(msg('err.keyInvalid', { label, source: state.source === 'env' ? PROVIDER_INFO[p].env : msg('err.savedKey'), detail: describeIssues(format.error) }))
   if (p !== 'vertex') return { key: state.key }
   const t = vertexTarget()
-  if (!t.project) throw new LlmError("Vertex AI için proje ID'si eksik. Ayarlar → Sağlayıcılar → Vertex AI bölümünden gir.")
+  if (!t.project) throw new LlmError(msg('err.vertexProjectMissing'))
   // .env'deki proje ve konum da istek adresine girer; ayarlarla aynı kuraldan geçer.
   const project = VertexProjectSchema.safeParse(t.project)
   const location = VertexLocationSchema.safeParse(t.location)
@@ -105,9 +108,9 @@ export function credentials(p: ProviderId): Credentials {
 
 export function saveKey(p: ProviderId, key: string) {
   const format = ApiKeySchema.safeParse(key)
-  if (!format.success) throw new Error(describeIssues(format.error))
+  if (!format.success) throw new UserError(describeIssues(format.error))
   const vault = vaultState()
-  if (!vault.ok) throw new Error(`${vault.reason} Key güvenle saklanamıyor; sistem anahtarlığını kurup tekrar dene.`)
+  if (!vault.ok) throw new UserError(msg('err.keyUnsafe', { reason: vault.reason }))
   writeFileAtomic(`${p}.key`, seal(format.data))
   forget(p)
 }
@@ -161,9 +164,9 @@ async function runVerify(p: ProviderId): Promise<ProviderStatus> {
     const models = await client(p).discover(credentials(p))
     status = models.length
       ? { ok: true, checkedAt: Date.now(), models }
-      : { ok: false, checkedAt: Date.now(), models, message: 'Bağlantı kuruldu ama erişilebilir metin modeli bulunamadı.' }
+      : { ok: false, checkedAt: Date.now(), models, message: msg('err.noTextModels') }
   } catch (e) {
-    status = { ok: false, checkedAt: Date.now(), models: [], message: e instanceof Error ? e.message : 'Doğrulama başarısız.' }
+    status = { ok: false, checkedAt: Date.now(), models: [], message: rendererMessage('providers:verify', e) }
   }
   if ((generation.get(p) ?? 0) !== started) return status
   statuses()[p] = status
@@ -188,7 +191,7 @@ export function providerViews(): ProviderView[] {
       state.key === null
         ? state.problem
         : state.source === 'saved' && leftoverKey(id)
-          ? "Key kayıtlı; .env dosyasındaki eski düz metin kopyasını sil."
+          ? msg('err.keyAlsoInEnv')
           : undefined
     return {
       id,
@@ -220,7 +223,7 @@ export function targetAccess(): Partial<Record<ModelId, TargetAccess>> {
   return out
 }
 
-export const candidatePool = (family: FamilyChoice): ModelId[] => poolFor(family, targetAccess())
+export const candidatePool = (family: FamilyChoice): ModelId[] => poolFor(family, targetAccess(), getSettings().families)
 
 
 // --- Motor ------------------------------------------------------------------------
@@ -281,7 +284,7 @@ function engineFor(role: 'analysis' | 'generation'): EngineRef & { cred: Credent
   const problem = auto ? savedKeyProblem() : undefined
   if (problem) throw new LlmError(problem)
   const e = resolveEngine()
-  if (!e) throw new LlmError(savedKeyProblem() ?? 'Hiç sağlayıcı yapılandırılmamış. Ayarlar → Sağlayıcılar bölümünden bir API key ekle.')
+  if (!e) throw new LlmError(savedKeyProblem() ?? msg('err.noProvider'))
   return { provider: e.provider, model: e[role], cred: credentials(e.provider) }
 }
 
@@ -304,6 +307,12 @@ export async function engineStream(
   return { ...result, engine: { provider, model } }
 }
 
+let hotkeyOk = true
+/** index.ts kısayolu her kaydettiğinde sonucu bildirir; arayüz kayıt başarısızsa uyarı ve alternatif gösterir. */
+export function setHotkeyOk(ok: boolean) {
+  hotkeyOk = ok
+}
+
 export function settingsView(): SettingsView {
-  return { ...getSettings(), providers: providerViews(), engine: resolveEngine(), targets: targetAccess() }
+  return { ...getSettings(), providers: providerViews(), engine: resolveEngine(), targets: targetAccess(), hotkeyOk }
 }

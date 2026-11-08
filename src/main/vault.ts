@@ -3,6 +3,8 @@
 
 import { safeStorage } from 'electron'
 import { closeSync, existsSync, fstatSync, fsyncSync, openSync, rmSync, writeSync } from 'node:fs'
+import { UserError } from './errors'
+import { msg } from '@shared/messages'
 
 export type VaultState = { ok: true } | { ok: false; reason: string }
 
@@ -11,22 +13,22 @@ export type VaultState = { ok: true } | { ok: false; reason: string }
 const LINUX_KEYRINGS: ReadonlySet<string> = new Set(['gnome_libsecret', 'kwallet', 'kwallet5', 'kwallet6'])
 
 export function vaultState(): VaultState {
-  if (!safeStorage.isEncryptionAvailable()) return { ok: false, reason: 'Bu sistemde güvenli depolama kullanılamıyor.' }
+  if (!safeStorage.isEncryptionAvailable()) return { ok: false, reason: msg('vault.unavailable') }
   if (process.platform === 'linux' && !LINUX_KEYRINGS.has(safeStorage.getSelectedStorageBackend())) {
-    return { ok: false, reason: 'Sistem anahtarlığı bulunamadı (GNOME Keyring / KWallet).' }
+    return { ok: false, reason: msg('vault.noKeyring') }
   }
   return { ok: true }
 }
 
 export function seal(text: string): Buffer {
   const state = vaultState()
-  if (!state.ok) throw new Error(state.reason)
+  if (!state.ok) throw new UserError(state.reason)
   return safeStorage.encryptString(text)
 }
 
 export function unseal(data: Buffer): string {
   const state = vaultState()
-  if (!state.ok) throw new Error(state.reason)
+  if (!state.ok) throw new UserError(state.reason)
   return safeStorage.decryptString(data)
 }
 

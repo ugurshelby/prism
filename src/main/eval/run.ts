@@ -11,6 +11,7 @@ import { generatePrompt } from '../engine/generate'
 import { cardPaths, parsedCard } from '../engine/knowledge'
 import { isStale } from '@shared/knowledge'
 import { LlmError, generate } from '../llm'
+import { updateSettings } from '../config'
 import { credentials, overrideEngine, resolveEngine } from '../providers'
 import { loadCases, scoreRecommendation, type EvalCase } from './cases'
 import { JUDGE, judgePair, judgeQuestions, simulateAnswers, type PairVerdict } from './judge'
@@ -44,6 +45,8 @@ async function runTarget(meter: Meter, model: string, effort: Effort, system: st
     // Kota, ağ ve zaman aşımı ölçüm hatasıdır (vaka yeniden koşulur); yalnızca modelin kendi başarısızlığı
     // (token sınırında kesilme, boş yanıt) ölçümün parçasıdır ve jüri onu kaybeden sayar.
     if (e instanceof BudgetExceeded || !(e instanceof LlmError) || e.status !== undefined || /zaman aşımı|Ağ hatası/.test(e.message)) throw e
+    // Kesilen ya da boş dönen yanıt da faturalanır; kullanımı bilinmediği için en kötü durum (tam çıktı) sayılır.
+    meter.add('target-failed', model, { promptTokens: 0, outputTokens: 32_768, thoughtsTokens: 0 })
     return `[hedef yanıt üretemedi: ${e.message}]`
   }
 }
@@ -179,46 +182,71 @@ export async function runEval(argv: string[]) {
   const label = (flag('label') ?? 'run').replace(/[^a-z0-9-]/gi, '')
   const suite = flag('suite') === 'analysis' ? 'analysis' : 'full'
   const only = flag('only')?.split(',')
-  const concurrency = Math.max(1, Math.min(4, Number(flag('concurrency') ?? 3)))
-  const meter = new Meter(Number(flag('max-usd') ?? 4), Number(flag('max-tokens') ?? 3_000_000))
-  if (!Number.isFinite(meter.maxUsd) || meter.maxUsd <= 0 || meter.maxUsd > 8) throw new Error('--max-usd 0 ile 8 arasında olmalı')
+  // Bayraklar doğrulanır: geçersiz değer tavanı kapatmasın ya da sıfır işçiyle "başarılı" boş koşu üretmesin.
+  const int = (name: string, fallback: number, min: number, max: number) => {
+    const n = Number(flag(name) ?? fallback)
+    if (!Number.isFinite(n) || n < min || n > max) throw new Error(`--${name} ${min} ile ${max} arasında olmalı`)
+    return n
+  }
+  const concurrency = Math.floor(int('concurrency', 3, 1, 4))
+  const meter = new Meter(int('max-usd', 4, 0.01, 8), Math.floor(int('max-tokens', 3_000_000, 1000, 10_000_000)))
 
   overrideEngine('vertex')
+  // Ölçümler aynı koşulda karşılaştırılsın: motorun insan okuyacağı alanları (sorular, notlar) Türkçe üretir.
+  updateSettings({ uiLanguage: 'tr' })
   // ROADMAP: 90 günü geçen kart eval'den önce yeniden doğrulanır.
   const stale = cardPaths().filter((p) => isStale(parsedCard(p).meta, new Date()))
   if (stale.length) process.stdout.write(`UYARI: son doğrulaması 90 günü geçen kartlar: ${stale.join(', ')}\n`)
   const root = app.getAppPath()
-  const cases = loadCases(root).filter((c) => !only || only.includes(c.id))
+  const all = loadCases(root)
+  const unknown = only?.filter((id) => !all.some((c) => c.id === id)) ?? []
+  if (unknown.length) throw new Error(`bilinmeyen vaka: ${unknown.join(', ')}`)
+  const cases = all.filter((c) => !only || only.includes(c.id))
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
   const dir = join(root, '.work', 'reports', 'eval', 'runs', `${stamp}-${label}`)
   mkdirSync(dir, { recursive: true })
   const secrets = [credentials('vertex').key]
   const save = (name: string, data: unknown) => writeFileSync(join(dir, name), mask(typeof data === 'string' ? data : JSON.stringify(data, null, 2), secrets))
+  // Konsola giden her satır da maskelenir (hata metinleri sağlayıcıdan gelir).
+  const out = (text: string) => process.stdout.write(mask(text, secrets))
+  // Harcama satırı koşu nasıl biterse bitsin (hata, tavan, kesinti) deftere yazılır.
+  const ledger = () => {
+    const models = [...new Set(meter.entries.map((e) => e.model))].join(', ')
+    appendFileSync(
+      join(root, '.work', 'reports', 'eval', 'budget.md'),
+      `| ${stamp.slice(0, 10)} | vertex/${models} | eval ${label} (${meter.entries.length} calls) | ${meter.tokens} total | ${meter.usd.toFixed(2)} (list) | phase 1 eval |\n`
+    )
+  }
+  process.on('exit', ledger)
 
-  process.stdout.write(`eval ${label}: ${cases.length} vaka, suite=${suite}, tavan=${meter.maxUsd} USD\n`)
+  out(`eval ${label}: ${cases.length} vaka, suite=${suite}, tavan=${meter.maxUsd} USD\n`)
   const results: CaseResult[] = []
   let stopped: string | null = null
   const queue = [...cases]
   const worker = async () => {
-    for (let c = queue.shift(); c && !stopped; c = queue.shift()) {
+    for (let c = queue.shift(); c; c = queue.shift()) {
+      if (stopped) {
+        results.push({ id: c.id, error: `atlandı: ${stopped}` })
+        continue
+      }
       // Kota (429) ya da zaman aşımında vaka bir dakika sonra bir kez daha baştan koşulur; harcanan kısım sayaçta kalır.
       for (let attempt = 0; ; attempt++) {
         try {
           const r = await runCase(c, meter, suite)
           results.push(r)
-          process.stdout.write(`  ${c.id}: ${r.writing?.outcome ?? 'ok'} · ${meter.usd.toFixed(3)} USD\n`)
+          out(`  ${c.id}: ${r.writing?.outcome ?? 'ok'} · ${meter.usd.toFixed(3)} USD\n`)
           break
         } catch (e) {
           if (e instanceof BudgetExceeded) stopped = e.message
           const transient = e instanceof LlmError && (e.kind === 'quota' || /zaman aşımı|Ağ hatası/.test(e.message))
           if (transient && attempt === 0 && !stopped) {
-            process.stdout.write(`  ${c.id}: geçici hata, 60 sn sonra tekrar\n`)
+            out(`  ${c.id}: geçici hata, 60 sn sonra tekrar\n`)
             await new Promise((r) => setTimeout(r, 60_000))
             continue
           }
           const msg = e instanceof Error ? e.message : String(e)
           results.push({ id: c.id, error: msg })
-          process.stdout.write(`  ${c.id}: HATA ${msg}\n`)
+          out(`  ${c.id}: HATA ${msg}\n`)
           break
         }
       }
@@ -231,10 +259,5 @@ export async function runEval(argv: string[]) {
   save('meter.json', meter.entries)
   const summary = summarize(label, results, meter, stopped)
   save('summary.md', summary)
-  const models = [...new Set(meter.entries.map((e) => e.model))].join(', ')
-  appendFileSync(
-    join(root, '.work', 'reports', 'eval', 'budget.md'),
-    `| ${stamp.slice(0, 10)} | vertex/${models} | eval ${label} (${meter.entries.length} calls) | ${meter.tokens} total | ${meter.usd.toFixed(2)} (list) | phase 1 eval |\n`
-  )
-  process.stdout.write(`\n${summary}\n\nkayıt: ${dir}\n`)
+  out(`\n${summary}\n\nkayıt: ${dir}\n`)
 }

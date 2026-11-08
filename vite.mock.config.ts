@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   root: 'src/renderer',
-  resolve: { alias: { '@shared': resolve('src/shared') } },
-  plugins: [react()]
+  resolve: { alias: { '@shared': resolve('src/shared'), '@products': resolve('src/products') } },
+  plugins: [react()],
+  define: { __PRISM_PRODUCT__: JSON.stringify(process.env.PRISM_PRODUCT ?? 'spectrum') }
 })

@@ -2,6 +2,7 @@
 // sunucularına gider; hata metinlerinden ayıklanır. Yanıt gövdeleri çağıran tarafta şemayla ayrıştırılır.
 
 import { z } from 'zod'
+import { msg } from '@shared/messages'
 import { logWarn } from '../log'
 import { LlmError, type LlmErrorKind } from './types'
 
@@ -26,11 +27,11 @@ export function assertProviderUrl(raw: string): URL {
   try {
     url = new URL(raw)
   } catch {
-    throw new LlmError('Geçersiz sağlayıcı adresi.')
+    throw new LlmError(msg('err.badProviderUrl'))
   }
   const host = url.hostname
   const allowed = url.protocol === 'https:' && !url.username && !url.password && !url.port && (HOSTS.has(host) || VERTEX_REGIONAL.test(host))
-  if (!allowed) throw new LlmError(`İzin verilmeyen sağlayıcı adresi: ${host}`)
+  if (!allowed) throw new LlmError(msg('err.hostNotAllowed', { host }))
   return url
 }
 
@@ -39,10 +40,22 @@ export function redact(text: string, key: string): string {
 }
 
 const ErrorBodySchema = z.object({
-  error: z.union([z.string(), z.object({ message: z.string() })]).optional(),
+  error: z
+    .union([
+      z.string(),
+      z.object({ message: z.string(), details: z.array(z.object({ reason: z.string().max(80).optional() })).max(20).optional() })
+    ])
+    .optional(),
   message: z.string().optional(),
   detail: z.string().optional()
 })
+
+/** Google hata gövdesindeki yapısal nedenler (ör. API_KEY_INVALID); metin değişse de key reddi tanınsın. */
+function errorReasons(data: unknown): string[] {
+  const parsed = ErrorBodySchema.safeParse(data)
+  const err = parsed.success ? parsed.data.error : undefined
+  return typeof err === 'object' ? (err.details ?? []).flatMap((d) => (d.reason ? [d.reason] : [])) : []
+}
 
 function errorMessage(data: unknown): string | undefined {
   const parsed = ErrorBodySchema.safeParse(data)
@@ -51,19 +64,20 @@ function errorMessage(data: unknown): string | undefined {
   return (typeof error === 'string' ? error : error?.message) ?? message ?? detail
 }
 
-function errorKind(status: number, message: string): LlmErrorKind {
+function errorKind(status: number, message: string, reasons: string[] = []): LlmErrorKind {
   if (status === 404) return 'not_found'
   // Google AI Studio, Vertex ve xAI geçersiz key'e 401 yerine 400 döndürür.
+  if (reasons.some((r) => r.startsWith('API_KEY_'))) return 'auth'
   if (status === 401 || status === 403 || (status === 400 && /api[ _-]?key/i.test(message))) return 'auth'
   if (status === 429) return 'quota'
   return 'other'
 }
 
 function friendly(label: string, status: number, message: string, kind: LlmErrorKind): string {
-  if (kind === 'not_found') return `Model bulunamadı ya da erişim yok (404). Ayarlardaki model ID'sini kontrol et. ${message}`
-  if (kind === 'auth') return `${label} API key'i reddedildi (${status}). Ayarlardan key'i kontrol et.`
-  if (kind === 'quota') return `${label} kotası doldu (429). Biraz sonra tekrar dene.`
-  return `${label} ${status}: ${message}`
+  if (kind === 'not_found') return msg('err.notFound', { detail: message })
+  if (kind === 'auth') return msg('err.keyRejected', { label, status, detail: message })
+  if (kind === 'quota') return msg('err.quota', { label })
+  return msg('err.status', { label, status, detail: message })
 }
 
 const MAX_ERROR_MESSAGE = 500
@@ -75,14 +89,14 @@ const MAX_SSE_LINE = 1 << 20
 /** İptal edilebilir bekleme: kullanıcı iptal ederse tekrar denemeyi beklemeden durur. */
 function sleep(ms: number, signal?: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
-    if (signal?.aborted) return reject(new LlmError('İptal edildi.'))
+    if (signal?.aborted) return reject(new LlmError(msg('err.cancelled')))
     const t = setTimeout(() => {
       signal?.removeEventListener('abort', stop)
       resolve()
     }, ms)
     const stop = () => {
       clearTimeout(t)
-      reject(new LlmError('İptal edildi.'))
+      reject(new LlmError(msg('err.cancelled')))
     }
     signal?.addEventListener('abort', stop, { once: true })
   })
@@ -122,9 +136,9 @@ export async function send(
         signal: AbortSignal.any(signals)
       })
     } catch (e) {
-      if (o.signal?.aborted) throw new LlmError('İptal edildi.')
-      if (timeout.signal.aborted) throw new LlmError('İstek zaman aşımına uğradı.')
-      throw new LlmError(`Ağ hatası: ${redact(e instanceof Error ? e.message : 'bağlantı kurulamadı', o.key)}`)
+      if (o.signal?.aborted) throw new LlmError(msg('err.cancelled'))
+      if (timeout.signal.aborted) throw new LlmError(msg('err.timeout'))
+      throw new LlmError(msg('err.network', { detail: redact(e instanceof Error ? e.message : msg('err.networkUnknown'), o.key) }))
     } finally {
       if (o.stream) clearTimeout(timer)
       else timer.unref()
@@ -138,12 +152,12 @@ export async function send(
       // Hata gövdesi JSON olmayabilir (ör. vekil sunucu sayfası); o durumda durum metni kullanılır.
       const data: unknown = await res.json().catch(() => null)
       const message = redact(errorMessage(data) ?? res.statusText, o.key).slice(0, MAX_ERROR_MESSAGE)
-      const kind = errorKind(res.status, message)
+      const kind = errorKind(res.status, message, errorReasons(data))
       throw new LlmError(friendly(o.label, res.status, message, kind), res.status, kind)
     }
     return res
   }
-  throw new LlmError(`${o.label}: tekrar denemeleri tükendi.`)
+  throw new LlmError(msg('err.retriesExhausted', { label: o.label }))
 }
 
 /** Yanıt gövdesini şemayla ayrıştırır; beklenmeyen biçim açık bir hataya dönüşür. */
@@ -152,17 +166,17 @@ export async function readJson<S extends z.ZodType>(res: Response, schema: S, la
   try {
     data = await res.json()
   } catch (e) {
-    if (e instanceof Error && e.name === 'AbortError') throw new LlmError(`${label}: yanıt zaman aşımına uğradı ya da iptal edildi.`)
-    throw new LlmError(`${label}: yanıt JSON değil.`)
+    if (e instanceof Error && e.name === 'AbortError') throw new LlmError(msg('err.responseTimeout', { label }))
+    throw new LlmError(msg('err.notJson', { label }))
   }
   const parsed = schema.safeParse(data)
-  if (!parsed.success) throw new LlmError(`${label}: yanıt beklenen biçimde değil.`)
+  if (!parsed.success) throw new LlmError(msg('err.badShape', { label }))
   return parsed.data
 }
 
 /** `data:` satırlarını şemadan geçirip sırayla iletir; şemaya uymayan olay atlanır. */
 export async function readSse<S extends z.ZodType>(res: Response, schema: S, onData: (data: z.infer<S>) => void, signal?: AbortSignal) {
-  if (!res.body) throw new LlmError('Akış gövdesi yok.')
+  if (!res.body) throw new LlmError(msg('err.noBody'))
   const reader: ReadableStreamDefaultReader<Uint8Array> = res.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
@@ -174,7 +188,7 @@ export async function readSse<S extends z.ZodType>(res: Response, schema: S, onD
     try {
       json = JSON.parse(payload)
     } catch {
-      throw new LlmError('Akışta geçersiz JSON.')
+      throw new LlmError(msg('err.badStreamJson'))
     }
     const parsed = schema.safeParse(json)
     // Sağlayıcılar yeni olay türleri ekleyebilir; tanınmayan olay akışı bozmaz.
@@ -185,7 +199,7 @@ export async function readSse<S extends z.ZodType>(res: Response, schema: S, onD
     new Promise<never>((_, reject) => {
       idle = setTimeout(() => {
         void reader.cancel()
-        reject(new LlmError('Sağlayıcı yanıt akışı durdu (2 dakika veri gelmedi). Tekrar dene.'))
+        reject(new LlmError(msg('err.streamStalled')))
       }, STREAM_IDLE_MS)
     })
   try {
@@ -196,17 +210,17 @@ export async function readSse<S extends z.ZodType>(res: Response, schema: S, onD
       buffer += decoder.decode(value, { stream: true })
       const lines = buffer.split(/\r?\n/)
       buffer = lines.pop() ?? ''
-      if (buffer.length > MAX_SSE_LINE) throw new LlmError('Akışta beklenmeyen biçimde uzun satır.')
+      if (buffer.length > MAX_SSE_LINE) throw new LlmError(msg('err.longLine'))
       lines.forEach(handle)
     }
     if (buffer) handle(buffer)
   } catch (e) {
     // Hata hangi yoldan gelirse gelsin bağlantı kapatılır; sağlayıcı boşuna üretmeye (ve ücret yazmaya) devam etmesin.
     reader.cancel().catch((err: unknown) => logWarn('llm', 'akış kapatılamadı', err))
-    if (signal?.aborted) throw new LlmError('İptal edildi.')
+    if (signal?.aborted) throw new LlmError(msg('err.cancelled'))
     if (e instanceof LlmError) throw e
     // Akış okunurken bağlantı koptu: ham DOMException/TypeError arayüze gitmez.
-    throw new LlmError(`Yanıt akışı kesildi: ${e instanceof Error ? e.message : 'bilinmeyen hata'}`)
+    throw new LlmError(msg('err.streamBroken', { detail: e instanceof Error ? e.message : msg('err.unknown') }))
   } finally {
     clearTimeout(idle)
   }

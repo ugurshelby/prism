@@ -2,6 +2,7 @@
 // İkisi aynı generateContent gövdesini kullanır; yalnızca uç nokta ve key türü farklı.
 
 import { z } from 'zod'
+import { msg } from '@shared/messages'
 import type { DiscoveredModel, Usage } from '@shared/types'
 import { readJson, readSse, send } from './http'
 import { toGemini } from './schema'
@@ -115,7 +116,7 @@ async function probe(cred: Credentials, model: string): Promise<boolean> {
     await res.body?.cancel()
     return true
   } catch (e) {
-    if (!(e instanceof LlmError) || e.status === 401 || e.status === 403 || e.status === undefined) throw e
+    if (!(e instanceof LlmError) || e.kind === 'auth' || e.status === undefined) throw e
     // 429 kota, 400 parametre sorunudur: model var demektir.
     return e.status === 429 || e.status === 400
   }
@@ -127,9 +128,9 @@ function client(kind: Kind): ProviderClient {
       const res = await post(kind, call, cred, false)
       const data = await readJson(res, GenerateSchema, LABEL[kind])
       const cand = data.candidates[0]
-      if (cand?.finishReason === 'MAX_TOKENS') throw new LlmError('Yanıt token sınırında kesildi.')
+      if (cand?.finishReason === 'MAX_TOKENS') throw new LlmError(msg('err.truncated'))
       const text = textOf(cand).trim()
-      if (!text) throw new LlmError(`Boş yanıt (${cand?.finishReason ?? data.promptFeedback?.blockReason ?? 'bilinmiyor'}).`)
+      if (!text) throw new LlmError(msg('err.empty', { reason: cand?.finishReason ?? data.promptFeedback?.blockReason ?? msg('err.unknownReason') }))
       return { text, usage: usageOf(data.usageMetadata) }
     },
 
@@ -153,14 +154,14 @@ function client(kind: Kind): ProviderClient {
         },
         call.signal
       )
-      if (finish === 'MAX_TOKENS') throw new LlmError('Yanıt token sınırında kesildi.')
-      if (!text.trim()) throw new LlmError(`Boş yanıt (${finish ?? 'bilinmiyor'}).`)
+      if (finish === 'MAX_TOKENS') throw new LlmError(msg('err.truncated'))
+      if (!text.trim()) throw new LlmError(msg('err.empty', { reason: finish ?? msg('err.unknownReason') }))
       return { text, usage }
     },
 
     async discover(cred): Promise<DiscoveredModel[]> {
       if (kind === 'vertex') {
-        if (!cred.project) throw new LlmError('Vertex AI için proje ID gerekli.')
+        if (!cred.project) throw new LlmError(msg('err.vertexProject'))
         const found: DiscoveredModel[] = []
         // Aynı anda en fazla 3 yoklama: kota hatası almamak için.
         for (let i = 0; i < VERTEX_PROBE.length; i += 3) {

@@ -29,6 +29,7 @@ const CaseSchema = z
   })
   .refine((c) => c.surface !== 'api' || !c.target || c.input, { message: 'API vakasında hedef çalıştırılacaksa input gerekli' })
   .refine((c) => !c.target || MODELS[c.target.model].family === 'gemini', { message: 'Hedef çalıştırma şimdilik yalnızca Gemini (Vertex)' })
+  .refine((c) => !c.target || MODELS[c.target.model].efforts.includes(c.target.effort), { message: 'Hedef effort modelin desteklediği bir seviye olmalı' })
 
 export type EvalCase = z.infer<typeof CaseSchema>
 

@@ -1,5 +1,6 @@
 import { FAMILY_INFO, MODELS } from '@shared/catalog'
 import { parseGenerated } from '@shared/parse'
+import { msg, uiLanguageName } from '@shared/messages'
 import type { GenerateRequest, GenerateResult, ReplyLanguage } from '@shared/types'
 import { getSettings } from '../config'
 import { engineStream } from '../providers'
@@ -57,7 +58,7 @@ Output exactly this, nothing before or after:
 (the final prompt)
 </prompt>
 <notes>
-- (2 to 4 very short bullets in Turkish: the most important things you changed or added and why; mention any placeholder)
+- (2 to 4 very short bullets in ${uiLanguageName()}: the most important things you changed or added and why; mention any placeholder)
 </notes>`
 }
 
@@ -105,6 +106,6 @@ export async function generatePrompt(
   const prompt = parsed.prompt || text.replace(/<\/?(prompt|notes)>/g, '').trim()
   const notes = [...parsed.notes]
   const strange = foreignScript(prompt, req.prompt + req.answers.map((a) => a.answer).join(' '))
-  if (strange.length) notes.push(`Uyarı: çıktıda beklenmeyen karakterler var (${strange.join(' ')}). Kopyalamadan önce kontrol et.`)
+  if (strange.length) notes.push(msg('note.foreignScript', { chars: strange.join(' ') }))
   return { prompt, notes, usage, engine, elapsedMs: Date.now() - started }
 }

@@ -36,6 +36,8 @@
     "setup": "node scripts/setup.mjs",
     "mock": "vite --config vite.mock.config.ts",
     "build": "electron-vite build",
+    "build:ray": "node scripts/build-product.mjs ray",
+    "build:spectrum": "node scripts/build-product.mjs spectrum",
     "start": "electron-vite preview",
     "selftest": "electron-vite build && electron . --selftest",
     "eval": "electron-vite build && electron . --selftest --eval",

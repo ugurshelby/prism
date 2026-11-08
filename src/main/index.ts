@@ -3,11 +3,12 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
-import { FAMILY_INFO, MODELS, PROVIDERS, PROVIDER_INFO } from '@shared/catalog'
+import { FAMILY_INFO, MODELS, PROVIDERS, PROVIDER_INFO, type FamilyChoice } from '@shared/catalog'
+import { PRODUCT } from '@shared/product'
+import { msg } from '@shared/messages'
 import {
   AnalyzeRequestSchema,
   ClipboardTextSchema,
-  DragKindSchema,
   GenerateRequestSchema,
   IdSchema,
   LIMITS,
@@ -21,10 +22,11 @@ import { analyze } from './engine/analyze'
 import { generatePrompt } from './engine/generate'
 import { appImagePath, devEnv } from './env'
 import { clearHistory, deleteHistory, listHistory, recordAnalysis, recordOutput } from './history'
-import { handle, on } from './ipc'
+import { handle, on, rendererMessage } from './ipc'
 import { LlmError } from './llm'
+import { UserError } from './errors'
 import { logError, logWarn } from './log'
-import { clearKey, engineGenerate, resolveEngine, saveKey, settingsView, verify, verifyPending } from './providers'
+import { clearKey, engineGenerate, resolveEngine, saveKey, setHotkeyOk, settingsView, verify, verifyPending } from './providers'
 import { selftest } from './selftest'
 import {
   applyContentProtection,
@@ -34,7 +36,11 @@ import {
   dragMove,
   dragStart,
   flushWindowState,
+  hidePanel,
+  revealPanel,
+  setPillState,
   getMode,
+  getPill,
   getWindow,
   isAppUrl,
   setMode,
@@ -126,22 +132,21 @@ function resource(name: string) {
 
 function registerHotkey(accelerator: string) {
   globalShortcut.unregisterAll()
+  let ok = false
   try {
-    const ok = globalShortcut.register(accelerator, toggleVisible)
-    if (!ok) logWarn('hotkey', `kısayol başka bir uygulamada kayıtlı: ${accelerator}`)
-    return ok
+    ok = globalShortcut.register(accelerator, toggleVisible)
+    if (!ok) logWarn('hotkey', `kısayol kaydedilemedi (başka uygulama ya da Wayland): ${accelerator}`)
   } catch (e) {
     logWarn('hotkey', `kısayol tanınmadı: ${accelerator}`, e)
-    return false
   }
+  setHotkeyOk(ok)
+  return ok
 }
 
 /** Pencereyi panel olarak öne getirir; istenirse arayüzde geçmişi ya da ayarları açar. */
 function showPanel(open?: 'settings' | 'history') {
   const win = getWindow() ?? createWindow()
-  if (getMode() === 'pill' && open) setMode('panel')
-  win.show()
-  win.focus()
+  revealPanel()
   if (open) win.webContents.send('ui:open', open)
 }
 
@@ -149,17 +154,20 @@ function buildTrayMenu() {
   const s = getSettings()
   const engine = resolveEngine()
   return Menu.buildFromTemplate([
-    { label: 'Göster / Gizle', click: toggleVisible },
-    { label: getMode() === 'pill' ? 'Paneli aç' : 'Küçült', click: () => setMode(getMode() === 'pill' ? 'panel' : 'pill') },
-    { label: 'Geçmiş…', click: () => showPanel('history') },
-    { label: 'Ayarlar…', click: () => showPanel('settings') },
+    { label: PRODUCT.name, enabled: false },
+    { label: active > 0 ? msg('tray.working') : msg('tray.ready'), enabled: false },
+    { type: 'separator' },
+    { label: msg('tray.showHide'), click: toggleVisible },
+    { label: getMode() === 'pill' ? msg('tray.openPanel') : msg('tray.minimize'), click: () => setMode(getMode() === 'pill' ? 'panel' : 'pill') },
+    { label: msg('tray.history'), click: () => showPanel('history') },
+    { label: msg('tray.settings'), click: () => showPanel('settings') },
     { type: 'separator' },
     {
-      label: engine ? `Motor: ${PROVIDER_INFO[engine.provider].label} · ${engine.generation}` : 'Motor: yapılandırılmamış',
+      label: engine ? msg('tray.engine', { engine: `${PROVIDER_INFO[engine.provider].label} · ${engine.generation}` }) : msg('tray.engineNone'),
       enabled: false
     },
     {
-      label: 'Her zaman üstte',
+      label: msg('tray.alwaysOnTop'),
       type: 'checkbox',
       checked: s.alwaysOnTop,
       click: (item) => {
@@ -171,13 +179,13 @@ function buildTrayMenu() {
       }
     },
     { type: 'separator' },
-    { label: 'Çıkış', click: () => app.quit() }
+    { label: msg('tray.quit'), click: () => app.quit() }
   ])
 }
 
 function refreshTray() {
   tray?.setContextMenu(buildTrayMenu())
-  tray?.setToolTip(active > 0 ? 'Prism — çalışıyor…' : 'Prism')
+  tray?.setToolTip(active > 0 ? msg('tray.tooltipBusy', { product: PRODUCT.name }) : PRODUCT.name)
 }
 
 /** Uzun süren analiz/yazım sırasında tray ipucunu günceller. */
@@ -193,11 +201,34 @@ function safeRefreshTray() {
 async function tracked<T>(work: () => Promise<T>): Promise<T> {
   active++
   safeRefreshTray()
+  setPillState({ busy: true })
   try {
     return await work()
   } finally {
     active--
     safeRefreshTray()
+    setPillState({ busy: active > 0 })
+  }
+}
+
+/** Ürün kuralı ana süreçte de geçerli: seçili olmayan aile için motor çalışmaz; çapraz öneri yalnızca çok aileli üründe. */
+function assertFamily(family: FamilyChoice) {
+  const { families } = getSettings()
+  const ok = family === 'auto' ? PRODUCT.familyMode === 'multi' : families.includes(family)
+  if (!ok) throw new UserError(msg('err.familyNotSelected'))
+}
+
+// Aynı türden en fazla iki iş aynı anda çalışır: arayüz hatası ya da tekrarlanan tıklama sağlayıcıya yığın
+// istek göndermesin (key'in kotası ve owner'ın bütçesi).
+const MAX_PER_KIND = 2
+const kinds = { analyze: 0, generate: 0 }
+async function limited<T>(kind: keyof typeof kinds, work: () => Promise<T>): Promise<T> {
+  if (kinds[kind] >= MAX_PER_KIND) throw new UserError(msg('err.tooMany'))
+  kinds[kind]++
+  try {
+    return await work()
+  } finally {
+    kinds[kind]--
   }
 }
 
@@ -205,11 +236,13 @@ async function tracked<T>(work: () => Promise<T>): Promise<T> {
 // Bildirimde prompt içeriği yer almaz, yalnızca model ve yüzey adı.
 function notifyDone(req: GenerateRequest) {
   const win = getWindow()
+  // Panel görünmüyorsa (küre ya da tray) kürede rozet yanar; panel açılınca söner.
+  if (!win?.isVisible()) setPillState({ badge: true })
   if (!getSettings().notifyWhenHidden || !Notification.isSupported() || !win) return
   if (win.isVisible() && !win.isMinimized() && (win.isFocused() || getMode() === 'pill')) return
   const m = MODELS[req.model]
   const n = new Notification({
-    title: 'Prompt hazır',
+    title: msg('notify.ready'),
     body: `${m.name} · ${FAMILY_INFO[m.family].surfaces[req.surface].label}`,
     silent: true
   })
@@ -220,7 +253,7 @@ function notifyDone(req: GenerateRequest) {
 function createTray() {
   const icon = nativeImage.createFromPath(resource(process.platform === 'darwin' ? 'trayTemplate.png' : 'tray.png'))
   tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon)
-  tray.setToolTip('Prism')
+  tray.setToolTip(PRODUCT.name)
   tray.setContextMenu(buildTrayMenu())
   tray.on('click', toggleVisible)
 }
@@ -245,7 +278,7 @@ function linuxAutostart(enabled: boolean) {
   const file = join(app.getPath('appData'), 'autostart', 'prism.desktop')
   if (!enabled) return rmSync(file, { force: true })
   const paths = [appImagePath() ?? process.execPath, ...(app.isPackaged ? [] : [app.getAppPath()])]
-  if (!paths.every((p) => SAFE_EXEC_PATH.test(p))) throw new Error('Uygulama yolu açılışta başlatma için uygun değil.')
+  if (!paths.every((p) => SAFE_EXEC_PATH.test(p))) throw new UserError(msg('err.autostartPath'))
   const exec = `${paths.map((p) => `"${p}"`).join(' ')} --hidden`
   mkdirSync(dirname(file), { recursive: true })
   writeFileSync(file, `[Desktop Entry]\nType=Application\nName=Prism\nExec=${exec}\nX-GNOME-Autostart-enabled=true\n`)
@@ -257,7 +290,7 @@ function applySettings(patch: z.infer<typeof SettingsPatchSchema>) {
   const hotkeyChanged = !!patch.hotkey && patch.hotkey !== before.hotkey
   if (patch.hotkey && hotkeyChanged && !registerHotkey(patch.hotkey)) {
     registerHotkey(before.hotkey)
-    throw new Error(`Kısayol kaydedilemedi: ${patch.hotkey}`)
+    throw new UserError(msg('err.hotkey', { hotkey: patch.hotkey }))
   }
   if (patch.launchAtLogin !== undefined) {
     try {
@@ -291,20 +324,22 @@ function applySettings(patch: z.infer<typeof SettingsPatchSchema>) {
 const none = z.tuple([])
 
 function registerIpc() {
-  handle('settings:get', none, () => settingsView())
+  // Küre de dili okumak için ayarları alır; başka hiçbir kanala erişemez.
+  handle('settings:get', none, () => settingsView(), 'any')
   handle('settings:set', z.tuple([SettingsPatchSchema]), (_e, patch) => applySettings(patch))
+  // Test de ücretli bir çağrıdır: analizle aynı eşzamanlılık sınırına tabi.
   handle('settings:test', none, async () => {
     const started = Date.now()
     try {
-      const { engine } = await engineGenerate('analysis', {
+      const { engine } = await limited('analyze', () => engineGenerate('analysis', {
         system: 'Reply with the single word: ok',
         user: 'ping',
         temperature: 0,
         timeoutMs: 60_000
-      })
+      }))
       return { ok: true, ms: Date.now() - started, engine }
     } catch (e) {
-      return { ok: false, ms: Date.now() - started, message: e instanceof Error ? e.message : 'Bağlantı denemesi başarısız.' }
+      return { ok: false, ms: Date.now() - started, message: rendererMessage('settings:test', e) }
     }
   })
   handle('settings:openKnowledge', none, () => shell.openPath(knowledgeDir()))
@@ -329,23 +364,26 @@ function registerIpc() {
   })
 
   handle('engine:analyze', z.tuple([AnalyzeRequestSchema]), async (_e, req) => {
-    if (running.has(req.id)) throw new Error('Bu istek zaten çalışıyor.')
+    assertFamily(req.family)
+    if (req.manual) assertFamily(MODELS[req.manual.model].family)
+    if (running.has(req.id)) throw new UserError(msg('err.running'))
     const controller = new AbortController()
     running.set(req.id, controller)
     // Geçmiş ayarı istek başladığı anki değeriyle uygulanır: kapalıyken başlatılan prompt sonradan açılsa da kaydedilmez.
     const save = getSettings().saveHistory
     try {
-      const analysis = await tracked(() => analyze(req, controller.signal))
+      const analysis = await limited('analyze', () => tracked(() => analyze(req, controller.signal)))
       // İptal edilmiş analiz geçmişe yazılmaz; yanıt sağlayıcıdan gelmiş olsa bile arayüz onu artık beklemiyor.
-      if (controller.signal.aborted) throw new LlmError('İptal edildi.')
+      if (controller.signal.aborted) throw new LlmError(msg('err.cancelled'))
       return { ...analysis, historyId: save ? keepRecord('analiz', () => recordAnalysis(req, analysis)) : undefined }
     } finally {
       running.delete(req.id)
     }
   })
   handle('engine:generate', z.tuple([GenerateRequestSchema]), async (e, req) => {
+    assertFamily(MODELS[req.model].family)
     // Aynı kimlikle ikinci bir yazım, öncekinin iptal denetimini ezmesin.
-    if (running.has(req.id)) throw new Error('Bu istek zaten çalışıyor.')
+    if (running.has(req.id)) throw new UserError(msg('err.running'))
     const controller = new AbortController()
     running.set(req.id, controller)
     const save = getSettings().saveHistory
@@ -353,15 +391,19 @@ function registerIpc() {
       if (!e.sender.isDestroyed()) e.sender.send('engine:stream', ev)
     }
     try {
-      const result = await tracked(() =>
-        generatePrompt(req, (text) => send({ id: req.id, type: 'chunk', text }), controller.signal)
+      const result = await limited('generate', () =>
+        tracked(() => generatePrompt(req, (text) => send({ id: req.id, type: 'chunk', text }), controller.signal))
       )
       // Bittikten hemen sonra iptal edilmiş yazım geçmişe yazılmaz; kullanıcı onu artık istemiyor.
       if (save && !controller.signal.aborted) keepRecord('yazım', () => recordOutput(req, result))
+      if (controller.signal.aborted) {
+        send({ id: req.id, type: 'error', message: msg('err.cancelled') })
+        return
+      }
       send({ id: req.id, type: 'done', result })
       notifyDone(req)
     } catch (err) {
-      send({ id: req.id, type: 'error', message: err instanceof Error ? err.message : 'Yazım başarısız.' })
+      send({ id: req.id, type: 'error', message: rendererMessage('engine:generate', err) })
     } finally {
       running.delete(req.id)
     }
@@ -375,14 +417,15 @@ function registerIpc() {
   handle('window:setMode', z.tuple([WindowModeSchema]), (_e, mode) => {
     setMode(mode)
     refreshTray()
-  })
+  }, 'any')
   handle('window:getState', none, () => ({ mode: getMode(), pinned: getSettings().alwaysOnTop }))
   handle('window:togglePin', none, () => applySettings({ alwaysOnTop: !getSettings().alwaysOnTop }).alwaysOnTop)
-  handle('window:hide', none, () => getWindow()?.hide())
+  handle('window:hide', none, () => hidePanel())
   handle('window:quit', none, () => app.quit())
-  on('window:dragStart', z.tuple([DragKindSchema]), (_e, kind) => dragStart(kind))
-  on('window:dragMove', none, () => dragMove())
-  on('window:dragEnd', none, () => dragEnd())
+  // Sürükleme yalnızca küre penceresinde; panel yerel olarak taşınır ve boyutlandırılır.
+  on('window:dragStart', none, () => dragStart(), 'pill')
+  on('window:dragMove', none, () => dragMove(), 'pill')
+  on('window:dragEnd', z.tuple([z.boolean()]), (_e, animate) => dragEnd(animate), 'pill')
 
   handle('clipboard:write', z.tuple([ClipboardTextSchema]), (_e, text) => clipboard.writeText(text))
 }
@@ -425,10 +468,7 @@ function lockDownSession() {
 }
 
 app.on('second-instance', () => {
-  const win = getWindow()
-  if (!win) return
-  win.show()
-  win.focus()
+  if (getWindow()) revealPanel()
 })
 
 app
@@ -471,8 +511,9 @@ app
  */
 function captureStates(win: Electron.BrowserWindow, dir: string, prompt: string | undefined) {
   const js = (code: string): Promise<unknown> => win.webContents.executeJavaScript(code)
-  const shot = async (name: string) => {
-    const img = await win.webContents.capturePage()
+  const shot = async (name: string, from: Electron.BrowserWindow | null = win) => {
+    if (!from) return
+    const img = await from.webContents.capturePage()
     writeFileSync(join(dir, `${name}.png`), img.toPNG())
   }
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -489,8 +530,8 @@ function captureStates(win: Electron.BrowserWindow, dir: string, prompt: string 
     await wait(1500)
     await shot('panel')
     setMode('pill')
-    await wait(900)
-    await shot('pill')
+    await wait(1500)
+    await shot('pill', getPill())
     setMode('panel')
     await wait(900)
 

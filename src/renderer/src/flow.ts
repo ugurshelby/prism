@@ -39,15 +39,13 @@ const initial: FlowState = {
   startedAt: 0
 }
 
-export function useFlow(onFinished?: () => void) {
+export function useFlow() {
   const [s, setS] = useState<FlowState>(initial)
   const ref = useRef(s)
   ref.current = s
   const analyzeSeq = useRef(0)
   const genId = useRef<string | null>(null)
   const analyzeId = useRef<string | null>(null)
-  const finished = useRef(onFinished)
-  finished.current = onFinished
 
   const patch = useCallback((p: Partial<FlowState>) => setS((prev) => ({ ...prev, ...p })), [])
 
@@ -59,7 +57,6 @@ export function useFlow(onFinished?: () => void) {
         else if (ev.type === 'done') {
           genId.current = null
           setS((prev) => ({ ...prev, result: ev.result, stage: 'result' }))
-          finished.current?.()
         } else {
           genId.current = null
           setS((prev) => ({ ...prev, error: ev.message, stage: prev.analysis ? 'review' : 'compose' }))

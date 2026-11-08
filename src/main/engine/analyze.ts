@@ -12,6 +12,7 @@ import {
   type ModelId
 } from '@shared/catalog'
 import { z } from 'zod'
+import { msg, uiLanguageName } from '@shared/messages'
 import type { Analysis, AnalyzeRequest } from '@shared/types'
 import { LlmError, parseJson } from '../llm'
 import { logWarn } from '../log'
@@ -39,13 +40,15 @@ export const TASK_TYPES = [
 
 /** Model ve effort enum'ları aday havuzundan üretilir; model havuz dışına çıkamaz. */
 function schemaFor(pool: ModelId[]) {
+  // İnsanın okuyacağı alanlar arayüz dilinde (ayarlar → arayüz dili).
+  const L = uiLanguageName()
   const efforts = EFFORTS.filter((e) => pool.some((m) => MODELS[m].efforts.includes(e) || MODELS[m].defaultEffort.api === e))
   return {
     type: 'object',
     properties: {
       intent: {
         type: 'string',
-        description: 'In Turkish, 1-2 sentences: what the person actually wants, stated precisely.'
+        description: `In ${L}, 1-2 sentences: what the person actually wants, stated precisely.`
       },
       task_type: { type: 'string', enum: [...TASK_TYPES] },
       complexity: { type: 'string', enum: ['trivial', 'moderate', 'complex', 'frontier'] },
@@ -57,11 +60,11 @@ function schemaFor(pool: ModelId[]) {
           confidence: { type: 'number', description: 'Between 0 and 1.', minimum: 0, maximum: 1 },
           reasoning: {
             type: 'string',
-            description: 'In Turkish, 2-3 sentences: why this model and this effort fit this task better than the neighbors.'
+            description: `In ${L}, 2-3 sentences: why this model and this effort fit this task better than the neighbors.`
           },
           factors: {
             type: 'array',
-            description: 'In Turkish, 2-4 very short signals from the prompt that drove the choice (max ~6 words each).',
+            description: `In ${L}, 2-4 very short signals from the prompt that drove the choice (max ~6 words each).`,
             items: { type: 'string' }
           }
         },
@@ -76,8 +79,8 @@ function schemaFor(pool: ModelId[]) {
           properties: {
             model: { type: 'string', enum: pool },
             effort: { type: 'string', enum: efforts },
-            label: { type: 'string', description: 'In Turkish, 1-3 words, e.g. "Daha hızlı", "Daha güçlü".' },
-            tradeoff: { type: 'string', description: 'In Turkish, one short sentence on what you gain and lose.' }
+            label: { type: 'string', description: `In ${L}, 1-3 words, e.g. ${L === 'Turkish' ? '"Daha hızlı", "Daha güçlü"' : '"Faster", "Stronger"'}.` },
+            tradeoff: { type: 'string', description: `In ${L}, one short sentence on what you gain and lose.` }
           },
           required: ['model', 'effort', 'label', 'tradeoff'],
           propertyOrdering: ['model', 'effort', 'label', 'tradeoff']
@@ -90,11 +93,11 @@ function schemaFor(pool: ModelId[]) {
           type: 'object',
           properties: {
             id: { type: 'string' },
-            question: { type: 'string', description: 'In Turkish, short and concrete.' },
-            why: { type: 'string', description: 'In Turkish, a few words: what in the prompt depends on the answer.' },
+            question: { type: 'string', description: `In ${L}, short and concrete.` },
+            why: { type: 'string', description: `In ${L}, a few words: what in the prompt depends on the answer.` },
             options: {
               type: 'array',
-              description: 'In Turkish, 2-4 concise likely answers.',
+              description: `In ${L}, 2-4 concise likely answers.`,
               items: { type: 'string' }
             }
           },
@@ -169,7 +172,7 @@ How to ask:
 - Never ask about the model or effort, or about things the target model can discover itself (a coding agent can read the repository, run commands and look at files).
 - Each question gets 2-4 short answer options covering the likely answers; the person can also type their own.
 ${manual}
-Language: every human-readable field is in Turkish. Keep model names, effort names and technical terms as they are.`
+Language: every human-readable field is in ${uiLanguageName()}. Keep model names, effort names and technical terms as they are.`
 }
 
 function userPrompt(req: AnalyzeRequest) {
@@ -253,5 +256,5 @@ export async function analyze(req: AnalyzeRequest, signal?: AbortSignal): Promis
       lastError = e
     }
   }
-  throw new LlmError(`Model yanıtı beklenen biçimde değil. Tekrar dene ya da başka bir motor modeli seç.${lastError instanceof LlmError ? ` (${lastError.message})` : ''}`)
+  throw new LlmError(`${msg('err.analysisShape')}${lastError instanceof LlmError ? ` (${lastError.message})` : ''}`)
 }

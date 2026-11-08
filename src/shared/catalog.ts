@@ -13,7 +13,8 @@ export type Effort = (typeof EFFORTS)[number]
 export const SURFACES = ['agent', 'chat', 'api'] as const
 export type Surface = (typeof SURFACES)[number]
 
-type SurfaceLabels = Record<Surface, { label: string; hint: string }>
+/** Hedef aracın kendi adı (ürün adı, çevrilmez); motor promptunda da bu ad kullanılır. Açıklamalar arayüz sözlüğünde. */
+type SurfaceLabels = Record<Surface, { label: string }>
 
 export interface FamilyInfo {
   id: Family
@@ -32,9 +33,9 @@ export const FAMILY_INFO: Record<Family, FamilyInfo> = {
     vendor: 'Anthropic',
     effortLabel: 'effort',
     surfaces: {
-      agent: { label: 'Claude Code', hint: 'Repo içinde agentic kodlama' },
-      chat: { label: 'Sohbet', hint: 'claude.ai / Desktop' },
-      api: { label: 'API', hint: 'System prompt' }
+      agent: { label: 'Claude Code' },
+      chat: { label: 'claude.ai' },
+      api: { label: 'API' }
     },
     hue: '#ff9a5a'
   },
@@ -44,9 +45,9 @@ export const FAMILY_INFO: Record<Family, FamilyInfo> = {
     vendor: 'OpenAI',
     effortLabel: 'reasoning effort',
     surfaces: {
-      agent: { label: 'Codex', hint: 'Repo içinde agentic kodlama' },
-      chat: { label: 'ChatGPT', hint: 'chatgpt.com / uygulama' },
-      api: { label: 'API', hint: 'Developer mesajı' }
+      agent: { label: 'Codex' },
+      chat: { label: 'ChatGPT' },
+      api: { label: 'API' }
     },
     hue: '#7fd6a6'
   },
@@ -56,9 +57,9 @@ export const FAMILY_INFO: Record<Family, FamilyInfo> = {
     vendor: 'Google',
     effortLabel: 'thinking level',
     surfaces: {
-      agent: { label: 'Antigravity', hint: 'Repo içinde agentic kodlama' },
-      chat: { label: 'Gemini', hint: 'gemini.google.com / uygulama' },
-      api: { label: 'API', hint: 'System instruction' }
+      agent: { label: 'Antigravity' },
+      chat: { label: 'Gemini' },
+      api: { label: 'API' }
     },
     hue: '#6cb0ff'
   },
@@ -68,19 +69,19 @@ export const FAMILY_INFO: Record<Family, FamilyInfo> = {
     vendor: 'xAI',
     effortLabel: 'reasoning effort',
     surfaces: {
-      agent: { label: 'Grok Build', hint: 'Repo içinde agentic kodlama' },
-      chat: { label: 'Grok', hint: 'grok.com / uygulama' },
-      api: { label: 'API', hint: 'System prompt' }
+      agent: { label: 'Grok Build' },
+      chat: { label: 'Grok' },
+      api: { label: 'API' }
     },
     hue: '#c9d1dc'
   }
 }
 
-/** Aile seçilmemişken (çapraz öneri) gösterilen yüzey adları. */
+/** Aile seçilmemişken (çapraz öneri) yüzeyin genel adı; motor promptuna girer, arayüz kendi sözlüğünden çevirir. */
 export const GENERIC_SURFACE: SurfaceLabels = {
-  agent: { label: 'Kodlama ajanı', hint: 'Claude Code, Codex, Antigravity, Grok Build' },
-  chat: { label: 'Sohbet', hint: 'Uygulama ya da web sohbeti' },
-  api: { label: 'API', hint: 'System prompt' }
+  agent: { label: 'Coding agent' },
+  chat: { label: 'Chat' },
+  api: { label: 'API' }
 }
 
 export function surfaceInfo(family: FamilyChoice, surface: Surface) {
@@ -105,13 +106,14 @@ export const MODEL_IDS = [
 ] as const
 export type ModelId = (typeof MODEL_IDS)[number]
 
+export type Latency = 'slow' | 'moderate' | 'fast' | 'fastest'
+
 export interface TargetModel {
   id: ModelId
   family: Family
   name: string
   short: string
-  tagline: string
-  latency: string
+  latency: Latency
   price: { input: number; output: number }
   /** Desteklenen seviyeler, düşükten yükseğe. Boşsa seviye sabittir (ayarlanamaz). */
   efforts: readonly Effort[]
@@ -127,8 +129,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     family: 'claude',
     name: 'Claude Fable 5.1',
     short: 'Fable 5.1',
-    tagline: 'En zor ve en uzun soluklu işler',
-    latency: 'Yavaş',
+    latency: 'slow',
     price: { input: 10, output: 50 },
     efforts: CLAUDE_EFFORTS,
     defaultEffort: { api: 'high', agent: 'high' },
@@ -139,8 +140,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     family: 'claude',
     name: 'Claude Opus 5.5',
     short: 'Opus 5.5',
-    tagline: 'Ciddi işlerin çoğu için başlangıç noktası',
-    latency: 'Orta',
+    latency: 'moderate',
     price: { input: 4, output: 20 },
     efforts: CLAUDE_EFFORTS,
     defaultEffort: { api: 'medium', agent: 'medium' },
@@ -151,8 +151,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     family: 'claude',
     name: 'Claude Sonnet 5.5',
     short: 'Sonnet 5.5',
-    tagline: 'Hız ve zekânın en iyi dengesi',
-    latency: 'Hızlı',
+    latency: 'fast',
     price: { input: 2, output: 10 },
     efforts: CLAUDE_EFFORTS,
     defaultEffort: { api: 'high', agent: 'medium' },
@@ -163,8 +162,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     family: 'claude',
     name: 'Claude Haiku 5.5',
     short: 'Haiku 5.5',
-    tagline: 'Hızlı, ucuz, yüksek hacim',
-    latency: 'En hızlı',
+    latency: 'fastest',
     price: { input: 0.1, output: 0.5 },
     efforts: CLAUDE_EFFORTS,
     defaultEffort: { api: 'medium', agent: 'medium' },
@@ -175,8 +173,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     family: 'openai',
     name: 'GPT-6 Astra',
     short: 'Astra',
-    tagline: 'OpenAI’nin en yetenekli modeli',
-    latency: 'Yavaş',
+    latency: 'slow',
     price: { input: 10, output: 50 },
     efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
     defaultEffort: { api: 'medium', agent: 'medium' },
@@ -187,8 +184,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     family: 'openai',
     name: 'GPT-6.1 Sol',
     short: 'Sol',
-    tagline: 'Astra’ya yakın, beşte bir fiyat',
-    latency: 'Orta',
+    latency: 'moderate',
     price: { input: 2, output: 10 },
     efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
     defaultEffort: { api: 'medium', agent: 'medium' },
@@ -199,8 +195,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     family: 'openai',
     name: 'GPT-6.1 Terra',
     short: 'Terra',
-    tagline: 'Hızlı; yazım, görsel ve bilgisayar kullanımı',
-    latency: 'Hızlı',
+    latency: 'fast',
     price: { input: 1, output: 5 },
     efforts: ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
     defaultEffort: { api: 'medium', agent: 'medium' },
@@ -211,8 +206,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     family: 'openai',
     name: 'GPT-6 Luna',
     short: 'Luna',
-    tagline: 'Odaklı, yüksek hacimli işler',
-    latency: 'En hızlı',
+    latency: 'fastest',
     price: { input: 0.1, output: 0.5 },
     efforts: ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
     defaultEffort: { api: 'medium', agent: 'medium' },
@@ -223,8 +217,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     family: 'gemini',
     name: 'Gemini 4 Argon',
     short: 'Argon',
-    tagline: 'En zor akıl yürütme, 1M bağlam',
-    latency: 'Orta',
+    latency: 'moderate',
     price: { input: 4, output: 20 },
     efforts: ['low', 'medium', 'high'],
     defaultEffort: { api: 'medium', agent: 'medium' },
@@ -235,8 +228,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     family: 'gemini',
     name: 'Gemini 3.8 Flash',
     short: '3.8 Flash',
-    tagline: 'Uzun soluklu ajan ve kodlama, uygun fiyat',
-    latency: 'Hızlı',
+    latency: 'fast',
     price: { input: 1.5, output: 7.5 },
     efforts: ['low', 'medium', 'high'],
     defaultEffort: { api: 'medium', agent: 'medium' },
@@ -247,8 +239,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     family: 'gemini',
     name: 'Gemini 3.5 Flash-Lite',
     short: '3.5 Flash-Lite',
-    tagline: 'En hızlı ve en ucuz Gemini',
-    latency: 'En hızlı',
+    latency: 'fastest',
     price: { input: 0.3, output: 2.5 },
     efforts: ['minimal', 'low', 'medium', 'high'],
     defaultEffort: { api: 'minimal', agent: 'minimal' },
@@ -259,8 +250,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     family: 'grok',
     name: 'Grok 4.7',
     short: 'Grok 4.7',
-    tagline: 'xAI’nin en yetenekli modeli, düşük fiyat',
-    latency: 'Orta',
+    latency: 'moderate',
     price: { input: 2, output: 6 },
     efforts: ['low', 'medium', 'high', 'xhigh'],
     defaultEffort: { api: 'high', agent: 'high' },
@@ -271,8 +261,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     family: 'grok',
     name: 'Grok 4.3',
     short: 'Grok 4.3',
-    tagline: 'Ucuz, 1M bağlam, hafif akıl yürütme',
-    latency: 'Hızlı',
+    latency: 'fast',
     price: { input: 1.25, output: 2.5 },
     efforts: ['none', 'low', 'medium', 'high'],
     defaultEffort: { api: 'low', agent: 'low' },
@@ -283,8 +272,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     family: 'grok',
     name: 'Grok Build 0.1',
     short: 'Grok Build',
-    tagline: 'Grok Build ajanının kodlama modeli',
-    latency: 'Orta',
+    latency: 'moderate',
     price: { input: 1, output: 2 },
     efforts: [],
     defaultEffort: { api: 'high', agent: 'high' },
@@ -304,18 +292,23 @@ export const modelsOf = (family: FamilyChoice): ModelId[] =>
   MODEL_IDS.filter((id) => family === 'auto' || MODELS[id].family === family)
 
 /**
- * Önerinin seçileceği modeller: daraltılmış ekosistemde o ailenin tamamı; çaprazda key ya da uygulama ile
- * erişilebilenler (hiçbiri yoksa tüm katalog).
+ * Önerinin seçileceği modeller: daraltılmış ekosistemde o ailenin tamamı; çaprazda seçili ailelerin key ya da
+ * uygulama ile erişilebilen modelleri (hiçbiri yoksa seçili ailelerin bütün modelleri).
  */
-export function candidatePool(family: FamilyChoice, access: Partial<Record<ModelId, unknown>>): ModelId[] {
+export function candidatePool(
+  family: FamilyChoice,
+  access: Partial<Record<ModelId, unknown>>,
+  families: readonly Family[] = FAMILIES
+): ModelId[] {
   if (family !== 'auto') return modelsOf(family)
-  const pool = MODEL_IDS.filter((id) => access[id])
-  return pool.length ? pool : [...MODEL_IDS]
+  // Çapraz öneri yalnızca kişinin seçtiği aileler içinde kalır.
+  const inFamilies = MODEL_IDS.filter((id) => families.includes(MODELS[id].family))
+  const pool = inFamilies.filter((id) => access[id])
+  return pool.length ? pool : inFamilies
 }
 
-/** Segment gibi dar yerlerde kullanılan aile adları. */
-export const FAMILY_SHORT: Record<FamilyChoice, string> = {
-  auto: '✦ Çapraz',
+/** Segment gibi dar yerlerde kullanılan aile adları ('auto' etiketi arayüz sözlüğünde). */
+export const FAMILY_SHORT: Record<Family, string> = {
   claude: 'Claude',
   openai: 'GPT',
   gemini: 'Gemini',
@@ -325,14 +318,15 @@ export const FAMILY_SHORT: Record<FamilyChoice, string> = {
 export const isModelId = (m: unknown): m is ModelId => (MODEL_IDS as readonly unknown[]).includes(m)
 export const isEffort = (e: unknown): e is Effort => (EFFORTS as readonly unknown[]).includes(e)
 
-export const EFFORT_INFO: Record<Effort, { label: string; hint: string }> = {
-  none: { label: 'None', hint: 'Akıl yürütme yok, en hızlı' },
-  minimal: { label: 'Minimal', hint: 'Çok kısa düşünme, basit işler' },
-  low: { label: 'Low', hint: 'Hızlı, dar kapsam' },
-  medium: { label: 'Medium', hint: 'Günlük, net kapsamlı iş' },
-  high: { label: 'High', hint: 'Doğrulama ve uç durumlar' },
-  xhigh: { label: 'xHigh', hint: 'Uzun soluklu agentic iş' },
-  max: { label: 'Max', hint: 'Sınır problemleri' }
+/** Seviye adları hedef araçlardaki gibi İngilizce kalır; açıklamaları arayüz sözlüğünde (effort.hint.*). */
+export const EFFORT_INFO: Record<Effort, { label: string }> = {
+  none: { label: 'None' },
+  minimal: { label: 'Minimal' },
+  low: { label: 'Low' },
+  medium: { label: 'Medium' },
+  high: { label: 'High' },
+  xhigh: { label: 'xHigh' },
+  max: { label: 'Max' }
 }
 
 export function defaultEffortFor(model: ModelId, surface: Surface): Effort {
@@ -350,117 +344,83 @@ export function clampEffort(model: ModelId, effort: Effort): Effort {
   return [...m.efforts].sort((a, b) => dist(a) - dist(b) || EFFORTS.indexOf(b) - EFFORTS.indexOf(a))[0] ?? m.defaultEffort.api
 }
 
-/** Kısa gösterim: seviye sabitse "sabit". */
-export const effortText = (model: ModelId, effort: Effort) => (MODELS[model].efforts.length ? effort : 'sabit')
+/** Kısa gösterim: seviye sabitse null (arayüz "sabit" yazar). */
+export const effortText = (model: ModelId, effort: Effort): Effort | null => (MODELS[model].efforts.length ? effort : null)
+
+/** Çeviri işlevi: arayüz kendi sözlüğünü verir (anahtarlar `note.*`; kapsam testi src/renderer/src/i18n). */
+export type Translate = (key: string, vars?: Record<string, string | number>) => string
 
 type Note = { title: string; lines: string[]; code?: string }
 
 const json = (v: unknown) => JSON.stringify(v, null, 2)
 
 /** Kopyalanan promptun yanında gösterilecek "hedef araçta böyle ayarla" notu. */
-export function setupNote(model: ModelId, effort: Effort, surface: Surface): Note {
+export function setupNote(model: ModelId, effort: Effort, surface: Surface, t: Translate): Note {
   const m = MODELS[model]
   const fixed = !m.efforts.length
+  const level = EFFORT_INFO[effort].label
   switch (m.family) {
     case 'claude':
-      return claudeNote(m, effort, surface)
+      return claudeNote(m, effort, surface, t)
     case 'openai':
       if (surface === 'agent') {
-        return {
-          title: 'Codex ayarı',
-          lines: ['Oturumda `/model` ile model ve reasoning effort seçilir; kalıcı ayar `~/.codex/config.toml` dosyasındadır.'],
-          code: `model = "${m.id}"\nmodel_reasoning_effort = "${effort}"`
-        }
+        return { title: t('note.codex.title'), lines: [t('note.codex.line')], code: `model = "${m.id}"\nmodel_reasoning_effort = "${effort}"` }
       }
       if (surface === 'chat') {
-        return {
-          title: 'ChatGPT ayarı',
-          lines: [
-            `Model seçiciden ${m.name} modelini seç.`,
-            `Düşünme / reasoning seçeneği varsa ${EFFORT_INFO[effort].label} düzeyine en yakın olanı seç.`
-          ]
-        }
+        return { title: t('note.chatgpt.title'), lines: [t('note.pickModel', { model: m.name }), t('note.pickThinking', { level })] }
       }
       return {
-        title: 'Responses API isteği',
-        lines: [
-          'Prompt developer mesajına (ya da `instructions` alanına) girer. `max_output_tokens` reasoning + yanıtı birlikte kapsar.',
-          effort === 'none' ? '' : 'Effort `none` değilken `temperature` / `top_p` gönderme.'
-        ].filter(Boolean),
+        title: t('note.openaiApi.title'),
+        lines: [t('note.openaiApi.line'), effort === 'none' ? '' : t('note.openaiApi.sampling')].filter(Boolean),
         code: json({
           model: m.id,
           reasoning: { effort },
           input: [
             { role: 'developer', content: '<prompt>' },
-            { role: 'user', content: '<kullanıcı girdisi>' }
+            { role: 'user', content: '<user input>' }
           ],
           max_output_tokens: effort === 'xhigh' || effort === 'max' ? 64000 : 32000
         })
       }
     case 'gemini':
       if (surface === 'agent') {
-        return {
-          title: 'Antigravity ayarı',
-          lines: [
-            `Model seçiciden (CLI'da \`/model\`) ${m.name} modelini seç.`,
-            `Thinking level ayarı sunulmuyorsa varsayılan (${m.defaultEffort.agent}) kullanılır.`
-          ]
-        }
+        return { title: t('note.antigravity.title'), lines: [t('note.antigravity.line', { model: m.name }), t('note.antigravity.thinking', { level })] }
       }
       if (surface === 'chat') {
-        return {
-          title: 'Gemini ayarı',
-          lines: [
-            `Model seçiciden ${m.name} modeline karşılık gelen modu seç.`,
-            `Düşünme ayarı varsa ${EFFORT_INFO[effort].label} düzeyine en yakın olanı seç.`
-          ]
-        }
+        return { title: t('note.geminiApp.title'), lines: [t('note.pickModel', { model: m.name }), t('note.pickThinking', { level })] }
       }
       return {
-        title: 'Gemini API isteği',
-        lines: [
-          'Prompt `systemInstruction` alanına girer. `temperature` / `topP` / `topK` gönderme (Gemini 4 ve 3.6+ yok sayar).',
-          'Interactions API kullanıyorsan: `generation_config.thinking_level`.'
-        ],
+        title: t('note.geminiApi.title'),
+        lines: [t('note.geminiApi.line')],
         code: json({
           systemInstruction: { parts: [{ text: '<prompt>' }] },
-          contents: [{ role: 'user', parts: [{ text: '<kullanıcı girdisi>' }] }],
+          contents: [{ role: 'user', parts: [{ text: '<user input>' }] }],
           generationConfig: { thinkingConfig: { thinkingLevel: effort } }
         })
       }
     case 'grok':
       if (surface === 'agent') {
         return {
-          title: 'Grok Build ayarı',
-          lines: fixed
-            ? ['Grok Build ajanı bu modelle çalışır; modelin belgelenmiş bir effort ayarı yok.']
-            : [
-                `Modeli \`~/.grok/config.toml\` içinde \`[models] default\` ile ya da \`-m ${m.id}\` ile seç.`,
-                `Effort için \`[models] default_reasoning_effort = "${effort}"\` kullanılabilir.`
-              ]
+          title: t('note.grokBuild.title'),
+          lines: fixed ? [t('note.grokBuild.fixed')] : [t('note.grokBuild.model', { id: m.id })],
+          code: fixed ? undefined : `[models]\ndefault = "${m.id}"\ndefault_reasoning_effort = "${effort}"`
         }
       }
       if (surface === 'chat') {
         return {
-          title: 'Grok ayarı',
-          lines: [
-            `Model seçiciden ${m.name} modelini seç.`,
-            fixed ? 'Reasoning sabit.' : `Düşünme modu varsa ${EFFORT_INFO[effort].label} düzeyine en yakın olanı seç.`
-          ]
+          title: t('note.grokApp.title'),
+          lines: [t('note.pickModel', { model: m.name }), fixed ? t('note.grokApp.fixed') : t('note.pickThinking', { level })]
         }
       }
       return {
-        title: 'xAI Responses API isteği',
-        lines: [
-          'Prompt `system` mesajına girer. Reasoning modellerine `presence_penalty`, `frequency_penalty`, `stop` gönderme (hata verir).',
-          'İstemci zaman aşımını uzun tut; her istekte effort’u açıkça gönder.'
-        ],
+        title: t('note.xaiApi.title'),
+        lines: [t('note.xaiApi.line'), t('note.xaiApi.timeout')],
         code: json({
           model: m.id,
           ...(fixed ? {} : { reasoning: { effort } }),
           input: [
             { role: 'system', content: '<prompt>' },
-            { role: 'user', content: '<kullanıcı girdisi>' }
+            { role: 'user', content: '<user input>' }
           ],
           temperature: 0.7,
           top_p: 0.95
@@ -469,29 +429,25 @@ export function setupNote(model: ModelId, effort: Effort, surface: Surface): Not
   }
 }
 
-function claudeNote(m: TargetModel, effort: Effort, surface: Surface): Note {
+function claudeNote(m: TargetModel, effort: Effort, surface: Surface, t: Translate): Note {
   if (surface === 'agent') {
     return {
-      title: 'Claude Code ayarı',
-      lines: [
-        effort === 'max' ? '`max` yalnızca bu oturum için geçerli olur.' : 'Seviye bir sonraki oturumlar için de kaydedilir.'
-      ],
+      title: t('note.claudeCode.title'),
+      lines: [effort === 'max' ? t('note.claudeCode.max') : t('note.claudeCode.saved')],
       code: `/model ${m.id}\n/effort ${effort}`
     }
   }
   if (surface === 'chat') {
     return {
-      title: 'Sohbet ayarı',
-      lines: [
-        `Model seçiciden ${m.name} modelini seç.`,
-        `Uygulamada düşünme/effort ayarı varsa ${EFFORT_INFO[effort].label} yap; yoksa varsayılan (${m.defaultEffort.api}) kullanılır.`
-      ]
+      title: t('note.claudeApp.title'),
+      lines: [t('note.pickModel', { model: m.name }), t('note.claudeApp.effort', { level: EFFORT_INFO[effort].label, fallback: m.defaultEffort.api })]
     }
   }
-  const maxTokens = effort === 'xhigh' || effort === 'max' ? 64000 : effort === 'high' ? 32000 : 16000
+  // Opus 5.5 ajan işinde 128k ile iyi çalışıyor (Anthropic, prompting-claude-opus-5-5).
+  const maxTokens = effort === 'xhigh' || effort === 'max' ? 128000 : effort === 'high' ? 32000 : 16000
   return {
-    title: 'API isteği',
-    lines: ['Prompt `system` alanına girer. `max_tokens` düşünme + yanıtı birlikte kapsar.'],
+    title: t('note.claudeApi.title'),
+    lines: [t('note.claudeApi.line')],
     code: json({ model: m.id, max_tokens: maxTokens, output_config: { effort }, system: '<prompt>', messages: [] })
   }
 }

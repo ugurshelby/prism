@@ -2,6 +2,7 @@
 // ve userData'dan okunan her dosyayı bunlarla ayrıştırır; tip bildirimi doğrulama sayılmaz.
 
 import { z } from 'zod'
+import { zmsg } from './messages'
 import { EFFORTS, FAMILIES, MODEL_IDS, PROVIDERS, SURFACES, type Effort, type ModelId } from './catalog'
 
 export const LIMITS = {
@@ -14,18 +15,19 @@ export const LIMITS = {
   keyMax: 512
 } as const
 
-export const ProviderIdSchema = z.enum(PROVIDERS, { error: 'Bilinmeyen sağlayıcı.' })
+export const ProviderIdSchema = z.enum(PROVIDERS, zmsg('schema.provider'))
 export const FamilySchema = z.enum(FAMILIES)
 export const FamilyChoiceSchema = z.union([FamilySchema, z.literal('auto')])
 export const SurfaceSchema = z.enum(SURFACES)
 export const EffortSchema = z.enum(EFFORTS)
 export const ModelIdSchema = z.enum(MODEL_IDS)
 export const WindowModeSchema = z.enum(['pill', 'panel'])
-export const DragKindSchema = z.enum(['move', 'resize'])
 export const ReplyLanguageSchema = z.enum(['tr', 'en', 'none'])
+export const UiLanguageSchema = z.enum(['en', 'tr'])
+export const SetupStepSchema = z.enum(['language', 'families', 'engine', 'shortcut'])
 
 /** İstek ve geçmiş kimlikleri (UUID ya da selftest gibi düz adlar). Dosya adına ya da yola girmez. */
-export const IdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,100}$/, 'Geçersiz kimlik.')
+export const IdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,100}$/, zmsg('schema.id'))
 
 /**
  * API key: yalnızca görünür ASCII, boşluksuz. Key hiçbir koşulda kırpılmaz ya da değiştirilmez;
@@ -33,20 +35,20 @@ export const IdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,100}$/, 'Geçersiz ki
  */
 export const ApiKeySchema = z
   .string()
-  .min(LIMITS.keyMin, 'Key çok kısa; tamamını yapıştırdığından emin ol.')
-  .max(LIMITS.keyMax, 'Key çok uzun.')
-  .regex(/^[\x21-\x7E]+$/, 'Key boşluk ya da görünmeyen karakter içeriyor; yalnızca key’in kendisini yapıştır.')
+  .min(LIMITS.keyMin, zmsg('schema.keyShort'))
+  .max(LIMITS.keyMax, zmsg('schema.keyLong'))
+  .regex(/^[\x21-\x7E]+$/, zmsg('schema.keyChars'))
 
 // Vertex proje ve konumu istek adresine girer. Serbest metin olursa key Google dışındaki bir sunucuya gidebilir.
 export const VertexProjectSchema = z
   .string()
-  .regex(/^(|[a-z][a-z0-9-]{4,28}[a-z0-9]|\d{1,20})$/, 'Geçersiz Google Cloud proje ID’si.')
-export const VertexLocationSchema = z.string().regex(/^[a-z][a-z0-9-]{0,38}[a-z0-9]$/, 'Geçersiz Vertex konumu (ör. global, us-central1).')
+  .regex(/^(|[a-z][a-z0-9-]{4,28}[a-z0-9]|\d{1,20})$/, zmsg('schema.project'))
+export const VertexLocationSchema = z.string().regex(/^[a-z][a-z0-9-]{0,38}[a-z0-9]$/, zmsg('schema.location'))
 
 /** Sağlayıcının döndürdüğü ya da ayarlarda seçilen motor model ID'si; istek adresine girer. */
-export const EngineModelIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:@-]{0,127}$/, 'Geçersiz model ID’si.')
+export const EngineModelIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:@-]{0,127}$/, zmsg('schema.model'))
 
-export const HotkeySchema = z.string().regex(/^[\x21-\x7E]{1,64}$/, 'Geçersiz kısayol.')
+export const HotkeySchema = z.string().regex(/^[\x21-\x7E]{1,64}$/, zmsg('schema.hotkey'))
 
 export const EngineModelsSchema = z.object({ analysis: EngineModelIdSchema, generation: EngineModelIdSchema })
 
@@ -56,6 +58,9 @@ export const SettingsSchema = z.object({
   engineModels: z.partialRecord(ProviderIdSchema, EngineModelsSchema),
   vertex: z.object({ project: VertexProjectSchema, location: VertexLocationSchema }),
   defaultFamily: FamilyChoiceSchema,
+  families: z.array(FamilySchema).min(1).max(FAMILIES.length),
+  uiLanguage: UiLanguageSchema,
+  setup: z.object({ done: z.boolean(), step: SetupStepSchema }),
   appFamilies: z.array(FamilySchema).max(FAMILIES.length),
   replyLanguage: ReplyLanguageSchema,
   defaultSurface: SurfaceSchema,
@@ -76,12 +81,12 @@ export const SettingsPatchSchema = SettingsSchema.omit({ version: true })
   .partial()
   .strict()
 
-const text = (max: number) => z.string().max(max, 'Metin çok uzun.')
+const text = (max: number) => z.string().max(max, zmsg('schema.tooLong'))
 
 export const AnalyzeRequestSchema = z
   .object({
     id: IdSchema,
-    prompt: text(LIMITS.prompt).min(1, 'Prompt boş.'),
+    prompt: text(LIMITS.prompt).min(1, zmsg('schema.emptyPrompt')),
     surface: SurfaceSchema,
     family: FamilyChoiceSchema,
     manual: z.object({ model: ModelIdSchema, effort: EffortSchema }).strict().optional()
@@ -95,7 +100,7 @@ const ComplexitySchema = z.enum(['trivial', 'moderate', 'complex', 'frontier'])
 export const GenerateRequestSchema = z
   .object({
     id: IdSchema,
-    prompt: text(LIMITS.prompt).min(1, 'Prompt boş.'),
+    prompt: text(LIMITS.prompt).min(1, zmsg('schema.emptyPrompt')),
     surface: SurfaceSchema,
     model: ModelIdSchema,
     effort: EffortSchema,
@@ -180,9 +185,16 @@ export const HistoryEntrySchema = z.object({
 // Bozuk bir konum dosyası pencereyi açılmaz hâle getirmesin: tam sayı ve makul aralık; tutmazsa varsayılan konum.
 const coord = z.number().int().min(-100_000).max(100_000)
 const size = z.number().int().min(1).max(20_000)
+const PanelRect = z.object({ x: coord, y: coord, width: size, height: size })
+const PillPoint = z.object({ x: coord, y: coord })
 export const WindowStateSchema = z.object({
-  panel: z.object({ x: coord, y: coord, width: size, height: size }).optional(),
-  pill: z.object({ x: coord, y: coord }).optional()
+  // Ekran başına konum (anahtar: ekran kimliği). Eski sürümün tek panel/pill alanı da okunur.
+  displays: z
+    .record(z.string().regex(/^\d{1,20}$/), z.object({ panel: PanelRect.optional(), pill: PillPoint.optional() }))
+    .refine((o) => Object.keys(o).length <= 16, 'en fazla 16 ekran')
+    .optional(),
+  panel: PanelRect.optional(),
+  pill: PillPoint.optional()
 })
 
 /** Şema hatasını alan yollarıyla anlatır; kullanıcının girdiği değer mesaja girmez. */

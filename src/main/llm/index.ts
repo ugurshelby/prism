@@ -1,4 +1,5 @@
 import type { ProviderId } from '@shared/catalog'
+import { msg } from '@shared/messages'
 import { anthropic } from './anthropic'
 import { aiStudio, vertex } from './google'
 import { openai, xai } from './openai'
@@ -29,10 +30,10 @@ export function parseJson(text: string): unknown {
   const cleaned = text.replace(/```(?:json)?/g, '')
   const start = cleaned.indexOf('{')
   const end = cleaned.lastIndexOf('}')
-  if (start < 0 || end < start) throw new LlmError('Geçerli JSON bulunamadı.')
+  if (start < 0 || end < start) throw new LlmError(msg('err.noJson'))
   try {
     return JSON.parse(cleaned.slice(start, end + 1)) as unknown
   } catch {
-    throw new LlmError('Model yanıtı geçerli JSON değil.')
+    throw new LlmError(msg('err.invalidJson'))
   }
 }

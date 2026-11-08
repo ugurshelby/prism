@@ -115,6 +115,12 @@ export interface HistoryList {
 
 export type ReplyLanguage = 'tr' | 'en' | 'none'
 
+/** Arayüz dili; üretilen promptun dili (ReplyLanguage) ayrı bir ayardır. */
+export type UiLanguage = 'en' | 'tr'
+
+/** Kurulum sihirbazının adımları; yarıda kapatılırsa kalınan adımdan devam edilir. */
+export type SetupStep = 'language' | 'families' | 'engine' | 'shortcut'
+
 export interface EngineModels {
   analysis: string
   generation: string
@@ -127,6 +133,10 @@ export interface Settings {
   engineModels: Partial<Record<ProviderId, EngineModels>>
   vertex: { project: string; location: string }
   defaultFamily: FamilyChoice
+  /** Kurulumda seçilen hedef aileler; arayüz ve öneri havuzu yalnızca bunları kullanır (Ray'de tam bir aile). */
+  families: Family[]
+  uiLanguage: UiLanguage
+  setup: { done: boolean; step: SetupStep }
   /** Key olmadan (abonelik / uygulama ile) kullanılan hedef aileler; çapraz öneri havuzuna girer. */
   appFamilies: Family[]
   replyLanguage: ReplyLanguage
@@ -174,9 +184,26 @@ export interface SettingsView extends Settings {
   engine: { provider: ProviderId; analysis: string; generation: string } | null
   /** Hangi hedef modeller key ya da uygulama ile kullanılabilir. */
   targets: Partial<Record<ModelId, TargetAccess>>
+  /** Global kısayol işletim sistemine kaydedilebildi mi (Wayland ya da başka bir uygulama engelleyebilir). */
+  hotkeyOk: boolean
 }
 
 export type WindowMode = 'pill' | 'panel'
+
+/** Panel küreden açıldığında hangi köşeye yaslandığı; içerik animasyonu bu köşeden başlar. */
+export interface PanelAnchor {
+  h: 'left' | 'right'
+  v: 'top' | 'bottom'
+}
+
+/** Küre penceresinin gösterdiği durum: ana süreç iş sayısından ve bitmiş yazımlardan hesaplar. */
+export interface PillState {
+  busy: boolean
+  badge: boolean
+}
+
+/** Panelin işletim sistemine özgü görünümü (CSS bunu body[data-look] ile alır). */
+export type WindowLook = 'mica' | 'vibrancy' | 'solid'
 
 export type StreamEvent =
   | { id: string; type: 'chunk'; text: string }

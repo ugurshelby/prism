@@ -8,6 +8,7 @@ import {
   type ModelId
 } from '@shared/catalog'
 import type { TargetAccess } from '@shared/types'
+import { effortHint, modelTagline, t } from '../i18n'
 
 export function Segment<T extends string>({
   id,
@@ -48,8 +49,6 @@ function ordered(models: ModelId[]) {
     return ia >= 0 && ib >= 0 ? ia - ib : 0
   })
 }
-
-const ACCESS_LABEL: Record<TargetAccess, string> = { key: 'API', app: 'uygulama' }
 
 export function ModelPicker({
   models,
@@ -92,11 +91,11 @@ export function ModelPicker({
               <span className="dot" />
               {m.short}
             </div>
-            <div className="tag">{m.tagline}</div>
+            <div className="tag">{modelTagline(id)}</div>
             <div className="price">
-              ${m.price.input} / ${m.price.output} · {m.latency}
+              ${m.price.input} / ${m.price.output} · {t(`latency.${m.latency}`)}
             </div>
-            {a && <span className={`access ${a}`}>{ACCESS_LABEL[a]}</span>}
+            {a && <span className={`access ${a}`}>{t(`access.${a}`)}</span>}
           </motion.button>
         ]
       })}
@@ -117,7 +116,7 @@ export function EffortPicker({
 }) {
   const levels = MODELS[model].efforts
   const label = FAMILY_INFO[MODELS[model].family].effortLabel
-  if (!levels.length) return <div className="effort-hint">Bu modelde {label} sabit; ayarlanamaz.</div>
+  if (!levels.length) return <div className="effort-hint">{t('effort.fixedNote', { label })}</div>
   const index = levels.indexOf(value)
   const top = Math.max(1, levels.length - 1)
   return (
@@ -141,7 +140,7 @@ export function EffortPicker({
         ))}
       </div>
       <motion.div key={value} className="effort-hint" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}>
-        {label} · {EFFORT_INFO[value].hint}
+        {label} · {effortHint(value)}
       </motion.div>
     </div>
   )

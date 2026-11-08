@@ -3,16 +3,18 @@ import { useEffect, useMemo, useState } from 'react'
 import { Check, Copy, RefreshCw, Search, Trash2, X } from 'lucide-react'
 import { FAMILIES, FAMILY_INFO, MODELS, PROVIDER_INFO, effortText, surfaceInfo, type Family } from '@shared/catalog'
 import type { HistoryEntry, HistoryStorage } from '@shared/types'
+import { locale, t } from '../i18n'
 import { Logo } from './Prism'
 
-const rtf = new Intl.RelativeTimeFormat('tr', { numeric: 'auto' })
+// Göreli zaman dile göre biçimlenir; dil değişince yeni biçimleyici kurulur.
+const rtf = () => new Intl.RelativeTimeFormat(locale(), { numeric: 'auto' })
 
 // Silinmiş ya da eski bir model ID'si kaydı bozmasın.
 const modelOf = (e: HistoryEntry) => MODELS[e.outputs.at(-1)?.model ?? e.analysis.recommendation.model] ?? MODELS['claude-opus-5-5']
 
 function ago(ts: number) {
   const s = Math.round((ts - Date.now()) / 1000)
-  if (s > -45) return 'az önce'
+  if (s > -45) return t('time.justNow')
   const steps: [number, Intl.RelativeTimeFormatUnit][] = [
     [60, 'second'],
     [60, 'minute'],
@@ -23,10 +25,10 @@ function ago(ts: number) {
   ]
   let v = s
   for (const [n, unit] of steps) {
-    if (Math.abs(v) < n) return rtf.format(Math.round(v), unit)
+    if (Math.abs(v) < n) return rtf().format(Math.round(v), unit)
     v /= n
   }
-  return rtf.format(Math.round(v), 'year')
+  return rtf().format(Math.round(v), 'year')
 }
 
 function Item({
@@ -48,8 +50,8 @@ function Item({
 
   useEffect(() => {
     if (!copied) return
-    const t = setTimeout(() => setCopied(false), 1400)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setCopied(false), 1400)
+    return () => clearTimeout(timer)
   }, [copied])
 
   return (
@@ -61,7 +63,7 @@ function Item({
       animate={{ opacity: 1, y: 0, transition: { delay: Math.min(index, 8) * 0.035, duration: 0.35, ease: [0.22, 1, 0.36, 1] } }}
       exit={{ opacity: 0, x: -24, scale: 0.98, transition: { duration: 0.2 } }}
     >
-      <button className="h-body" onClick={onOpen} title="Aç">
+      <button className="h-body" onClick={onOpen} title={t('history.open')}>
         <div className="h-meta">
           <span className="dot" />
           {last ? (
@@ -69,7 +71,7 @@ function Item({
               {model.short} · {effortText(model.id, last.effort)}
             </b>
           ) : (
-            <span className="h-only">Yalnızca analiz</span>
+            <span className="h-only">{t('history.analysisOnly')}</span>
           )}
           <span>· {surfaceInfo(model.family, entry.surface).label}</span>
           {entry.outputs.length > 1 && <span className="h-count">×{entry.outputs.length}</span>}
@@ -91,14 +93,14 @@ function Item({
             }}
           >
             {copied ? <Check size={13} /> : <Copy size={13} />}
-            {copied ? 'Kopyalandı' : 'Kopyala'}
+            {copied ? t('result.copied') : t('common.copy')}
           </button>
         )}
         <button className="h-btn" onClick={onRewrite}>
           <RefreshCw size={13} />
-          {last ? 'Yeniden yaz' : 'Yaz'}
+          {last ? t('result.rewrite') : t('history.write')}
         </button>
-        <button className="icon-btn h-del" title="Sil" onClick={onDelete}>
+        <button className="icon-btn h-del" title={t('common.delete')} aria-label={t('common.delete')} onClick={onDelete}>
           <Trash2 size={13} />
         </button>
       </div>
@@ -131,7 +133,7 @@ export function History({
       })
       .catch((e: unknown) => {
         setItems([])
-        setLoadError(e instanceof Error ? e.message : 'Geçmiş okunamadı.')
+        setLoadError(e instanceof Error ? e.message : t('history.loadError'))
       })
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', esc)
@@ -141,13 +143,13 @@ export function History({
   const present = useMemo(() => FAMILIES.filter((f) => items?.some((e) => modelOf(e).family === f)), [items])
 
   const shown = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase('tr')
+    const q = query.trim().toLocaleLowerCase(locale())
     return (items ?? []).filter(
       (e) =>
         (family === 'all' || modelOf(e).family === family) &&
         (!q ||
-          [e.prompt, e.analysis.intent, e.outputs.at(-1)?.prompt ?? '', modelOf(e).name].some((t) =>
-            t.toLocaleLowerCase('tr').includes(q)
+          [e.prompt, e.analysis.intent, e.outputs.at(-1)?.prompt ?? '', modelOf(e).name].some((term) =>
+            term.toLocaleLowerCase(locale()).includes(q)
           ))
     )
   }, [items, query, family])
@@ -179,7 +181,7 @@ export function History({
         {items && items.length > 0 && (
           <div className="h-search">
             <Search size={14} />
-            <input placeholder="Promptlarda ara…" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <input placeholder={t('history.search')} aria-label={t('history.search')} value={query} onChange={(e) => setQuery(e.target.value)} />
           </div>
         )}
 
@@ -193,7 +195,7 @@ export function History({
                 onClick={() => setFamily(f)}
               >
                 {f !== 'all' && <i />}
-                {f === 'all' ? 'Tümü' : FAMILY_INFO[f].name}
+                {f === 'all' ? t('history.all') : FAMILY_INFO[f].name}
               </button>
             ))}
           </div>
@@ -204,16 +206,16 @@ export function History({
           {items && items.length === 0 && (
             <motion.div className="h-empty" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}>
               <Logo size={34} />
-              <b>Henüz geçmiş yok</b>
+              <b>{t('history.empty')}</b>
               <span>
                 {storage === 'off'
-                  ? 'Geçmiş kaydı kapalı; yeni promptlar kaydedilmez. Ayarlar → Gizlilik’ten açabilirsin.'
-                  : 'Analiz ettiğin ve yazdırdığın promptlar burada birikir.'}
+                  ? t('history.offEmpty')
+                  : t('history.emptyHint')}
               </span>
             </motion.div>
           )}
           {items && items.length > 0 && shown.length === 0 && (
-            <span className="hint">{query ? `“${query}” için sonuç yok.` : 'Bu ekosistemde kayıt yok.'}</span>
+            <span className="hint">{query ? t('history.noResults', { query }) : t('history.noneInFamily')}</span>
           )}
           <ul className="h-list">
             <AnimatePresence mode="popLayout">
@@ -235,10 +237,10 @@ export function History({
           <div className="h-foot">
             <span className="hint">
               {storage === 'encrypted'
-                ? 'Son 200 kayıt bu bilgisayarda şifreli saklanır.'
+                ? t('history.encrypted')
                 : storage === 'off'
-                  ? 'Geçmiş kaydı kapalı: yeni promptlar kaydedilmez (Ayarlar → Gizlilik).'
-                  : 'Sistem anahtarlığı yok ya da kilitli: geçmiş diske yazılmaz, uygulama kapanınca silinir.'}
+                  ? t('history.off')
+                  : t('history.memory')}
             </span>
             <button
               className={`link ${confirmClear ? 'bad-text' : ''}`}
@@ -250,7 +252,7 @@ export function History({
               }}
               onBlur={() => setConfirmClear(false)}
             >
-              <Trash2 size={12} /> {confirmClear ? 'Emin misin? Tümü silinecek' : 'Tümünü temizle'}
+              <Trash2 size={12} /> {confirmClear ? t('history.confirmClear') : t('history.clear')}
             </button>
           </div>
         )}

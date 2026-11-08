@@ -14,7 +14,6 @@ import {
   X
 } from 'lucide-react'
 import {
-  FAMILIES,
   FAMILY_DEFAULT_MODEL,
   FAMILY_INFO,
   FAMILY_SHORT,
@@ -28,7 +27,7 @@ import {
   modelsOf,
   preferredModel,
   setupNote,
-  surfaceInfo,
+  type Family,
   type FamilyChoice,
   type Surface
 } from '@shared/catalog'
@@ -37,6 +36,7 @@ import { parseGenerated } from '@shared/parse'
 import type { Choice, FlowState, useFlow } from '../flow'
 import { EffortPicker, Meter, ModelPicker, Segment } from './Pickers'
 import { PrismLoader } from './Prism'
+import { effortName, fmtNumber, surfaceHint, surfaceLabel, t, taskLabel, tk } from '../i18n'
 
 type Flow = ReturnType<typeof useFlow>
 
@@ -79,24 +79,25 @@ function useCtrlEnter(fn: () => void, enabled = true) {
   }, [fn, enabled])
 }
 
-const surfaceOptions = (family: FamilyChoice) => SURFACES.map((v) => ({ value: v, label: surfaceInfo(family, v).label }))
+const surfaceOptions = (family: FamilyChoice) => SURFACES.map((v) => ({ value: v, label: surfaceLabel(family, v) }))
 
-const familyOptions = (['auto', ...FAMILIES] as FamilyChoice[]).map((f) => ({
-  value: f,
-  label: FAMILY_SHORT[f],
-  hue: f === 'auto' ? undefined : FAMILY_INFO[f].hue
-}))
+/** Seçili ailelerden segment seçenekleri; birden çok aile varsa başta çapraz öneri. Tek ailede segment gösterilmez. */
+const familyOptions = (families: readonly Family[]) =>
+  (families.length > 1 ? (['auto', ...families] as FamilyChoice[]) : [...families]).map((f) => ({
+    value: f,
+    label: f === 'auto' ? t('family.autoShort') : FAMILY_SHORT[f],
+    hue: f === 'auto' ? undefined : FAMILY_INFO[f].hue
+  }))
 
-
-const ACCESS_TEXT: Record<TargetAccess, string> = { key: 'API', app: 'uygulama' }
+const accessText = (a: TargetAccess) => t(`access.${a}`)
 
 /** Seçili ekosistemde hangi modellere nasıl erişildiğini tek satırda özetler. */
-function PoolHint({ family, targets }: { family: FamilyChoice; targets: SettingsView['targets'] }) {
-  const families = FAMILIES.filter((f) => family === 'auto' || f === family)
+function PoolHint({ family, families: selected, targets }: { family: FamilyChoice; families: readonly Family[]; targets: SettingsView['targets'] }) {
+  const families = selected.filter((f) => family === 'auto' || f === family)
   const parts = families
     .map((f) => {
       const ids = modelsOf(f).filter((id) => targets[id])
-      const kinds = [...new Set(ids.map((id) => ACCESS_TEXT[targets[id]!]))].join(' + ')
+      const kinds = [...new Set(ids.flatMap((id) => { const a = targets[id]; return a ? [accessText(a)] : [] }))].join(' + ')
       return ids.length ? { f, text: `${FAMILY_INFO[f].name} ${ids.length} · ${kinds}` } : null
     })
     .filter((p) => p !== null)
@@ -104,10 +105,10 @@ function PoolHint({ family, targets }: { family: FamilyChoice; targets: Settings
     family === 'auto'
       ? parts.length
         ? null
-        : 'Erişim tanımlı değil; tüm modeller arasından önerilir. Ayarlar’dan key ekle ya da kullandığın uygulamaları işaretle.'
+        : t('pool.noneAuto')
       : parts.length
         ? null
-        : `${FAMILY_INFO[family].name} için doğrulanmış key ya da işaretli uygulama yok; prompt yine de yazılır.`
+        : t('pool.noneFamily', { family: FAMILY_INFO[family].name })
   return (
     <motion.div key={family} className="pool-hint" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}>
       {text ??
@@ -123,15 +124,15 @@ function PoolHint({ family, targets }: { family: FamilyChoice; targets: Settings
 
 // ---------------------------------------------------------------- Compose
 
-export function Compose({ flow, targets = {} }: { flow: Flow; targets?: SettingsView['targets'] }) {
+export function Compose({ flow, families, targets = {} }: { flow: Flow; families: readonly Family[]; targets?: SettingsView['targets'] }) {
   const { s, patch, start } = flow
   const words = s.prompt.trim() ? s.prompt.trim().split(/\s+/).length : 0
-  const pool = candidatePool(s.family, targets)
+  const pool = candidatePool(s.family, targets, families)
   useCtrlEnter(() => void start(), !!s.prompt.trim())
 
   // Ekosistem değişince elle seçilen model yeni havuzda yoksa havuzun önerilen modeline geçer.
   const setFamily = (family: FamilyChoice) => {
-    const next = candidatePool(family, targets)
+    const next = candidatePool(family, targets, families)
     const keep = next.includes(s.manual.model)
     const model = keep ? s.manual.model : family === 'auto' ? preferredModel(next) : FAMILY_DEFAULT_MODEL[family]
     patch({ family, manual: { model, effort: keep ? s.manual.effort : defaultEffortFor(model, s.surface) } })
@@ -140,8 +141,8 @@ export function Compose({ flow, targets = {} }: { flow: Flow; targets?: Settings
   return (
     <motion.div className="view" {...viewMotion}>
       <motion.div style={{ display: 'flex', flexDirection: 'column', gap: 8 }} {...stagger(0)}>
-        <Segment<FamilyChoice> id="family" value={s.family} options={familyOptions} onChange={setFamily} />
-        <PoolHint family={s.family} targets={targets} />
+        {families.length > 1 && <Segment<FamilyChoice> id="family" value={s.family} options={familyOptions(families)} onChange={setFamily} />}
+        <PoolHint family={s.family} families={families} targets={targets} />
         <Segment<Surface> id="surface" value={s.surface} options={surfaceOptions(s.family)} onChange={(v) => patch({ surface: v })} />
       </motion.div>
 
@@ -150,20 +151,21 @@ export function Compose({ flow, targets = {} }: { flow: Flow; targets?: Settings
           autoFocus
           value={s.prompt}
           onChange={(e) => patch({ prompt: e.target.value })}
-          placeholder={'Ne yaptırmak istiyorsun? Aklındakini olduğu gibi yaz.\nSıralı olması, İngilizce olması gerekmiyor.'}
+          placeholder={t('compose.placeholder')}
+          aria-label={t('compose.aria')}
         />
-        <span className="meta">{words ? `${words} kelime` : surfaceInfo(s.family, s.surface).hint}</span>
+        <span className="meta">{words ? t('compose.words', { n: fmtNumber(words) }) : surfaceHint(s.family, s.surface)}</span>
       </motion.div>
 
       <motion.div className="row between" {...stagger(2)}>
-        <span className="label">Model ve effort</span>
+        <span className="label">{t('compose.modelEffort')}</span>
         <div style={{ width: 210 }}>
           <Segment
             id="select-mode"
             value={s.selectMode}
             options={[
-              { value: 'auto', label: '✦ Önerilsin' },
-              { value: 'manual', label: 'Ben seçeyim' }
+              { value: 'auto', label: t('compose.modeAuto') },
+              { value: 'manual', label: t('compose.modeManual') }
             ]}
             onChange={(v) => patch({ selectMode: v })}
           />
@@ -200,7 +202,7 @@ export function Compose({ flow, targets = {} }: { flow: Flow; targets?: Settings
 
       <motion.button className="cta sticky" disabled={!s.prompt.trim()} onClick={start} {...stagger(3)}>
         {s.selectMode === 'auto' ? <Sparkles size={17} /> : <Wand2 size={17} />}
-        {s.selectMode === 'auto' ? 'Analiz et ve öner' : 'Promptu hazırla'}
+        {s.selectMode === 'auto' ? t('compose.analyze') : t('compose.write')}
         <span className="kbd">{MOD} ↵</span>
       </motion.button>
     </motion.div>
@@ -210,19 +212,19 @@ export function Compose({ flow, targets = {} }: { flow: Flow; targets?: Settings
 // ---------------------------------------------------------------- Analyzing
 
 const STATUS = (cross: boolean) => [
-  'Niyetini çözümlüyorum…',
-  'Görevin zorluğunu tartıyorum…',
-  cross ? 'Ekosistemleri karşılaştırıyorum…' : 'Model kartlarını karşılaştırıyorum…',
-  'Effort dengesini hesaplıyorum…',
-  'Belirsiz noktaları ayıklıyorum…',
-  'Son kontrol…'
+  t('analyzing.intent'),
+  t('analyzing.difficulty'),
+  cross ? t('analyzing.families') : t('analyzing.cards'),
+  t('analyzing.effort'),
+  t('analyzing.unclear'),
+  t('analyzing.final')
 ]
 
 function useElapsed(since: number) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 250)
-    return () => clearInterval(t)
+    const timer = setInterval(() => setNow(Date.now()), 250)
+    return () => clearInterval(timer)
   }, [])
   return Math.max(0, Math.floor((now - since) / 1000))
 }
@@ -251,35 +253,16 @@ export function Analyzing({ flow, engine }: { flow: Flow; engine: SettingsView['
         </AnimatePresence>
       </div>
       <div className="elapsed">
-        {elapsed} sn{engine && ` · ${PROVIDER_INFO[engine.provider].label} · ${engine.analysis}`}
+        {t('time.seconds', { n: elapsed })}{engine && ` · ${PROVIDER_INFO[engine.provider].label} · ${engine.analysis}`}
       </div>
       <button className="ghost" onClick={cancel}>
-        <X size={15} /> Vazgeç
+        <X size={15} /> {t('common.cancel')}
       </button>
     </motion.div>
   )
 }
 
 // ---------------------------------------------------------------- Review
-
-const TASK_LABEL: Record<string, string> = {
-  agentic_coding: 'Agentic kodlama',
-  debugging: 'Hata ayıklama',
-  code_review: 'Kod inceleme',
-  code_question: 'Kod sorusu',
-  architecture_design: 'Mimari / tasarım',
-  frontend_design: 'Arayüz tasarımı',
-  writing: 'Yazım',
-  editing: 'Düzenleme',
-  analysis: 'Analiz',
-  research: 'Araştırma',
-  data_extraction: 'Veri çıkarma',
-  brainstorming: 'Beyin fırtınası',
-  chat_qa: 'Soru-cevap',
-  system_prompt: 'System prompt',
-  other: 'Diğer'
-}
-const COMPLEXITY_LABEL = { trivial: 'Basit', moderate: 'Orta', complex: 'Karmaşık', frontier: 'Sınırda' }
 
 export function Review({ flow, targets }: { flow: Flow; targets?: SettingsView['targets'] }) {
   const { s, patch, write, answer, reset } = flow
@@ -300,19 +283,19 @@ export function Review({ flow, targets }: { flow: Flow; targets?: SettingsView['
   return (
     <motion.div className="view" {...viewMotion} style={{ '--hue': m.hue }}>
       <motion.div className="intent" {...stagger(0)}>
-        <b>Anladığım:</b> {a.intent}
+        <b>{t('review.understood')}</b> {a.intent}
       </motion.div>
       <motion.div className="chips" {...stagger(1)}>
-        <span className="chip">{TASK_LABEL[a.taskType] ?? a.taskType}</span>
-        <span className="chip">{COMPLEXITY_LABEL[a.complexity]}</span>
+        <span className="chip">{taskLabel(a.taskType)}</span>
+        <span className="chip">{t(`complexity.${a.complexity}`)}</span>
         {cross && <span className="chip">{FAMILY_INFO[m.family].name}</span>}
-        <span className="chip">{surfaceInfo(m.family, s.surface).label}</span>
+        <span className="chip">{surfaceLabel(m.family, s.surface)}</span>
       </motion.div>
 
       <motion.div className="rec" layout {...stagger(2)}>
         <div className="kicker">
           {isRec ? <Sparkles size={12} /> : <SlidersHorizontal size={12} />}
-          {isRec ? 'Önerim' : 'Senin seçimin'}
+          {isRec ? t('review.recommendation') : t('review.yourChoice')}
         </div>
         <AnimatePresence mode="wait">
           <motion.div
@@ -329,13 +312,13 @@ export function Review({ flow, targets }: { flow: Flow; targets?: SettingsView['
         <div className="effort-badge">
           <Meter key={`${choice.model}-${choice.effort}`} model={choice.model} effort={choice.effort} />
           <span>
-            {FAMILY_INFO[m.family].effortLabel} <b style={{ color: 'var(--text)' }}>{effortText(choice.model, choice.effort)}</b>
+            {FAMILY_INFO[m.family].effortLabel} <b style={{ color: 'var(--text)' }}>{effortName(effortText(choice.model, choice.effort))}</b>
           </span>
         </div>
         {isRec && (
           <>
             <div className="conf">
-              <strong>%{Math.round(rec.confidence * 100)}</strong>eminlik
+              <strong>{fmtNumber(rec.confidence, { style: 'percent' })}</strong>{t('review.confidence')}
             </div>
             <p className="reason">{rec.reasoning}</p>
             {rec.factors.length > 0 && (
@@ -349,9 +332,9 @@ export function Review({ flow, targets }: { flow: Flow; targets?: SettingsView['
         )}
         {!isRec && (
           <p className="reason">
-            {manual ? 'Benim önerim' : 'Önerim'}: {nameOf(rec.model)} · {effortText(rec.model, rec.effort)}.{' '}
+            {manual ? t('review.myRecommendation') : t('review.recommendation')}: {nameOf(rec.model)} · {effortName(effortText(rec.model, rec.effort))}.{' '}
             <button className="link" style={{ display: 'inline' }} onClick={() => choose({ model: rec.model, effort: rec.effort })}>
-              <Undo2 size={12} style={{ verticalAlign: -2 }} /> Öneriye geç
+              <Undo2 size={12} style={{ verticalAlign: -2 }} /> {t('review.useRecommendation')}
             </button>
             <br />
             <span style={{ color: 'var(--muted)', fontSize: 12 }}>{rec.reasoning}</span>
@@ -373,7 +356,7 @@ export function Review({ flow, targets }: { flow: Flow; targets?: SettingsView['
                 <span className="dot" />
                 <span>
                   <div className="t">
-                    {alt.label} · {nameOf(alt.model)} · {effortText(alt.model, alt.effort)}
+                    {alt.label} · {nameOf(alt.model)} · {effortName(effortText(alt.model, alt.effort))}
                   </div>
                   <div className="d">{alt.tradeoff}</div>
                 </span>
@@ -384,7 +367,7 @@ export function Review({ flow, targets }: { flow: Flow; targets?: SettingsView['
 
       <motion.div {...stagger(4)}>
         <button className="link" onClick={() => setEditing((v) => !v)}>
-          <SlidersHorizontal size={13} /> {editing ? 'Seçiciyi kapat' : 'Model veya effort’u değiştir'}
+          <SlidersHorizontal size={13} /> {editing ? t('review.closePicker') : t('review.change')}
         </button>
       </motion.div>
 
@@ -410,7 +393,7 @@ export function Review({ flow, targets }: { flow: Flow; targets?: SettingsView['
 
       {a.questions.length > 0 && (
         <motion.div style={{ display: 'flex', flexDirection: 'column', gap: 8 }} {...stagger(5)}>
-          <span className="label">Önce birkaç soru</span>
+          <span className="label">{t('review.questions')}</span>
           {a.questions.map((q, i) => (
             <motion.div key={q.id} className="question" {...stagger(6 + i)}>
               <div className="q">
@@ -431,7 +414,7 @@ export function Review({ flow, targets }: { flow: Flow; targets?: SettingsView['
               </div>
               <input
                 className="free"
-                placeholder="Kendi cevabım…"
+                placeholder={t('review.ownAnswer')}
                 value={s.answers[q.id]?.text ?? ''}
                 onChange={(e) => answer(q.id, { text: e.target.value })}
               />
@@ -444,12 +427,12 @@ export function Review({ flow, targets }: { flow: Flow; targets?: SettingsView['
 
       <div style={{ flex: 1 }} />
       <motion.div className="row sticky" {...stagger(8)}>
-        <button className="ghost" onClick={reset} title="Baştan başla">
+        <button className="ghost" onClick={reset} title={t('review.restart')} aria-label={t('review.restart')}>
           <ArrowLeft size={15} />
         </button>
         <button className="cta" style={{ flex: 1 }} onClick={() => write()}>
           <Wand2 size={17} />
-          {isRec ? 'Kabul et ve yaz' : 'Bu ayarla yaz'}
+          {isRec ? t('review.accept') : t('review.writeWith')}
           <span className="kbd">{MOD} ↵</span>
         </button>
       </motion.div>
@@ -509,7 +492,8 @@ function CopyMini({ text }: { text: string }) {
   return (
     <button
       className="icon-btn"
-      title="Kopyala"
+      title={t('common.copy')}
+      aria-label={t('common.copy')}
       onClick={async () => {
         await window.prism.clipboard.write(text)
         setDone(true)
@@ -532,7 +516,7 @@ export function Result({ flow }: { flow: Flow }) {
   const [editing, setEditing] = useState(false)
   const [burst, setBurst] = useState(0)
   const [copied, setCopied] = useState(false)
-  const note = setupNote(choice.model, choice.effort, s.surface)
+  const note = setupNote(choice.model, choice.effort, s.surface, tk)
 
   useEffect(() => {
     if (s.result) setText(s.result.prompt)
@@ -540,8 +524,8 @@ export function Result({ flow }: { flow: Flow }) {
 
   useEffect(() => {
     if (!copied) return
-    const t = setTimeout(() => setCopied(false), 1600)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setCopied(false), 1600)
+    return () => clearTimeout(timer)
   }, [copied, burst])
 
   const copy = async () => {
@@ -558,17 +542,17 @@ export function Result({ flow }: { flow: Flow }) {
         <div className="target">
           <span className="dot" />
           <b>{m.short}</b>
-          <span>· {effortText(choice.model, choice.effort)} ·</span>
-          <span>{surfaceInfo(m.family, s.surface).label}</span>
+          <span>· {effortName(effortText(choice.model, choice.effort))} ·</span>
+          <span>{surfaceLabel(m.family, s.surface)}</span>
         </div>
         <span
           className="stats"
-          title={s.result?.engine ? `${PROVIDER_INFO[s.result.engine.provider].label} · ${s.result.engine.model} ile yazıldı` : undefined}
+          title={s.result?.engine ? t('result.writtenWith', { engine: `${PROVIDER_INFO[s.result.engine.provider].label} · ${s.result.engine.model}` }) : undefined}
         >
           {generating
-            ? `${elapsed} sn`
+            ? t('time.seconds', { n: elapsed })
             : s.result
-              ? `${(s.result.elapsedMs / 1000).toFixed(1)} sn · ${s.result.usage?.outputTokens ?? 0} tok`
+              ? `${t('time.seconds', { n: fmtNumber(s.result.elapsedMs / 1000, { maximumFractionDigits: 1 }) })} · ${t('result.tokens', { n: fmtNumber(s.result.usage?.outputTokens ?? 0) })}`
               : ''}
         </span>
       </div>
@@ -584,13 +568,13 @@ export function Result({ flow }: { flow: Flow }) {
           <textarea value={text} onChange={(e) => setText(e.target.value)} autoFocus />
         ) : (
           <pre>
-            {shown ? <Highlighted text={shown} /> : <span style={{ color: 'var(--muted)' }}>Prompt yazılıyor…</span>}
+            {shown ? <Highlighted text={shown} /> : <span style={{ color: 'var(--muted)' }}>{t('result.writing')}</span>}
             {generating && <span className="caret" />}
           </pre>
         )}
         {!generating && (
           <div className="box-tools">
-            <button className={`icon-btn ${editing ? 'on' : ''}`} title="Düzenle" onClick={() => setEditing((v) => !v)}>
+            <button className={`icon-btn ${editing ? 'on' : ''}`} title={t('common.edit')} aria-label={t('common.edit')} onClick={() => setEditing((v) => !v)}>
               <Pencil size={13} />
             </button>
           </div>
@@ -599,7 +583,7 @@ export function Result({ flow }: { flow: Flow }) {
 
       {generating ? (
         <button className="ghost" onClick={flow.cancel}>
-          <X size={15} /> Durdur
+          <X size={15} /> {t('common.stop')}
         </button>
       ) : (
         <>
@@ -620,7 +604,7 @@ export function Result({ flow }: { flow: Flow }) {
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
               >
                 {copied ? <Check size={17} /> : <Copy size={17} />}
-                {copied ? 'Kopyalandı' : 'Promptu kopyala'}
+                {copied ? t('result.copied') : t('result.copy')}
               </motion.span>
             </AnimatePresence>
           </motion.button>
@@ -642,7 +626,7 @@ export function Result({ flow }: { flow: Flow }) {
 
           {s.result && s.result.notes.length > 0 && (
             <motion.div className="card" {...stagger(2)}>
-              <div className="title">Neler değişti</div>
+              <div className="title">{t('result.changes')}</div>
               <ul className="notes">
                 {s.result.notes.map((n) => (
                   <li key={n}>{n}</li>
@@ -653,15 +637,15 @@ export function Result({ flow }: { flow: Flow }) {
 
           <motion.div className="row" {...stagger(3)} style={{ flexWrap: 'wrap' }}>
             <button className="ghost" onClick={() => write()}>
-              <RefreshCw size={14} /> Yeniden yaz
+              <RefreshCw size={14} /> {t('result.rewrite')}
             </button>
             {s.analysis && (
               <button className="ghost" onClick={() => patch({ stage: 'review' })}>
-                <SlidersHorizontal size={14} /> Ayarı değiştir
+                <SlidersHorizontal size={14} /> {t('result.changeSetting')}
               </button>
             )}
             <button className="ghost" onClick={reset} style={{ marginLeft: 'auto' }}>
-              Yeni prompt
+              {t('result.new')}
             </button>
           </motion.div>
         </>

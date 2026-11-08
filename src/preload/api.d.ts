@@ -7,6 +7,8 @@ import type {
   HistoryList,
   SettingsPatch,
   SettingsView,
+  PanelAnchor,
+  PillState,
   StreamEvent,
   WindowMode
 } from '../shared/types'
@@ -43,10 +45,15 @@ export interface PrismApi {
     togglePin(): Promise<boolean>
     hide(): Promise<void>
     quit(): Promise<void>
-    dragStart(kind: 'move' | 'resize'): void
+    /** Küre sürükleme (yalnızca küre penceresi). */
+    dragStart(): void
     dragMove(): void
-    dragEnd(): void
-    onMode(cb: (mode: WindowMode) => void): () => void
+    /** animate: false ise (azaltılmış hareket) küre kenara yaysız yerleşir. */
+    dragEnd(animate: boolean): void
+    /** Panel gösterildi: imleç metin alanına, içerik animasyonu yaslandığı köşeden. */
+    onShown(cb: (anchor: PanelAnchor) => void): () => void
+    /** Küre penceresinin durumu (çalışıyor, rozet). */
+    onPillState(cb: (state: PillState) => void): () => void
     onPinned(cb: (on: boolean) => void): () => void
   }
   clipboard: {

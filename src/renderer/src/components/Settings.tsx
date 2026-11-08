@@ -1,167 +1,23 @@
-import { AnimatePresence, motion } from 'motion/react'
+import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
-import { ChevronDown, Cpu, ExternalLink, FolderOpen, KeyRound, Plug, Power, RefreshCw, X } from 'lucide-react'
-import {
-  FAMILIES,
-  FAMILY_INFO,
-  PROVIDERS,
-  PROVIDER_INFO,
-  surfaceInfo,
-  SURFACES,
-  type FamilyChoice,
-  type Surface
-} from '@shared/catalog'
-import type { EngineRef, ProviderView, ReplyLanguage, SettingsPatch, SettingsView } from '@shared/types'
+import { Cpu, FolderOpen, Plug, Power, RotateCcw, X } from 'lucide-react'
+import { FAMILY_SHORT, PROVIDERS, PROVIDER_INFO, SURFACES, type FamilyChoice, type Surface } from '@shared/catalog'
+import { PRODUCT } from '@shared/product'
+import type { EngineRef, ReplyLanguage, SettingsPatch, SettingsView, UiLanguage } from '@shared/types'
 import { cleanError } from '../errors'
+import { fmtNumber, surfaceLabel, t } from '../i18n'
+import { FamilyPicker, ProviderCard, ToggleRow } from './Fields'
 import { Segment } from './Pickers'
 
-export function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button className={`toggle ${on ? 'on' : ''}`} onClick={() => onChange(!on)} role="switch" aria-checked={on}>
-      <i />
-    </button>
-  )
-}
-
-
-function statusOf(p: ProviderView): { color: string; text: string } {
-  const source = p.key.source === 'saved' ? 'kayıtlı' : '.env'
-  if (!p.key.present) return { color: 'var(--muted)', text: 'Key yok' }
-  if (!p.ready) return { color: 'var(--danger)', text: `${p.key.hint} · proje ID eksik` }
-  if (!p.status) return { color: '#ffd36e', text: `${p.key.hint} · ${source} · doğrulanmadı` }
-  if (!p.status.ok) return { color: 'var(--danger)', text: `${p.key.hint} · ${source} · hata` }
-  return { color: 'var(--ok)', text: `${p.key.hint} · ${source} · ${p.status.models.length} model` }
-}
-
-export function ProviderCard({
-  view,
-  settings,
+export function Settings({
+  onClose,
   onChanged,
-  onSettings
+  onRerunSetup
 }: {
-  view: ProviderView
-  settings: SettingsView
+  onClose: () => void
   onChanged: (v: SettingsView) => void
-  onSettings: (patch: SettingsPatch) => void
+  onRerunSetup: () => void
 }) {
-  const info = PROVIDER_INFO[view.id]
-  const [key, setKey] = useState('')
-  const [busy, setBusy] = useState<'save' | 'verify' | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [open, setOpen] = useState(false)
-  const st = statusOf(view)
-
-  const run = async (kind: 'save' | 'verify', fn: () => Promise<SettingsView>) => {
-    setBusy(kind)
-    setError(null)
-    try {
-      onChanged(await fn())
-      if (kind === 'save') setKey('')
-    } catch (e) {
-      setError(cleanError(e))
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  return (
-    <div className="provider">
-      <div className="provider-head">
-        <b>{info.label}</b>
-        <span className="provider-family">{FAMILY_INFO[info.family].name}</span>
-        {/* Ana süreç https bağlantılarını sistem tarayıcısında açar. */}
-        {!view.key.present && (
-          <a className="link" href={info.keyUrl} target="_blank" rel="noreferrer">
-            Key al <ExternalLink size={11} />
-          </a>
-        )}
-        <span className="pill-status" style={{ marginLeft: 'auto' }}>
-          <i style={{ background: st.color, boxShadow: `0 0 8px ${st.color}` }} />
-          {st.text}
-        </span>
-      </div>
-
-      {view.id === 'vertex' && (
-        <div className="row">
-          <input
-            className="input mono"
-            style={{ flex: 1 }}
-            placeholder="Proje ID"
-            defaultValue={settings.vertex.project}
-            onBlur={(e) => e.target.value.trim() !== settings.vertex.project && onSettings({ vertex: { project: e.target.value.trim() } })}
-          />
-          <input
-            className="input mono"
-            style={{ width: 110 }}
-            placeholder="global"
-            defaultValue={settings.vertex.location}
-            onBlur={(e) => onSettings({ vertex: { location: e.target.value.trim() || 'global' } })}
-          />
-        </div>
-      )}
-
-      <div className="row">
-        <input
-          className="input mono"
-          style={{ flex: 1 }}
-          type="password"
-          autoComplete="off"
-          placeholder={view.key.present ? 'Yeni key ile değiştir' : `${info.env} (şifreli saklanır)`}
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
-        />
-        <button
-          className="ghost"
-          disabled={!key.trim() || !!busy}
-          onClick={() => run('save', () => window.prism.providers.saveKey(view.id, key))}
-        >
-          <KeyRound size={14} /> {busy === 'save' ? 'Doğrulanıyor…' : 'Kaydet'}
-        </button>
-      </div>
-
-      {(view.key.present || view.status) && (
-        <div className="row" style={{ flexWrap: 'wrap' }}>
-          {view.ready && (
-            <button className="ghost" disabled={!!busy} onClick={() => run('verify', () => window.prism.providers.verify(view.id))}>
-              <RefreshCw size={13} /> {busy === 'verify' ? 'Doğrulanıyor…' : 'Doğrula ve modelleri getir'}
-            </button>
-          )}
-          {view.status?.ok && (
-            <button className="link" onClick={() => setOpen((v) => !v)}>
-              <ChevronDown size={12} style={{ transform: open ? 'rotate(180deg)' : undefined }} /> Modeller
-            </button>
-          )}
-          {view.key.source === 'saved' && (
-            <button className="link" style={{ marginLeft: 'auto' }} onClick={() => run('verify', () => window.prism.providers.clearKey(view.id))}>
-              Kayıtlı key’i sil
-            </button>
-          )}
-        </div>
-      )}
-
-      {view.key.problem && <span className="hint bad-text">{view.key.problem}</span>}
-      {view.status && !view.status.ok && <span className="hint bad-text">{view.status.message}</span>}
-      {error && <span className="hint bad-text">{error}</span>}
-
-      <AnimatePresence initial={false}>
-        {open && view.status?.ok && (
-          <motion.div
-            className="provider-models"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-          >
-            {view.status.models.map((m) => (
-              <span key={m.id}>{m.id}</span>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-
-export function Settings({ onClose, onChanged }: { onClose: () => void; onChanged: (v: SettingsView) => void }) {
   const [v, setV] = useState<SettingsView | null>(null)
   const [hotkey, setHotkey] = useState('')
   const [test, setTest] = useState<{ ok: boolean; ms: number; message?: string; engine?: EngineRef } | 'running' | null>(null)
@@ -202,47 +58,65 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
     const cur = v.engineModels[engine.provider] ?? { analysis: engine.analysis, generation: engine.generation }
     void apply({ engineModels: { [engine.provider]: { ...cur, [role]: model } } })
   }
+  const multi = PRODUCT.familyMode === 'multi' && (v?.families.length ?? 0) > 1
 
   return (
     <>
       <motion.div className="sheet-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
       <motion.div
         className="sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('settings.title')}
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
         transition={{ type: 'spring', stiffness: 380, damping: 38 }}
       >
         <div className="head">
-          Ayarlar
-          <button className="icon-btn" onClick={onClose}>
+          {t('settings.title')}
+          <button className="icon-btn" onClick={onClose} title={t('common.close')} aria-label={t('common.close')}>
             <X size={16} />
           </button>
         </div>
         {v && (
           <div className="content">
             <div className="group">
-              <span className="label">Sağlayıcılar</span>
-              <span className="hint">
-                Key’ler yalnızca bu bilgisayarda, işletim sisteminin şifrelemesiyle saklanır; arayüze yalnızca son dört karakteri
-                gelir. Kaydedince bağlantı ve erişilen modeller doğrulanır.
-              </span>
-              {PROVIDERS.map((id) => (
-                <ProviderCard
-                  key={id}
-                  view={v.providers.find((p) => p.id === id)!}
-                  settings={v}
-                  onChanged={changed}
-                  onSettings={apply}
-                />
-              ))}
+              <span className="label">{t('settings.language')}</span>
+              <Segment<UiLanguage>
+                id="ui-lang"
+                value={v.uiLanguage}
+                options={[
+                  { value: 'en', label: 'English' },
+                  { value: 'tr', label: 'Türkçe' }
+                ]}
+                onChange={(uiLanguage) => apply({ uiLanguage })}
+              />
+              <span className="hint">{t('settings.languageHint')}</span>
             </div>
 
             <div className="group">
-              <span className="label">Prism motoru</span>
-              <span className="hint">Analiz, öneri ve yazımı yapan model. Yalnızca key’i tanımlı sağlayıcılar seçilebilir.</span>
+              <span className="label">{t('settings.families')}</span>
+              <FamilyPicker product={PRODUCT} value={v.families} onChange={(families) => apply({ families })} />
+              <span className="hint">
+                {PRODUCT.familyMode === 'single' ? t('settings.familiesHintSingle', { product: PRODUCT.name }) : t('settings.familiesHintMulti')}
+              </span>
+            </div>
+
+            <div className="group">
+              <span className="label">{t('settings.providers')}</span>
+              <span className="hint">{t('settings.providersHint')}</span>
+              {PROVIDERS.map((id) => {
+                const pv = v.providers.find((p) => p.id === id)
+                return pv && <ProviderCard key={id} view={pv} settings={v} onChanged={changed} onSettings={apply} />
+              })}
+            </div>
+
+            <div className="group">
+              <span className="label">{t('settings.engine')}</span>
+              <span className="hint">{t('settings.engineHint')}</span>
               <label className="field">
-                <span>Sağlayıcı</span>
+                <span>{t('settings.engineProvider')}</span>
                 <select
                   className="input"
                   value={v.engineProvider}
@@ -252,11 +126,14 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
                     if (choice) void apply({ engineProvider: choice })
                   }}
                 >
-                  <option value="auto">Otomatik{engine ? ` (${PROVIDER_INFO[engine.provider].label})` : ''}</option>
+                  <option value="auto">
+                    {t('settings.engineAuto')}
+                    {engine ? ` (${PROVIDER_INFO[engine.provider].label})` : ''}
+                  </option>
                   {ready.map((p) => (
                     <option key={p.id} value={p.id}>
                       {PROVIDER_INFO[p.id].label}
-                      {p.status?.ok ? '' : ' (doğrulanmadı)'}
+                      {p.status?.ok ? '' : ` ${t('settings.notVerified')}`}
                     </option>
                   ))}
                 </select>
@@ -264,7 +141,7 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
               {engine ? (
                 <>
                   <label className="field">
-                    <span>Analiz (öneri + sorular)</span>
+                    <span>{t('settings.engineAnalysis')}</span>
                     <input
                       key={`a-${engine.provider}`}
                       className="input mono"
@@ -274,7 +151,7 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
                     />
                   </label>
                   <label className="field">
-                    <span>Yazım (prompt üretimi)</span>
+                    <span>{t('settings.engineGeneration')}</span>
                     <input
                       key={`g-${engine.provider}`}
                       className="input mono"
@@ -296,92 +173,82 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
                         setTest(await window.prism.settings.test())
                       }}
                     >
-                      <Plug size={14} /> {test === 'running' ? 'Deneniyor…' : 'Motoru test et'}
+                      <Plug size={14} /> {test === 'running' ? t('settings.engineTesting') : t('settings.engineTest')}
                     </button>
                   </div>
                   {test && test !== 'running' && (
-                    <span className={`hint ${test.ok ? 'ok-text' : 'bad-text'}`}>
+                    <span className={`hint ${test.ok ? 'ok-text' : 'bad-text'}`} role="status">
                       {test.ok
-                        ? `Çalışıyor · ${test.engine ? `${PROVIDER_INFO[test.engine.provider].label} ${test.engine.model} · ` : ''}${(test.ms / 1000).toFixed(1)} sn`
+                        ? t('settings.engineWorks', {
+                            engine: test.engine ? `${PROVIDER_INFO[test.engine.provider].label} ${test.engine.model} · ` : '',
+                            seconds: t('time.seconds', { n: fmtNumber(test.ms / 1000, { maximumFractionDigits: 1 }) })
+                          })
                         : test.message}
                     </span>
                   )}
                 </>
               ) : (
                 <span className="hint bad-text">
-                  <Cpu size={12} style={{ verticalAlign: -2 }} /> Motor için en az bir sağlayıcıya key ekle.
+                  <Cpu size={12} style={{ verticalAlign: -2 }} /> {t('settings.engineNone')}
                 </span>
               )}
             </div>
 
             <div className="group">
-              <span className="label">Hedef ekosistem</span>
-              <Segment<FamilyChoice>
-                id="def-family"
-                value={v.defaultFamily}
-                options={[
-                  { value: 'auto', label: '✦ Çapraz' },
-                  ...FAMILIES.map((f) => ({ value: f, label: f === 'openai' ? 'GPT' : FAMILY_INFO[f].name }))
-                ]}
-                onChange={(defaultFamily) => apply({ defaultFamily })}
-              />
-              <span className="hint">
-                Çapraz öneri, doğrulanmış key’lerin modelleri ile aşağıda işaretlediğin uygulamalar arasından seçer.
-              </span>
-              {FAMILIES.map((f) => (
-                <div key={f} className="toggle-row">
-                  {FAMILY_INFO[f].name} uygulamasını key olmadan kullanıyorum
-                  <Toggle
-                    on={v.appFamilies.includes(f)}
-                    onChange={(on) =>
-                      apply({ appFamilies: on ? [...v.appFamilies, f] : v.appFamilies.filter((x) => x !== f) })
-                    }
+              {multi && (
+                <>
+                  <span className="label">{t('settings.defaultFamily')}</span>
+                  <Segment<FamilyChoice>
+                    id="def-family"
+                    value={v.defaultFamily}
+                    options={[{ value: 'auto', label: t('family.autoShort') }, ...v.families.map((f) => ({ value: f, label: FAMILY_SHORT[f] }))]}
+                    onChange={(defaultFamily) => apply({ defaultFamily })}
                   />
-                </div>
+                  <span className="hint">{t('settings.defaultFamilyHint')}</span>
+                </>
+              )}
+              {v.families.map((f) => (
+                <ToggleRow
+                  key={f}
+                  label={t('settings.appFamily', { family: FAMILY_SHORT[f] })}
+                  on={v.appFamilies.includes(f)}
+                  onChange={(on) => apply({ appFamilies: on ? [...v.appFamilies, f] : v.appFamilies.filter((x) => x !== f) })}
+                />
               ))}
             </div>
 
             <div className="group">
-              <span className="label">Modelin sana yanıt dili</span>
+              <span className="label">{t('settings.replyLanguage')}</span>
               <Segment<ReplyLanguage>
-                id="lang"
+                id="reply-lang"
                 value={v.replyLanguage}
                 options={[
-                  { value: 'tr', label: 'Türkçe' },
-                  { value: 'en', label: 'English' },
-                  { value: 'none', label: 'Belirtme' }
+                  { value: 'tr', label: t('settings.replyTr') },
+                  { value: 'en', label: t('settings.replyEn') },
+                  { value: 'none', label: t('settings.replyNone') }
                 ]}
                 onChange={(replyLanguage) => apply({ replyLanguage })}
               />
-              <span className="hint">Prompt her zaman İngilizce yazılır; bu ayar içine bir dil satırı ekler.</span>
+              <span className="hint">{t('settings.replyHint')}</span>
             </div>
 
             <div className="group">
-              <span className="label">Varsayılan yüzey</span>
+              <span className="label">{t('settings.defaultSurface')}</span>
               <Segment<Surface>
                 id="def-surface"
                 value={v.defaultSurface}
-                options={SURFACES.map((s) => ({ value: s, label: surfaceInfo(v.defaultFamily, s).label }))}
+                options={SURFACES.map((s) => ({ value: s, label: surfaceLabel(v.defaultFamily, s) }))}
                 onChange={(defaultSurface) => apply({ defaultSurface })}
               />
             </div>
 
             <div className="group">
-              <span className="label">Pencere</span>
-              <div className="toggle-row">
-                Her zaman üstte
-                <Toggle on={v.alwaysOnTop} onChange={(alwaysOnTop) => apply({ alwaysOnTop })} />
-              </div>
-              <div className="toggle-row">
-                Oturum açılışında başlat (tray’de gizli)
-                <Toggle on={v.launchAtLogin} onChange={(launchAtLogin) => apply({ launchAtLogin })} />
-              </div>
-              <div className="toggle-row">
-                Pencere gizliyken prompt hazır olunca bildir
-                <Toggle on={v.notifyWhenHidden} onChange={(notifyWhenHidden) => apply({ notifyWhenHidden })} />
-              </div>
+              <span className="label">{t('settings.window')}</span>
+              <ToggleRow label={t('settings.alwaysOnTop')} on={v.alwaysOnTop} onChange={(alwaysOnTop) => apply({ alwaysOnTop })} />
+              <ToggleRow label={t('settings.launchAtLogin')} on={v.launchAtLogin} onChange={(launchAtLogin) => apply({ launchAtLogin })} />
+              <ToggleRow label={t('settings.notify')} on={v.notifyWhenHidden} onChange={(notifyWhenHidden) => apply({ notifyWhenHidden })} />
               <label className="field">
-                <span>Göster / gizle kısayolu</span>
+                <span>{t('settings.hotkey')}</span>
                 <input
                   className="input mono"
                   value={hotkey}
@@ -389,37 +256,43 @@ export function Settings({ onClose, onChanged }: { onClose: () => void; onChange
                   onBlur={() => hotkey.trim() && hotkey !== v.hotkey && apply({ hotkey: hotkey.trim() })}
                 />
               </label>
-              {error && <span className="hint bad-text">{error}</span>}
-            </div>
-
-            <div className="group">
-              <span className="label">Gizlilik</span>
-              <div className="toggle-row">
-                Geçmişi kaydet (bu bilgisayarda şifreli)
-                <Toggle on={v.saveHistory} onChange={(saveHistory) => apply({ saveHistory })} />
-              </div>
-              {window.prism.platform !== 'linux' && (
-                <div className="toggle-row">
-                  Pencereyi ekran görüntüsü ve ekran paylaşımından gizle
-                  <Toggle on={v.contentProtection} onChange={(contentProtection) => apply({ contentProtection })} />
-                </div>
+              {!v.hotkeyOk && (
+                <span className="hint bad-text" role="alert">
+                  {t('settings.hotkeyBlocked')}
+                </span>
               )}
-              <span className="hint">
-                Geçmiş kapalıyken yeni promptlar hiçbir yere yazılmaz; önceki kayıtlar Geçmiş ekranından silinebilir.
-              </span>
+              {error && (
+                <span className="hint bad-text" role="alert">
+                  {error}
+                </span>
+              )}
             </div>
 
             <div className="group">
-              <span className="label">Bilgi tabanı</span>
-              <span className="hint">
-                Öneri ve yazım, knowledge/ klasöründeki kartlara dayanır. Düzenlediğin kart bir sonraki istekte kullanılır.
-              </span>
-              <div className="row">
+              <span className="label">{t('settings.privacy')}</span>
+              <ToggleRow label={t('settings.saveHistory')} on={v.saveHistory} onChange={(saveHistory) => apply({ saveHistory })} />
+              {window.prism.platform !== 'linux' && (
+                <ToggleRow
+                  label={t('settings.contentProtection')}
+                  on={v.contentProtection}
+                  onChange={(contentProtection) => apply({ contentProtection })}
+                />
+              )}
+              <span className="hint">{t('settings.privacyHint')}</span>
+            </div>
+
+            <div className="group">
+              <span className="label">{t('settings.knowledge')}</span>
+              <span className="hint">{t('settings.knowledgeHint')}</span>
+              <div className="row" style={{ flexWrap: 'wrap' }}>
                 <button className="ghost" onClick={() => window.prism.settings.openKnowledge()}>
-                  <FolderOpen size={14} /> Klasörü aç
+                  <FolderOpen size={14} /> {t('settings.openFolder')}
+                </button>
+                <button className="ghost" onClick={onRerunSetup}>
+                  <RotateCcw size={14} /> {t('settings.rerunSetup')}
                 </button>
                 <button className="ghost" style={{ marginLeft: 'auto' }} onClick={() => window.prism.window.quit()}>
-                  <Power size={14} /> Çıkış
+                  <Power size={14} /> {t('settings.quit')}
                 </button>
               </div>
             </div>
