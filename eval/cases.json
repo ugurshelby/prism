@@ -1,151 +1,416 @@
 {
-  "version": 1,
+  "version": 2,
   "cases": [
     {
       "id": "g01-leave-email",
       "taskType": "writing",
       "family": "gemini",
       "surface": "chat",
-      "prompt": "müdürüme yarın izin alacağımı söyleyen kısa bir mail yaz",
+      "prompt": "selin hanıma mail atmam lazm yarın için izin.. tam gün değil aslında öğleden sonra yeter. kısa olsun ama çok resmi olmasın ya da bilmiyorum, ekip küçük zaten",
       "intent": "A short, polite Turkish email to the manager asking for leave tomorrow.",
-      "facts": ["Manager is Selin Hanım.", "Only tomorrow afternoon (half day).", "Reason: a doctor's appointment.", "Tone: formal but warm; the team is small."],
+      "facts": [
+        "Reason: a doctor's appointment."
+      ],
       "mustAsk": [],
-      "expect": { "models": ["gemini-3.5-flash-lite", "gemini-3.8-flash"], "effort": ["minimal", "low"] },
-      "target": { "model": "gemini-3.8-flash", "effort": "low" }
+      "expect": {
+        "models": [
+          "gemini-3.5-flash-lite",
+          "gemini-3.8-flash"
+        ],
+        "effort": [
+          "minimal",
+          "low"
+        ]
+      },
+      "target": {
+        "model": "gemini-3.8-flash",
+        "effort": "low"
+      },
+      "style": "messy",
+      "stated": [
+        "Recipient is Selin Hanım, the manager.",
+        "Leave is only tomorrow afternoon, not a full day.",
+        "Short; polite but not stiff, the team is small."
+      ]
     },
     {
       "id": "g02-pandas-decode",
       "taskType": "debugging",
       "family": "gemini",
       "surface": "chat",
-      "prompt": "python scriptim pandas ile csv okurken hata veriyor düzelt\n\nUnicodeDecodeError: 'utf-8' codec can't decode byte 0xfd in position 1834: invalid start byte\n\ndf = pd.read_csv('musteriler.csv')",
+      "prompt": "pandas read_csv patlıyor yardım\n\nTraceback (most recent call last):\n  File \"C:\\Users\\emre\\rapor\\temizle.py\", line 4, in <module>\n    df = pd.read_csv('musteriler.csv')\n  File \"...\\pandas\\io\\parsers\\readers.py\", line 1026, in read_csv\n    return _read(filepath_or_buffer, kwds)\nUnicodeDecodeError: 'utf-8' codec can't decode byte 0xfd in position 1834: invalid start byte\n\nencoding='latin1' denedim hata gitti ama ı ş ğ harfleri bozuk çıkıyo şimdi. excelden kaydetmiştim dosyayı",
       "intent": "Fix a pandas read_csv UnicodeDecodeError on a Turkish CSV and explain the cause briefly.",
-      "facts": ["The CSV was exported from Excel on Turkish Windows (cp1254).", "pandas 2.2, Python 3.12.", "The file has Turkish characters like ı, ş, ğ."],
+      "facts": [
+        "Excel on Turkish Windows, so the file is cp1254.",
+        "pandas 2.2, Python 3.12."
+      ],
       "mustAsk": [],
-      "expect": { "models": ["gemini-3.8-flash", "gemini-3.5-flash-lite"], "effort": ["low", "medium"] },
-      "target": { "model": "gemini-3.8-flash", "effort": "medium" }
+      "expect": {
+        "models": [
+          "gemini-3.8-flash",
+          "gemini-3.5-flash-lite"
+        ],
+        "effort": [
+          "low",
+          "medium"
+        ]
+      },
+      "target": {
+        "model": "gemini-3.8-flash",
+        "effort": "medium"
+      },
+      "style": "messy",
+      "stated": [
+        "UnicodeDecodeError on byte 0xfd when reading musteriler.csv.",
+        "encoding='latin1' removes the error but corrupts ı, ş, ğ.",
+        "The file was saved from Excel."
+      ]
     },
     {
       "id": "g03-invoice-extract",
       "taskType": "data_extraction",
       "family": "gemini",
       "surface": "api",
-      "prompt": "faturalardan bilgi çıkaran bir system prompt yaz, json dönsün",
+      "prompt": "faturadan veri çeken system prompt lazım json dönsün. alanlar: fatura no, tarih, satıcı vkn, toplamlar... kdv de olsun. aa bir de para birimi. tarihler iso olsun",
       "intent": "A system prompt that extracts invoice fields from pasted invoice text into strict JSON.",
-      "facts": ["Fields: fatura_no, tarih (ISO 8601), satici_vergi_no, ara_toplam, kdv, genel_toplam, para_birimi.", "Missing field must be null, never guessed.", "Output only the JSON object, no prose.", "Amounts use Turkish formatting in source (1.234,56) and must become numbers."],
-      "mustAsk": ["which fields to extract"],
-      "expect": { "models": ["gemini-3.5-flash-lite", "gemini-3.8-flash"], "effort": ["minimal", "medium"] },
-      "target": { "model": "gemini-3.8-flash", "effort": "low" },
-      "input": "FATURA\nFatura No: TR2026-004812\nDüzenleme Tarihi: 03.11.2026\nSatıcı: Ayaz Kırtasiye Ltd. Şti. VKN 4810293746\nAlıcı: Deniz Yazılım A.Ş.\n10 adet A4 kağıt paketi x 189,90 = 1.899,00 TL\n2 adet toner x 1.250,00 = 2.500,00 TL\nAra Toplam: 4.399,00 TL\nKDV %20: 879,80 TL\nGenel Toplam: 5.278,80 TL"
+      "facts": [
+        "Totals means ara_toplam and genel_toplam.",
+        "A missing field must be null, never guessed.",
+        "Output only the JSON object, no prose.",
+        "Source amounts use Turkish formatting (1.234,56) and must become numbers."
+      ],
+      "mustAsk": [
+        "what to do when a field is missing"
+      ],
+      "expect": {
+        "models": [
+          "gemini-3.5-flash-lite",
+          "gemini-3.8-flash"
+        ],
+        "effort": [
+          "minimal",
+          "medium"
+        ]
+      },
+      "target": {
+        "model": "gemini-3.8-flash",
+        "effort": "low"
+      },
+      "input": "FATURA\nFatura No: TR2026-004812\nDüzenleme Tarihi: 03.11.2026\nSatıcı: Ayaz Kırtasiye Ltd. Şti. VKN 4810293746\nAlıcı: Deniz Yazılım A.Ş.\n10 adet A4 kağıt paketi x 189,90 = 1.899,00 TL\n2 adet toner x 1.250,00 = 2.500,00 TL\nAra Toplam: 4.399,00 TL\nKDV %20: 879,80 TL\nGenel Toplam: 5.278,80 TL",
+      "style": "messy",
+      "stated": [
+        "Output is JSON.",
+        "Fields: invoice number, date, seller tax number, totals, VAT, currency.",
+        "Dates in ISO 8601."
+      ]
     },
     {
       "id": "g04-survey-insights",
       "taskType": "analysis",
       "family": "gemini",
       "surface": "chat",
-      "prompt": "şu anket sonuçlarını yorumla\n\nSoru: Uygulamamızı ne sıklıkla kullanıyorsunuz? Her gün %18, haftada birkaç kez %34, ayda birkaç kez %29, nadiren %19 (n=412)\nSoru: En çok sevdiğiniz özellik? Hızlı not %41, etiketler %22, paylaşım %15, takvim %12, diğer %10\nSoru: Ücretli plana geçer misiniz? Evet %11, belki %37, hayır %52\nSoru: Neden hayır? Fiyat %46, ihtiyaç yok %31, rakip kullanıyorum %15, diğer %8",
+      "prompt": "şunları yorumla bi, yönetime sunucam galiba fiyatlandırma toplantısı var\n\nSoru: Uygulamamızı ne sıklıkla kullanıyorsunuz? Her gün %18, haftada birkaç kez %34, ayda birkaç kez %29, nadiren %19 (n=412)\nSoru: En çok sevdiğiniz özellik? Hızlı not %41, etiketler %22, paylaşım %15, takvim %12, diğer %10\nSoru: Ücretli plana geçer misiniz? Evet %11, belki %37, hayır %52\nSoru: Neden hayır? Fiyat %46, ihtiyaç yok %31, rakip kullanıyorum %15, diğer %8\n\nçok uzun olmasın",
       "intent": "Interpret survey results for a note-taking app and give actionable insights.",
-      "facts": ["The audience is the management team deciding next quarter's pricing.", "They want 3 key insights and 3 concrete recommendations.", "One page, Turkish."],
-      "mustAsk": ["audience or purpose of the interpretation"],
-      "expect": { "models": ["gemini-3.8-flash", "gemini-4-argon"], "effort": ["low", "medium"] },
-      "target": { "model": "gemini-3.8-flash", "effort": "medium" }
+      "facts": [
+        "They want 3 key insights and 3 concrete recommendations.",
+        "One page, Turkish."
+      ],
+      "mustAsk": [],
+      "expect": {
+        "models": [
+          "gemini-3.8-flash",
+          "gemini-4-argon"
+        ],
+        "effort": [
+          "low",
+          "medium"
+        ]
+      },
+      "target": {
+        "model": "gemini-3.8-flash",
+        "effort": "medium"
+      },
+      "style": "messy",
+      "stated": [
+        "Audience: management, for a pricing meeting.",
+        "Not too long.",
+        "Survey data as pasted (n=412)."
+      ]
     },
     {
       "id": "g05-useeffect-twice",
       "taskType": "code_question",
       "family": "gemini",
       "surface": "chat",
-      "prompt": "react'te useEffect neden iki kere çalışıyor",
+      "prompt": "react'te useEffect neden iki kere çalışıyor? vite ile dev modda, StrictMode açık",
       "intent": "Explain why useEffect runs twice and what to do about it.",
-      "facts": ["React 19 with Vite in development mode.", "StrictMode is on in main.tsx.", "The effect fetches data from an API."],
+      "facts": [
+        "React 19.",
+        "The effect fetches data from an API."
+      ],
       "mustAsk": [],
-      "expect": { "models": ["gemini-3.5-flash-lite", "gemini-3.8-flash"], "effort": ["minimal", "low"] },
-      "target": { "model": "gemini-3.8-flash", "effort": "low" }
+      "expect": {
+        "models": [
+          "gemini-3.5-flash-lite",
+          "gemini-3.8-flash"
+        ],
+        "effort": [
+          "minimal",
+          "low"
+        ]
+      },
+      "target": {
+        "model": "gemini-3.8-flash",
+        "effort": "low"
+      },
+      "style": "clear",
+      "stated": [
+        "Vite, development mode.",
+        "StrictMode is on."
+      ]
     },
     {
       "id": "g06-remember-me",
       "taskType": "agentic_coding",
       "family": "gemini",
       "surface": "agent",
-      "prompt": "login sayfasına beni hatırla kutusu ekle",
+      "prompt": "login sayfasına 'beni hatırla' checkbox ekle. nextauth kullanıyoruz v5. işaretliyse oturum uzun kalsın.. kaç gün bilmiyorum 7 mi 30 mu, neyse 30 olsun. işaretli değilse tarayıcı kapanınca çıksın. testler bozulmasın",
       "intent": "Add a 'remember me' checkbox to the login page with correct session behavior.",
-      "facts": ["Next.js 15 App Router with Auth.js (NextAuth v5), credentials provider.", "Checked: session lasts 30 days. Unchecked: session ends when the browser closes.", "Playwright e2e tests exist under e2e/; they must keep passing.", "UI text is Turkish: 'Beni hatırla'."],
-      "mustAsk": ["what remember-me should change (session duration or behavior)"],
-      "expect": { "models": ["gemini-3.8-flash", "gemini-4-argon"], "effort": ["medium", "high"] },
-      "target": { "model": "gemini-3.8-flash", "effort": "medium" }
+      "facts": [
+        "Next.js 15 App Router, credentials provider.",
+        "Playwright e2e tests under e2e/.",
+        "UI text is Turkish: 'Beni hatırla'."
+      ],
+      "mustAsk": [],
+      "expect": {
+        "models": [
+          "gemini-3.8-flash",
+          "gemini-4-argon"
+        ],
+        "effort": [
+          "medium",
+          "high"
+        ]
+      },
+      "target": {
+        "model": "gemini-3.8-flash",
+        "effort": "medium"
+      },
+      "style": "messy",
+      "stated": [
+        "Auth.js (NextAuth v5).",
+        "Checked: session lasts 30 days (decided after weighing 7).",
+        "Unchecked: session ends when the browser closes.",
+        "Existing tests must keep passing."
+      ]
     },
     {
       "id": "g07-cafe-campaign",
       "taskType": "brainstorming",
       "family": "gemini",
       "surface": "chat",
-      "prompt": "kafem için instagram kampanya fikirleri ver",
+      "prompt": "kafem için insta kampanya fikri lazım. kadıköyde küçük bi yer, 3. dalga kahve. bütçe yok neredeyse influencer falan olmaz",
       "intent": "Instagram campaign ideas for a small café, tailored to its situation.",
-      "facts": ["Specialty coffee shop in Kadıköy, Istanbul.", "Launching a new cold brew this summer.", "Main audience: university students.", "Very small budget, no paid influencers."],
-      "mustAsk": ["the campaign goal or product", "the target audience"],
-      "expect": { "models": ["gemini-3.8-flash", "gemini-3.5-flash-lite"], "effort": ["low", "medium"] },
-      "target": { "model": "gemini-3.8-flash", "effort": "medium" }
+      "facts": [
+        "Launching a new cold brew this summer.",
+        "Main audience: university students."
+      ],
+      "mustAsk": [
+        "the campaign goal or product",
+        "the target audience"
+      ],
+      "expect": {
+        "models": [
+          "gemini-3.8-flash",
+          "gemini-3.5-flash-lite"
+        ],
+        "effort": [
+          "low",
+          "medium"
+        ]
+      },
+      "target": {
+        "model": "gemini-3.8-flash",
+        "effort": "medium"
+      },
+      "style": "messy",
+      "stated": [
+        "Small specialty (third-wave) coffee shop in Kadıköy.",
+        "Almost no budget, no influencers."
+      ]
     },
     {
       "id": "g08-edit-paragraph",
       "taskType": "editing",
       "family": "gemini",
       "surface": "chat",
-      "prompt": "bu metni düzelt ama anlamını değiştirme:\n\nprojenin ilk fazında yapılan çalışmalarda, kullanıcı arayüzündeki bir çok sorun tespit edilmiş olup bu sorunların büyük kısmı ikinci fazda giderilmesi planlanmaktadır. ayrıca performans konusunda da bazı iyileştirmeler yapılmış ve sayfa açılış süreleri ortalama %30 oranında azalmışdır, ancak mobil cihazlarda halen istenilen seviyeye ulaşılamamıştır.",
+      "prompt": "şunu düzelt ama anlam değişmesin, rapora girecek. sadece düzeltilmiş halini at\n\nprojenin ilk fazında yapılan çalışmalarda, kullanıcı arayüzündeki bir çok sorun tespit edilmiş olup bu sorunların büyük kısmı ikinci fazda giderilmesi planlanmaktadır. ayrıca performans konusunda da bazı iyileştirmeler yapılmış ve sayfa açılış süreleri ortalama %30 oranında azalmışdır, ancak mobil cihazlarda halen istenilen seviyeye ulaşılamamıştır.",
       "intent": "Correct spelling and grammar of a Turkish paragraph without changing meaning.",
-      "facts": ["It goes into a formal project report.", "Keep roughly the same length.", "Return only the corrected text."],
+      "facts": [
+        "Formal project report; keep roughly the same length."
+      ],
       "mustAsk": [],
-      "expect": { "models": ["gemini-3.5-flash-lite", "gemini-3.8-flash"], "effort": ["minimal", "low"] },
-      "target": { "model": "gemini-3.8-flash", "effort": "low" }
+      "expect": {
+        "models": [
+          "gemini-3.5-flash-lite",
+          "gemini-3.8-flash"
+        ],
+        "effort": [
+          "minimal",
+          "low"
+        ]
+      },
+      "target": {
+        "model": "gemini-3.8-flash",
+        "effort": "low"
+      },
+      "style": "clear",
+      "stated": [
+        "Goes into a report.",
+        "Return only the corrected text.",
+        "Meaning must not change."
+      ]
     },
     {
       "id": "g09-support-bot",
       "taskType": "system_prompt",
       "family": "gemini",
       "surface": "api",
-      "prompt": "müşteri destek botu için system prompt yaz, iade sorularına cevap versin",
+      "prompt": "iade sorularına bakan destek botu için system prompt. lumo home diye ev tekstili sitesi. 14 gün iade var ama açılmamış ürün... ya da açılmış da olur mu? yok sadece açılmamış olsun. sinirli müşteri olursa insana aktarsın",
       "intent": "A system prompt for a returns-support chatbot that applies the store's policy correctly.",
-      "facts": ["Store: Lumo Home (home textiles, online).", "Returns within 14 days of delivery, only unopened products.", "Defective products: 2-year warranty, always accepted.", "Exceptions or angry customers: hand off to a human via the phrase 'Sizi bir temsilcimize aktarıyorum'.", "Reply in Turkish, friendly, short."],
-      "mustAsk": ["the return policy rules", "the store or brand"],
-      "expect": { "models": ["gemini-3.5-flash-lite", "gemini-3.8-flash"], "effort": ["minimal", "low"] },
-      "target": { "model": "gemini-3.8-flash", "effort": "low" },
-      "input": "Merhaba, nevresim takımını 20 gün önce aldım, paketini açtım ama rengini beğenmedim. İade edebilir miyim?"
+      "facts": [
+        "14 days counts from delivery.",
+        "Defective products: 2-year warranty, always accepted.",
+        "Handoff phrase: 'Sizi bir temsilcimize aktarıyorum'.",
+        "Reply in Turkish, friendly, short."
+      ],
+      "mustAsk": [
+        "defective or warranty cases"
+      ],
+      "expect": {
+        "models": [
+          "gemini-3.5-flash-lite",
+          "gemini-3.8-flash"
+        ],
+        "effort": [
+          "minimal",
+          "low"
+        ]
+      },
+      "target": {
+        "model": "gemini-3.8-flash",
+        "effort": "low"
+      },
+      "input": "Merhaba, nevresim takımını 20 gün önce aldım, paketini açtım ama rengini beğenmedim. İade edebilir miyim?",
+      "style": "messy",
+      "stated": [
+        "Store: Lumo Home, online home textiles.",
+        "Returns within 14 days, unopened products only (changed mind once).",
+        "Angry customers are handed to a human."
+      ]
     },
     {
       "id": "g10-ev-vs-hybrid",
       "taskType": "research",
       "family": "gemini",
       "surface": "chat",
-      "prompt": "elektrikli araba mı alayım hibrit mi",
+      "prompt": "elektrikli mi alsam hibrit mi kafam karıştı. ist'da oturuyorum, çoğunlukla şehir içi. bütçe 1.5 civarı, belki 1.8e çıkarım",
       "intent": "A personal recommendation between an EV and a hybrid, reasoned from the person's situation.",
-      "facts": ["Drives about 60 km a day, mostly city, in Istanbul.", "Has a private garage where a home charger can be installed.", "Budget about 1.8 million TL.", "Plans to keep the car 5+ years; one long trip to Ankara per month."],
-      "mustAsk": ["daily driving distance or usage", "home charging access", "budget"],
-      "expect": { "models": ["gemini-3.8-flash", "gemini-4-argon"], "effort": ["low", "medium"] },
-      "target": { "model": "gemini-3.8-flash", "effort": "medium" }
+      "facts": [
+        "About 60 km a day.",
+        "Private garage where a home charger can be installed.",
+        "Keeps the car 5+ years; one long trip to Ankara a month."
+      ],
+      "mustAsk": [
+        "daily driving distance or long trips",
+        "home charging access"
+      ],
+      "expect": {
+        "models": [
+          "gemini-3.8-flash",
+          "gemini-4-argon"
+        ],
+        "effort": [
+          "low",
+          "medium"
+        ]
+      },
+      "target": {
+        "model": "gemini-3.8-flash",
+        "effort": "medium"
+      },
+      "style": "messy",
+      "stated": [
+        "Lives in Istanbul, mostly city driving.",
+        "Budget about 1.5M TL, may stretch to 1.8M TL."
+      ]
     },
     {
       "id": "g11-hero-section",
       "taskType": "frontend_design",
       "family": "gemini",
       "surface": "chat",
-      "prompt": "landing page hero bölümü için html css yaz modern olsun",
+      "prompt": "landing hero yaz html css, modern dursun. ürün kalem diye not uygulaması. framework yok. renk mor olsun.. yok mor değil amber daha iyi, dark tema",
       "intent": "A modern hero section in plain HTML and CSS for the person's product.",
-      "facts": ["Product: 'Kalem', a minimalist note-taking app.", "Dark theme, one accent color (amber).", "One CTA button: 'Ücretsiz dene'.", "No frameworks, single file, responsive."],
-      "mustAsk": ["what the product is"],
-      "expect": { "models": ["gemini-3.8-flash", "gemini-4-argon"], "effort": ["low", "medium"] },
-      "target": { "model": "gemini-3.8-flash", "effort": "medium" }
+      "facts": [
+        "Minimalist look.",
+        "One CTA button: 'Ücretsiz dene'.",
+        "Single file, responsive."
+      ],
+      "mustAsk": [],
+      "expect": {
+        "models": [
+          "gemini-3.8-flash",
+          "gemini-4-argon"
+        ],
+        "effort": [
+          "low",
+          "medium"
+        ]
+      },
+      "target": {
+        "model": "gemini-3.8-flash",
+        "effort": "medium"
+      },
+      "style": "messy",
+      "stated": [
+        "Product: 'Kalem', a note-taking app.",
+        "No frameworks.",
+        "Dark theme with an amber accent (changed from purple)."
+      ]
     },
     {
       "id": "g12-review-js",
       "taskType": "code_review",
       "family": "gemini",
       "surface": "chat",
-      "prompt": "bu kodu review et\n\nasync function getUser(req, res) {\n  const id = req.query.id\n  const user = await db.query('SELECT * FROM users WHERE id = ' + id)\n  if (!user) res.status(404).send('yok')\n  res.json(user)\n}",
+      "prompt": "pls review this, prodda public api'de çalışıyo. en önemli sorunlar önce\n\nasync function getUser(req, res) {\n  const id = req.query.id\n  const user = await db.query('SELECT * FROM users WHERE id = ' + id)\n  if (!user) res.status(404).send('yok')\n  res.json(user)\n}",
       "intent": "Review an Express handler and point out real problems with fixes.",
-      "facts": ["Node 22, Express 5, PostgreSQL via node-postgres.", "Public API with high traffic.", "Wants the most important issues first, with a corrected version."],
+      "facts": [
+        "Node 22, Express 5, PostgreSQL via node-postgres.",
+        "High traffic.",
+        "Wants a corrected version."
+      ],
       "mustAsk": [],
-      "expect": { "models": ["gemini-3.8-flash", "gemini-3.5-flash-lite"], "effort": ["low", "medium"] },
-      "target": { "model": "gemini-3.8-flash", "effort": "medium" }
+      "expect": {
+        "models": [
+          "gemini-3.8-flash",
+          "gemini-3.5-flash-lite"
+        ],
+        "effort": [
+          "low",
+          "medium"
+        ]
+      },
+      "target": {
+        "model": "gemini-3.8-flash",
+        "effort": "medium"
+      },
+      "style": "messy",
+      "stated": [
+        "Runs in production as a public API.",
+        "Most important issues first."
+      ]
     },
     {
       "id": "g13-longest-river",
@@ -156,19 +421,53 @@
       "intent": "A short factual answer.",
       "facts": [],
       "mustAsk": [],
-      "expect": { "models": ["gemini-3.5-flash-lite"], "effort": ["minimal", "low"] },
-      "target": { "model": "gemini-3.8-flash", "effort": "low" }
+      "expect": {
+        "models": [
+          "gemini-3.5-flash-lite"
+        ],
+        "effort": [
+          "minimal",
+          "low"
+        ]
+      },
+      "target": {
+        "model": "gemini-3.8-flash",
+        "effort": "low"
+      },
+      "style": "clear",
+      "stated": []
     },
     {
       "id": "c01-esm-migration",
       "taskType": "agentic_coding",
       "family": "claude",
       "surface": "agent",
-      "prompt": "monorepodaki bütün paketleri commonjs'ten esm'e geçir, ci kırılmasın",
+      "prompt": "tüm paketleri cjs den esm e geçir monorepo, ci kırmızıya düşmesin. bazıları npm'de yayında dikkat",
       "intent": "Migrate every package in a monorepo from CommonJS to ESM while keeping CI green.",
-      "facts": ["pnpm workspace with 14 packages, TypeScript, Jest tests.", "CI on GitHub Actions runs build, lint and test.", "Some packages are published to npm and have external consumers."],
-      "mustAsk": [],
-      "expect": { "models": ["claude-opus-5-5", "claude-fable-5-1"], "effort": ["high", "xhigh"] }
+      "facts": [
+        "pnpm workspace with 14 packages, TypeScript, Jest tests.",
+        "CI on GitHub Actions runs build, lint and test.",
+        "Published packages must stay usable from CommonJS consumers (dual export) until the next major."
+      ],
+      "mustAsk": [
+        "compatibility for external npm consumers"
+      ],
+      "expect": {
+        "models": [
+          "claude-opus-5-5",
+          "claude-fable-5-1"
+        ],
+        "effort": [
+          "high",
+          "xhigh"
+        ]
+      },
+      "style": "messy",
+      "stated": [
+        "Monorepo, CommonJS to ESM.",
+        "CI must stay green.",
+        "Some packages are published to npm."
+      ]
     },
     {
       "id": "c02-translate",
@@ -179,73 +478,190 @@
       "intent": "Translate one sentence to English.",
       "facts": [],
       "mustAsk": [],
-      "expect": { "models": ["claude-haiku-5-5", "claude-sonnet-5-5"], "effort": ["low", "low"] }
+      "expect": {
+        "models": [
+          "claude-haiku-5-5",
+          "claude-sonnet-5-5"
+        ],
+        "effort": [
+          "low",
+          "low"
+        ]
+      },
+      "style": "clear",
+      "stated": []
     },
     {
       "id": "c03-ticket-classifier",
       "taskType": "system_prompt",
       "family": "claude",
       "surface": "api",
-      "prompt": "günde binlerce destek talebini kategorilere ayıracak bir system prompt lazım",
+      "prompt": "destek ticketlarını sınıflandıracak system prompt, günde 20k falan geliyor ucuz olsun. kategoriler fatura, teknik, hesap... iade de var. bir de diğer",
       "intent": "A system prompt for a high-volume support ticket classifier.",
-      "facts": ["Categories: fatura, teknik_sorun, hesap, iade, diğer.", "Output: one JSON object with category and confidence.", "About 20k tickets a day, cost matters."],
-      "mustAsk": ["the category list"],
-      "expect": { "models": ["claude-haiku-5-5", "claude-sonnet-5-5"], "effort": ["low", "medium"] }
+      "facts": [
+        "Output: one JSON object with category and confidence."
+      ],
+      "mustAsk": [
+        "output format"
+      ],
+      "expect": {
+        "models": [
+          "claude-haiku-5-5",
+          "claude-sonnet-5-5"
+        ],
+        "effort": [
+          "low",
+          "medium"
+        ]
+      },
+      "style": "messy",
+      "stated": [
+        "About 20k tickets a day, cost matters.",
+        "Categories: fatura, teknik, hesap, iade, diğer."
+      ]
     },
     {
       "id": "c04-deadlock",
       "taskType": "debugging",
       "family": "claude",
       "surface": "agent",
-      "prompt": "prodda ara sıra deadlock oluyor postgres'te, logları incele kök nedeni bul ve düzelt",
+      "prompt": "prodda arada deadlock var postgres. log şöyle:\n\nERROR:  deadlock detected\nDETAIL:  Process 48211 waits for ShareLock on transaction 9183342; blocked by process 48190.\n        Process 48190 waits for ShareLock on transaction 9183340; blocked by process 48211.\nHINT:  See server log for query details.\nCONTEXT:  while updating tuple (412,7) in relation \"inventory\"\n\nkök nedeni bul düzelt. go servisi",
       "intent": "Find the root cause of intermittent PostgreSQL deadlocks in production and fix it.",
-      "facts": ["Go service, pgx, two workers update orders and inventory in different orders.", "Deadlock logs are in logs/pg/.", "Happens a few times a day under load."],
+      "facts": [
+        "pgx; two workers update orders and inventory in different orders.",
+        "Full logs are in logs/pg/.",
+        "Happens a few times a day under load."
+      ],
       "mustAsk": [],
-      "expect": { "models": ["claude-opus-5-5", "claude-fable-5-1"], "effort": ["high", "max"] }
+      "expect": {
+        "models": [
+          "claude-opus-5-5",
+          "claude-fable-5-1"
+        ],
+        "effort": [
+          "high",
+          "max"
+        ]
+      },
+      "style": "messy",
+      "stated": [
+        "Go service.",
+        "Deadlock while updating relation inventory (pasted log)."
+      ]
     },
     {
       "id": "o01-readme-typos",
       "taskType": "editing",
       "family": "openai",
       "surface": "agent",
-      "prompt": "readme'deki yazım hatalarını düzelt",
+      "prompt": "readme'deki yazım hatalarını düzelt başka bişeye dokunma",
       "intent": "Fix typos in README without other changes.",
       "facts": [],
       "mustAsk": [],
-      "expect": { "models": ["gpt-6-luna", "gpt-6.1-terra"], "effort": ["none", "low"] }
+      "expect": {
+        "models": [
+          "gpt-6-luna",
+          "gpt-6.1-terra"
+        ],
+        "effort": [
+          "none",
+          "low"
+        ]
+      },
+      "style": "clear",
+      "stated": [
+        "Change nothing else."
+      ]
     },
     {
       "id": "o02-pitch-deck",
       "taskType": "writing",
       "family": "openai",
       "surface": "chat",
-      "prompt": "yatırım sunumu için 10 slaytlık bir iskelet çıkar",
+      "prompt": "yatırımcı sunumu 10 slayt iskelet. fintech, kobilerin masraf yönetimi. melek yatırımcılara",
       "intent": "A 10-slide pitch deck outline for the person's startup.",
-      "facts": ["Seed-stage fintech: expense management for Turkish SMEs.", "Audience: local angel investors.", "Raising 500k USD."],
-      "mustAsk": ["what the company or product is", "the audience or round"],
-      "expect": { "models": ["gpt-6.1-sol", "gpt-6.1-terra"], "effort": ["low", "medium"] }
+      "facts": [
+        "Seed stage, raising 500k USD.",
+        "Turkish SMEs; local angels."
+      ],
+      "mustAsk": [
+        "the round size or ask"
+      ],
+      "expect": {
+        "models": [
+          "gpt-6.1-sol",
+          "gpt-6.1-terra"
+        ],
+        "effort": [
+          "low",
+          "medium"
+        ]
+      },
+      "style": "messy",
+      "stated": [
+        "10-slide outline.",
+        "Fintech: expense management for SMEs.",
+        "Audience: angel investors."
+      ]
     },
     {
       "id": "o03-payment-migration",
       "taskType": "agentic_coding",
       "family": "openai",
       "surface": "agent",
-      "prompt": "ödeme altyapısını stripe'tan iyzico'ya taşı, abonelikler ve iadeler dahil bütün akışlar çalışsın",
+      "prompt": "stripe -> iyzico geçiş, abonelik ve iade dahil her şey çalışsın. django. mevcut abonelerin ödeme günü kaymasın!!",
       "intent": "Migrate all payment flows from Stripe to iyzico, including subscriptions and refunds.",
-      "facts": ["Django 5 monolith, Celery for webhooks.", "Sandbox credentials are in .env.example names only.", "Existing subscribers must keep billing dates."],
+      "facts": [
+        "Django 5 monolith, Celery for webhooks.",
+        "Sandbox credentials are named in .env.example only."
+      ],
       "mustAsk": [],
-      "expect": { "models": ["gpt-6.1-sol", "gpt-6-astra"], "effort": ["high", "xhigh"] }
+      "expect": {
+        "models": [
+          "gpt-6.1-sol",
+          "gpt-6-astra"
+        ],
+        "effort": [
+          "high",
+          "xhigh"
+        ]
+      },
+      "style": "messy",
+      "stated": [
+        "Django.",
+        "Subscriptions and refunds included.",
+        "Existing subscribers keep their billing dates."
+      ]
     },
     {
       "id": "o04-junior-assistant",
       "taskType": "system_prompt",
       "family": "openai",
       "surface": "api",
-      "prompt": "junior geliştiricilere kod yardımı yapacak asistan için system prompt yaz",
+      "prompt": "junior devlere yardım eden asistan system prompt. kodu direk vermesin açıklasın. türkçe",
       "intent": "A system prompt for a coding helper aimed at junior developers.",
-      "facts": ["Stack: TypeScript and React.", "It should explain, not just hand over code.", "Answers in Turkish."],
-      "mustAsk": ["the stack or languages"],
-      "expect": { "models": ["gpt-6.1-sol", "gpt-6.1-terra"], "effort": ["low", "medium"] }
+      "facts": [
+        "Stack: TypeScript and React."
+      ],
+      "mustAsk": [
+        "the stack or languages"
+      ],
+      "expect": {
+        "models": [
+          "gpt-6.1-sol",
+          "gpt-6.1-terra"
+        ],
+        "effort": [
+          "low",
+          "medium"
+        ]
+      },
+      "style": "messy",
+      "stated": [
+        "Audience: junior developers.",
+        "Explain, do not just hand over code.",
+        "Answers in Turkish."
+      ]
     },
     {
       "id": "k01-trending",
@@ -256,7 +672,18 @@
       "intent": "Today's most discussed tech news on X.",
       "facts": [],
       "mustAsk": [],
-      "expect": { "models": ["grok-4.3", "grok-4.7"], "effort": ["none", "medium"] }
+      "expect": {
+        "models": [
+          "grok-4.3",
+          "grok-4.7"
+        ],
+        "effort": [
+          "none",
+          "medium"
+        ]
+      },
+      "style": "clear",
+      "stated": []
     },
     {
       "id": "k02-dockerfile",
@@ -265,9 +692,23 @@
       "surface": "agent",
       "prompt": "bu repoya dockerfile ekle",
       "intent": "Add a Dockerfile suitable for the repository.",
-      "facts": ["Node 22 app with npm, entry dist/server.js after build."],
+      "facts": [
+        "Node 22 app with npm, entry dist/server.js after build."
+      ],
       "mustAsk": [],
-      "expect": { "models": ["grok-build-0.1", "grok-4.3", "grok-4.7"], "effort": ["low", "high"] }
+      "expect": {
+        "models": [
+          "grok-build-0.1",
+          "grok-4.3",
+          "grok-4.7"
+        ],
+        "effort": [
+          "low",
+          "high"
+        ]
+      },
+      "style": "clear",
+      "stated": []
     },
     {
       "id": "a01-olympiad",
@@ -278,18 +719,122 @@
       "intent": "A rigorous proof and a correct generalization (Fermat's little theorem and the universal divisor).",
       "facts": [],
       "mustAsk": [],
-      "expect": { "models": ["claude-opus-5-5", "claude-fable-5-1", "gpt-6-astra", "gpt-6.1-sol", "gemini-4-argon", "grok-4.7"], "effort": ["medium", "max"] }
+      "expect": {
+        "models": [
+          "claude-opus-5-5",
+          "claude-fable-5-1",
+          "gpt-6-astra",
+          "gpt-6.1-sol",
+          "gemini-4-argon",
+          "grok-4.7"
+        ],
+        "effort": [
+          "medium",
+          "max"
+        ]
+      },
+      "style": "clear",
+      "stated": []
     },
     {
       "id": "a02-product-copy",
       "taskType": "system_prompt",
       "family": "auto",
       "surface": "api",
-      "prompt": "e-ticaret sitesi için günde 50 bin ürün açıklaması üretecek system prompt",
+      "prompt": "e-ticaret, günde 50k ürün açıklaması üretecek system prompt. ucuz olmalı. girdi json gelecek",
       "intent": "A system prompt for very high-volume product description generation where cost matters.",
-      "facts": ["Input: product title, category and attributes as JSON.", "Output: 60-90 words, Turkish, SEO friendly, no invented specs."],
-      "mustAsk": ["output length or format"],
-      "expect": { "models": ["claude-haiku-5-5", "gpt-6-luna", "gemini-3.5-flash-lite", "grok-4.3"], "effort": ["none", "low"] }
+      "facts": [
+        "The JSON has title, category and attributes.",
+        "Output: 60-90 words, Turkish, SEO friendly, no invented specs."
+      ],
+      "mustAsk": [
+        "output length or format"
+      ],
+      "expect": {
+        "models": [
+          "claude-haiku-5-5",
+          "gpt-6-luna",
+          "gemini-3.5-flash-lite",
+          "grok-4.3"
+        ],
+        "effort": [
+          "none",
+          "low"
+        ]
+      },
+      "style": "messy",
+      "stated": [
+        "About 50k descriptions a day, cost matters.",
+        "Input is JSON."
+      ]
+    },
+    {
+      "id": "g14-docker-port",
+      "taskType": "debugging",
+      "family": "gemini",
+      "surface": "chat",
+      "style": "messy",
+      "prompt": "docker compose up deyince bu çıkıyo, dün çalışıyordu\n\nError response from daemon: driver failed programming external connectivity on endpoint api-db-1 (3f9c2a71e0b4): Bind for 0.0.0.0:5432 failed: port is already allocated\n\nne yapmam lazım. windows'tayım bu arada wsl2",
+      "intent": "Diagnose a Postgres port conflict in docker compose on Windows/WSL2 and give the fix.",
+      "stated": [
+        "Port 5432 already allocated for api-db-1.",
+        "It worked yesterday.",
+        "Windows with WSL2."
+      ],
+      "facts": [
+        "A local PostgreSQL 16 Windows service starts at boot.",
+        "They want to keep the local Postgres installed."
+      ],
+      "mustAsk": [],
+      "expect": {
+        "models": [
+          "gemini-3.5-flash-lite",
+          "gemini-3.8-flash"
+        ],
+        "effort": [
+          "minimal",
+          "low"
+        ]
+      },
+      "target": {
+        "model": "gemini-3.8-flash",
+        "effort": "low"
+      }
+    },
+    {
+      "id": "g15-notif-story",
+      "taskType": "writing",
+      "family": "gemini",
+      "surface": "chat",
+      "style": "messy",
+      "prompt": "user story yaz bi tane, bildirim ayarları sayfası için. email ve push olacak, sms de... yok sms çıkar şimdilik maliyetli. kullanıcı kategori bazlı açıp kapatabilsin: yorumlar, mentionlar, haftalık özet. ah haftalık özet sadece email. jira'ya yapıştırcam acceptance criteria ile",
+      "intent": "One Jira-ready user story with acceptance criteria for a notification settings page.",
+      "stated": [
+        "Notification settings page.",
+        "Channels: email and push; SMS dropped for cost.",
+        "Per-category toggles: comments, mentions, weekly digest.",
+        "Weekly digest is email only.",
+        "For Jira, with acceptance criteria."
+      ],
+      "facts": [
+        "Both web and mobile apps.",
+        "Defaults: everything on except the weekly digest."
+      ],
+      "mustAsk": [],
+      "expect": {
+        "models": [
+          "gemini-3.5-flash-lite",
+          "gemini-3.8-flash"
+        ],
+        "effort": [
+          "minimal",
+          "low"
+        ]
+      },
+      "target": {
+        "model": "gemini-3.8-flash",
+        "effort": "low"
+      }
     }
   ]
 }

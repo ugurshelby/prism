@@ -14,7 +14,11 @@ const CaseSchema = z
     taskType: z.string(),
     family: FamilyChoiceSchema,
     surface: SurfaceSchema,
+    /** messy: gerçekçi dağınık istek; clear: soru sorulmaması beklenen net istek. */
+    style: z.enum(['messy', 'clear']),
     prompt: z.string().min(1),
+    /** Ham promptta açıkça verilen somut bilgiler (İngilizce); yazılan prompt bunların hepsini taşımalı. */
+    stated: z.array(z.string()),
     /** Jüri için: kişinin gerçekte istediği (İngilizce, tek cümle). */
     intent: z.string().min(1),
     /** Kişinin bildiği ama promptta olmayan bilgiler; soruları yanıtlayan simülasyon yalnızca bunları kullanır. */
@@ -27,13 +31,14 @@ const CaseSchema = z
     /** API yüzeyinde system prompt'un karşılayacağı örnek kullanıcı mesajı. */
     input: z.string().optional()
   })
+  .refine((c) => c.style !== 'clear' || c.mustAsk.length === 0, { message: 'Net vakada sorulması zorunlu konu olamaz' })
   .refine((c) => c.surface !== 'api' || !c.target || c.input, { message: 'API vakasında hedef çalıştırılacaksa input gerekli' })
   .refine((c) => !c.target || MODELS[c.target.model].family === 'gemini', { message: 'Hedef çalıştırma şimdilik yalnızca Gemini (Vertex)' })
   .refine((c) => !c.target || MODELS[c.target.model].efforts.includes(c.target.effort), { message: 'Hedef effort modelin desteklediği bir seviye olmalı' })
 
 export type EvalCase = z.infer<typeof CaseSchema>
 
-const FileSchema = z.object({ version: z.literal(1), cases: z.array(CaseSchema).min(1) })
+const FileSchema = z.object({ version: z.literal(2), cases: z.array(CaseSchema).min(1) })
 
 export function loadCases(root: string): EvalCase[] {
   const parsed = FileSchema.parse(JSON.parse(readFileSync(join(root, 'eval', 'cases.json'), 'utf8')) as unknown)
