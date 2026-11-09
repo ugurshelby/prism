@@ -107,6 +107,8 @@ export function readUserJson<S extends z.ZodType>(name: UserFileName, schema: S,
 let settings: Settings | null = null
 /** Bu sürümün tanımadığı alanlar (daha yeni bir sürümden); her yazımda geri konur. */
 let extras: Record<string, unknown> = {}
+// Daha yeni sürümün okunamayan alanları (ham) ve yükleme anındaki değerler; değişmeyen alan diske aynen geri yazılır.
+let preserved: { shadow: Record<string, unknown>; base: Settings } | undefined
 
 export function getSettings(): Settings {
   if (settings) return settings
@@ -121,6 +123,7 @@ export function getSettings(): Settings {
   if (loaded.invalid.length) logWarn('config', `settings.json içindeki geçersiz alanlar varsayılana döndü: ${loaded.invalid.join(', ')}`)
   const next = loaded.settings
   extras = loaded.extras
+  preserved = Object.keys(loaded.shadow).length ? { shadow: loaded.shadow, base: next } : undefined
   // .env'deki Vertex projesi bir kez ayarlara yazılır; kurulu sürüm geliştirme .env'ini görmez.
   const envProject = envValues().VERTEX_PROJECT_ID
   const migrated = loaded.from !== null && loaded.from < SETTINGS_VERSION
@@ -135,7 +138,7 @@ export function getSettings(): Settings {
   settings = next
   setMessageLanguage(next.uiLanguage)
   try {
-    if (legacy || migrated || (raw !== null && projectFromEnv)) writeJson('settings.json', serializeSettings(settings, extras))
+    if (legacy || migrated || (raw !== null && projectFromEnv)) writeJson('settings.json', serializeSettings(settings, extras, preserved))
   } catch (e) {
     logWarn('config', 'taşınan ayarlar yazılamadı; bellekteki ayarlarla devam ediliyor', e)
   }
@@ -165,7 +168,7 @@ export function updateSettings(patch: z.infer<typeof SettingsPatchSchema>): Sett
   if (patch.families && !validFamilies(PRODUCT, patch.families)) throw new UserError(msg('err.familiesInvalid', { product: PRODUCT.name }))
   // Birleşik sonuç da şemadan geçer; diske yalnızca geçerli ayar yazılır. Yazım başarısız olursa bellekteki ayar da değişmez.
   const parsed = conform(SettingsSchema.parse(next), PRODUCT)
-  writeJson('settings.json', serializeSettings(parsed, extras))
+  writeJson('settings.json', serializeSettings(parsed, extras, preserved))
   settings = parsed
   setMessageLanguage(parsed.uiLanguage)
   return settings

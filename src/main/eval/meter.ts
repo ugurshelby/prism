@@ -39,9 +39,13 @@ export class Meter {
     if (this.tokens > this.maxTokens) throw new BudgetExceeded(`Token tavanı aşıldı: ${this.tokens} > ${this.maxTokens}`)
   }
 
-  /** Yeni çağrıdan önce: tavan zaten dolduysa başlatma. */
+  /**
+   * Yeni çağrıdan önce: tavan dolduysa ya da dolmak üzereyse başlatma. Süren paralel çağrılar henüz sayılmadığı için
+   * tavanın %5'i (en çok 0,25 USD) yedek bırakılır; böylece tavan aşımı bu yedekle sınırlı kalır.
+   */
   check() {
-    if (this.usd > this.maxUsd || this.tokens > this.maxTokens) throw new BudgetExceeded('Koşu tavanı dolu')
+    const reserve = Math.min(0.25, this.maxUsd * 0.05)
+    if (this.usd > this.maxUsd - reserve || this.tokens > this.maxTokens) throw new BudgetExceeded('Koşu tavanı dolu')
   }
 }
 

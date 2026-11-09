@@ -2,6 +2,7 @@
 // Key'ler ana süreçten çıkmaz: arayüze yalnızca maskeli hâli gider.
 
 import { existsSync, readFileSync } from 'node:fs'
+import { timingSafeEqual } from 'node:crypto'
 import {
   MODELS,
   MODEL_IDS,
@@ -111,8 +112,18 @@ export function saveKey(p: ProviderId, key: string) {
   if (!format.success) throw new UserError(describeIssues(format.error))
   const vault = vaultState()
   if (!vault.ok) throw new UserError(msg('err.keyUnsafe', { reason: vault.reason }))
+  // Aynı key yeniden kaydedilirse önbellekteki keşif sonucu korunur; ücretli keşif istekleri yinelenmez.
+  if (sameSecret(savedKey(p)?.key ?? null, format.data)) return
   writeFileAtomic(`${p}.key`, seal(format.data))
   forget(p)
+}
+
+/** Sabit süreli karşılaştırma; uzunluk farkı da eşit değildir. */
+function sameSecret(a: string | null, b: string) {
+  if (a === null) return false
+  const x = Buffer.from(a, 'utf8')
+  const y = Buffer.from(b, 'utf8')
+  return x.length === y.length && timingSafeEqual(x, y)
 }
 
 export function clearKey(p: ProviderId) {

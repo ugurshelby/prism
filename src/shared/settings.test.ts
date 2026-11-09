@@ -45,6 +45,16 @@ describe('loadSettings', () => {
     expect(serializeSettings(r.settings, r.extras)).toMatchObject({ version: 9, futureField: { a: 1 }, hotkey: 'Alt+K' })
   })
 
+  it('writes back a newer file’s unreadable known field unless the user changed it', () => {
+    const r = loadSettings({ version: 9, uiLanguage: 'de', hotkey: { chord: ['Alt', 'K'] } }, spectrum)
+    expect(r.shadow).toEqual({ uiLanguage: 'de', hotkey: { chord: ['Alt', 'K'] } })
+    const preserved = { shadow: r.shadow, base: r.settings }
+    expect(serializeSettings(r.settings, r.extras, preserved)).toMatchObject({ uiLanguage: 'de', hotkey: { chord: ['Alt', 'K'] } })
+    const changed = serializeSettings({ ...r.settings, uiLanguage: r.settings.uiLanguage === 'tr' ? 'en' : 'tr' }, r.extras, preserved)
+    expect(changed).toMatchObject({ uiLanguage: r.settings.uiLanguage === 'tr' ? 'en' : 'tr', hotkey: { chord: ['Alt', 'K'] } })
+    expect(loadSettings({ version: 3, uiLanguage: 'de' }, spectrum).shadow).toEqual({})
+  })
+
   it('resets only the invalid fields and names them', () => {
     const r = loadSettings({ version: 3, hotkey: 'Bad Key With Spaces', uiLanguage: 'de', families: ['gemini'] }, spectrum)
     expect(r.invalid.toSorted()).toEqual(['hotkey', 'uiLanguage'])

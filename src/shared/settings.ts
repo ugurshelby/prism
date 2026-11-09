@@ -86,6 +86,8 @@ export interface LoadedSettings {
   newer: boolean
   /** Varsayılana dönen geçersiz alanların adları (değerleri değil). */
   invalid: string[]
+  /** Daha yeni sürümün yazdığı ama bu sürümün okuyamadığı bilinen alanların ham değerleri; değişmedikçe diske aynen geri yazılır. */
+  shadow: Raw
 }
 
 /** Alan alan doğrulama: tek bir bozuk alan bütün ayarları sıfırlamasın. */
@@ -137,8 +139,8 @@ export function conform(s: Settings, product: ProductInfo, invalid: string[] = [
 
 export function loadSettings(raw: unknown, product: ProductInfo): LoadedSettings {
   const invalid: string[] = []
-  if (raw === null) return { settings: settingsDefaults(product), from: null, extras: {}, newer: false, invalid }
-  if (!isRecord(raw)) return { settings: settingsDefaults(product), from: null, extras: {}, newer: false, invalid: ['(dosya)'] }
+  if (raw === null) return { settings: settingsDefaults(product), from: null, extras: {}, newer: false, invalid, shadow: {} }
+  if (!isRecord(raw)) return { settings: settingsDefaults(product), from: null, extras: {}, newer: false, invalid: ['(dosya)'], shadow: {} }
   // 1'den küçük ya da çok büyük sürüm numarası geçersiz sayılır: göç döngüsü sınırlı kalsın.
   const ver = raw.version
   const from = typeof ver === 'number' && Number.isInteger(ver) && ver >= 1 && ver <= 100 ? ver : 1
@@ -150,10 +152,19 @@ export function loadSettings(raw: unknown, product: ProductInfo): LoadedSettings
   }
   const extras = Object.fromEntries(Object.entries(cur).filter(([k]) => !KNOWN.has(k)))
   const settings = sanitize({ ...cur, version: newer ? from : SETTINGS_VERSION }, product, invalid)
-  return { settings, from, extras, newer, invalid }
+  // Yeni sürümün biçimini bu sürüm anlamıyorsa değer kaybolmasın: yalnızca daha yeni dosyada, ham hâli saklanır.
+  const shadow: Raw = newer ? Object.fromEntries(invalid.filter((k) => KNOWN.has(k) && cur[k] !== undefined).map((k) => [k, cur[k]])) : {}
+  return { settings, from, extras, newer, invalid, shadow }
 }
 
-/** Diske yazılacak nesne: tanınmayan alanlar geri konur, bilinen alanlar her zaman bu sürümün değeridir. */
-export function serializeSettings(settings: Settings, extras: Raw): Raw {
-  return { ...extras, ...settings }
+/**
+ * Diske yazılacak nesne: tanınmayan alanlar geri konur, bilinen alanlar bu sürümün değeridir. `preserved` verilirse,
+ * daha yeni dosyadan okunamayan bir alan kullanıcı değiştirmediği sürece (yükleme anındaki değerle aynıysa) ham hâliyle yazılır.
+ */
+export function serializeSettings(settings: Settings, extras: Raw, preserved?: { shadow: Raw; base: Settings }): Raw {
+  const out: Raw = { ...extras, ...settings }
+  if (!preserved) return out
+  const base: Raw = { ...preserved.base }
+  for (const [k, v] of Object.entries(preserved.shadow)) if (JSON.stringify(out[k]) === JSON.stringify(base[k])) out[k] = v
+  return out
 }
