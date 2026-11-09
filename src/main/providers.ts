@@ -247,7 +247,7 @@ export const candidatePool = (family: FamilyChoice): ModelId[] => poolFor(family
 let override: ProviderId | null = null
 
 /** selftest için: ayarlardan bağımsız motor sağlayıcısı. */
-export function overrideEngine(p: ProviderId | null) {
+export function overrideEngine(p: ProviderId) {
   override = p
 }
 
