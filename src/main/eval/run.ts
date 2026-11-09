@@ -227,6 +227,8 @@ function metrics(results: CaseResult[]): Metric[] {
     ['(b) Info carried: Prism', carried('prism'), 2],
     ['(b) Stated info carried: fix-it baseline', carried('fixit'), 2],
     ['(c) Inventions per prompt: Prism', mean(fid.map((f) => f.prism.inventions)), 2],
+    ['(c) Inventions per prompt: Prism, Gemini juror only', mean(fid.flatMap((f) => f.prism.perJuror.filter((p) => p.juror === 'gemini').map((p) => p.inventions.length))), 2],
+    ['(c) Inventions per prompt: Prism, DeepSeek juror only', mean(fid.flatMap((f) => f.prism.perJuror.filter((p) => p.juror === 'deepseek').map((p) => p.inventions.length))), 2],
     ['(c) Prism prompts with zero inventions (share)', fid.length ? fid.filter((f) => f.prism.inventions === 0).length / fid.length : null, 2],
     ['(c) Inventions per prompt: fix-it baseline', mean(fid.map((f) => f.fixit.inventions)), 2],
     ['(d) Prism vs raw: wins', rate(w.map((x) => x.vsRaw), 'win'), 0],

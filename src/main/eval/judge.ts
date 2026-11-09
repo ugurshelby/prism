@@ -52,10 +52,15 @@ async function askJuror<S extends z.ZodType>(
   parser: S
 ): Promise<z.infer<S>> {
   if (juror === 'gemini') return askGemini(meter, role, JUDGE, system, user, schema, parser)
-  meter.check()
-  const res = await deepseekJson(credentials('vertex'), `${system}\n\nReturn only one JSON object that matches this JSON Schema:\n${JSON.stringify(schema)}`, user)
-  meter.add(`${role}-ds`, DEEPSEEK_MODEL, res.usage)
-  return parser.parse(parseJson(res.text))
+  // Şema talimatla istendiği için biçim arada bozulabiliyor; bir kez daha sorulur, ikinci bozuk yanıt hata olur.
+  for (let attempt = 0; ; attempt++) {
+    meter.check()
+    const res = await deepseekJson(credentials('vertex'), `${system}\n\nReturn only one JSON object that matches this JSON Schema:\n${JSON.stringify(schema)}`, user)
+    meter.add(`${role}-ds`, DEEPSEEK_MODEL, res.usage)
+    const parsed = parser.safeParse(parseJson(res.text))
+    if (parsed.success) return parsed.data
+    if (attempt > 0) throw new Error(`DeepSeek jüri yanıtı şemaya uymadı: ${parsed.error.issues.map((i) => i.path.join('.')).join(', ')}`)
+  }
 }
 
 // --- Soruları yanıtlayan kişi ------------------------------------------------------
