@@ -4,6 +4,8 @@ import { MODELS, isModelId } from '@shared/catalog'
 import type { Usage } from '@shared/types'
 
 const FALLBACK = MODELS['gemini-4-argon'].price
+// Katalog dışı jüri modeli. Vertex liste fiyatı (0,30 / 1,20 USD) üçüncü taraf kaynaklardan; tavan güvenli kalsın diye iki katı sayılır.
+const EXTRA: Record<string, { input: number; output: number }> = { 'deepseek-ai/deepseek-v4.1-flash-maas': { input: 0.6, output: 2.4 } }
 
 export class BudgetExceeded extends Error {}
 
@@ -26,7 +28,7 @@ export class Meter {
   ) {}
 
   add(role: string, model: string, usage: Usage) {
-    const price = isModelId(model) ? MODELS[model].price : FALLBACK
+    const price = isModelId(model) ? MODELS[model].price : (EXTRA[model] ?? FALLBACK)
     // Düşünme token'ları çıktı fiyatıyla faturalanır.
     const out = usage.outputTokens + usage.thoughtsTokens
     const usd = (usage.promptTokens * price.input + out * price.output) / 1e6
