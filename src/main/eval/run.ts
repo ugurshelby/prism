@@ -16,12 +16,15 @@ import { isStale } from '@shared/knowledge'
 import { LlmError, generate } from '../llm'
 import { updateSettings } from '../config'
 import { credentials, overrideEngine, resolveEngine } from '../providers'
+import { devEnv } from '../env'
 import { loadCases, scoreRecommendation, type EvalCase } from './cases'
 import { FIXER, NO_INFO, fixPrompt, judgeFidelity, judgePair, judgeQuestions, jurorModel, simulateAnswers, type Fidelity } from './judge'
 import { combineVotes, type Juror, type Vote } from './votes'
 import { BudgetExceeded, Meter, mask } from './meter'
 
 type Suite = 'analysis' | 'prompt' | 'full'
+/** Kullanımı bildirilmeyen motor çağrısı için sayılan üst sınır. */
+const WORST = { promptTokens: 30_000, outputTokens: 16_384, thoughtsTokens: 0 }
 type Outcome = 'win' | 'tie' | 'loss'
 
 interface FidelityResult {
@@ -57,8 +60,10 @@ interface CaseResult {
 
 async function runTarget(meter: Meter, model: string, effort: Effort, system: string, user: string) {
   meter.check()
+  // Key ya da proje eksikliği ölçüm hatasıdır; modelin başarısızlığı sayılmasın diye denemeden önce alınır.
+  const cred = credentials('vertex')
   try {
-    const res = await generate('vertex', { model, effort, system, user, maxTokens: 32_768 }, credentials('vertex'))
+    const res = await generate('vertex', { model, effort, system, user, maxTokens: 32_768 }, cred)
     meter.add('target', model, res.usage)
     return res.text
   } catch (e) {
@@ -118,7 +123,8 @@ async function runCase(c: EvalCase, round: number, meter: Meter, suite: Suite, j
   const out: CaseResult = { id: c.id, round, style: c.style }
   meter.check()
   const a = await analyze({ id: `eval-${c.id}`, prompt: c.prompt, surface: c.surface, family: c.family })
-  if (a.usage && a.engine) meter.add('analysis', a.engine.model, a.usage)
+  // Kullanım bilgisi yoksa en kötü durum sayılır: tavan sessizce açılmasın.
+  meter.add('analysis', a.engine?.model ?? 'unknown', a.usage ?? WORST)
   out.analysis = { intent: a.intent, taskType: a.taskType, complexity: a.complexity, recommendation: a.recommendation, questions: a.questions }
   out.rec = scoreRecommendation(c, a.recommendation.model, a.recommendation.effort)
 
@@ -153,7 +159,7 @@ async function runCase(c: EvalCase, round: number, meter: Meter, suite: Suite, j
       () => undefined,
       new AbortController().signal
     )
-    if (g.usage && g.engine) meter.add('generation', g.engine.model, g.usage)
+    meter.add('generation', g.engine?.model ?? 'unknown', g.usage ?? WORST)
     return g.prompt
   }
   const [prompt, fixed] = await Promise.all([write(target.model, target.effort), fixPrompt(meter, c.prompt)])
@@ -280,7 +286,9 @@ function summarize(label: string, rounds: CaseResult[][], meter: Meter, jury: Ju
 
 export async function runEval(argv: string[]) {
   if (app.isPackaged) throw new Error('eval yalnızca geliştirme kopyasında çalışır')
-  const flag = (name: string) => argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1]
+  // Eval ayarları (dil) diske yazar; gerçek profil hiçbir zaman değişmesin.
+  if (!devEnv().userData) throw new Error('eval yalnızca PRISM_USER_DATA ile ayrı bir profil klasöründe çalışır')
+  const flag = (name: string) => argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3)
   const label = (flag('label') ?? 'run').replace(/[^a-z0-9-]/gi, '')
   const suiteFlag = flag('suite') ?? 'full'
   if (suiteFlag !== 'analysis' && suiteFlag !== 'prompt' && suiteFlag !== 'full') throw new Error('--suite analysis, prompt ya da full olmalı')
@@ -321,6 +329,14 @@ export async function runEval(argv: string[]) {
   const out = (text: string) => process.stdout.write(mask(text, secrets))
   // Harcama satırı koşu nasıl biterse bitsin (hata, tavan, kesinti) deftere yazılır.
   const ledger = () => {
+    // Çıkış anında hata fırlatılmasın; defter yazılamazsa konsola yazılır.
+    try {
+      writeLedger()
+    } catch (e) {
+      process.stderr.write(`harcama defteri yazılamadı: ${e instanceof Error ? e.message : String(e)}\n`)
+    }
+  }
+  const writeLedger = () => {
     const models = [...new Set(meter.entries.map((e) => e.model))].join(', ')
     appendFileSync(
       join(root, '.work', 'reports', 'eval', 'budget.md'),

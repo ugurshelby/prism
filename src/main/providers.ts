@@ -107,16 +107,21 @@ export function credentials(p: ProviderId): Credentials {
   return { key: state.key, project: project.data, location: location.data }
 }
 
-export function saveKey(p: ProviderId, key: string) {
+/** Key'i kaydeder; aynı key zaten kayıtlıysa dokunmaz ve false döner. */
+export function saveKey(p: ProviderId, key: string): boolean {
   const format = ApiKeySchema.safeParse(key)
   if (!format.success) throw new UserError(describeIssues(format.error))
   const vault = vaultState()
   if (!vault.ok) throw new UserError(msg('err.keyUnsafe', { reason: vault.reason }))
   // Aynı key yeniden kaydedilirse önbellekteki keşif sonucu korunur; ücretli keşif istekleri yinelenmez.
-  if (sameSecret(savedKey(p)?.key ?? null, format.data)) return
+  if (sameSecret(savedKey(p)?.key ?? null, format.data)) return false
   writeFileAtomic(`${p}.key`, seal(format.data))
   forget(p)
+  return true
 }
+
+/** Son doğrulama yoksa ya da başarısızsa (kota, ağ) yeniden doğrulanmalı. */
+export const needsVerify = (p: ProviderId) => !statuses()[p]?.ok
 
 /** Sabit süreli karşılaştırma; uzunluk farkı da eşit değildir. */
 function sameSecret(a: string | null, b: string) {

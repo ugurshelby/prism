@@ -53,7 +53,7 @@ export const HotkeySchema = z.string().regex(/^[\x21-\x7E]{1,64}$/, zmsg('schema
 export const EngineModelsSchema = z.object({ analysis: EngineModelIdSchema, generation: EngineModelIdSchema })
 
 export const SettingsSchema = z.object({
-  version: z.number().int().min(1).max(100),
+  version: z.number().int().min(1).max(1_000_000),
   engineProvider: z.union([ProviderIdSchema, z.literal('auto')]),
   engineModels: z.partialRecord(ProviderIdSchema, EngineModelsSchema),
   vertex: z.object({ project: VertexProjectSchema, location: VertexLocationSchema }),

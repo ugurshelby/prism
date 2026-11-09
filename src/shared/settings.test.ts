@@ -55,6 +55,17 @@ describe('loadSettings', () => {
     expect(loadSettings({ version: 3, uiLanguage: 'de' }, spectrum).shadow).toEqual({})
   })
 
+  it('keeps product-rule changes of a newer file and never treats a huge version as v1', () => {
+    const r = loadSettings({ version: 500, families: ['openai', 'gemini'], vertex: { location: 'global', project: 'p-1' } }, ray)
+    expect(r.newer).toBe(true)
+    expect(r.settings.families).toHaveLength(1)
+    expect(r.shadow.families).toEqual(['openai', 'gemini'])
+    // Anahtar sırası farklı ama değeri aynı iç içe alan "değişti" sayılmaz.
+    const base = { ...r.settings, vertex: { location: 'global', project: 'p-1' } }
+    const now = { ...r.settings, vertex: { project: 'p-1', location: 'global' } }
+    expect(serializeSettings(now, r.extras, { shadow: r.shadow, base })).toMatchObject({ version: 500, families: ['openai', 'gemini'] })
+  })
+
   it('resets only the invalid fields and names them', () => {
     const r = loadSettings({ version: 3, hotkey: 'Bad Key With Spaces', uiLanguage: 'de', families: ['gemini'] }, spectrum)
     expect(r.invalid.toSorted()).toEqual(['hotkey', 'uiLanguage'])

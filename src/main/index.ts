@@ -26,7 +26,7 @@ import { handle, on, rendererMessage } from './ipc'
 import { LlmError } from './llm'
 import { UserError } from './errors'
 import { logError, logWarn } from './log'
-import { clearKey, engineGenerate, resolveEngine, saveKey, setHotkeyOk, settingsView, verify, verifyPending } from './providers'
+import { clearKey, engineGenerate, resolveEngine, needsVerify, saveKey, setHotkeyOk, settingsView, verify, verifyPending } from './providers'
 import { selftest } from './selftest'
 import {
   applyContentProtection,
@@ -347,8 +347,8 @@ function registerIpc() {
   // Key arayüzden yalnızca kaydetmek için gelir; geri gönderilmez. Kaydedilince bağlantı ve modeller doğrulanır.
   // Biçim denetimi saveKey'de: hata mesajı alan adını değil key'in sorununu anlatsın.
   handle('providers:saveKey', z.tuple([ProviderIdSchema, z.string().max(LIMITS.keyMax * 2)]), async (_e, id, key) => {
-    saveKey(id, key)
-    await verify(id)
+    // Aynı key yeniden kaydedilirse başarılı son doğrulama korunur; ücretli keşif yinelenmez.
+    if (saveKey(id, key) || needsVerify(id)) await verify(id)
     refreshTray()
     return settingsView()
   })

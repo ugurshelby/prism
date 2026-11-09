@@ -4,7 +4,8 @@ import { MODELS, isModelId } from '@shared/catalog'
 import type { Usage } from '@shared/types'
 
 const FALLBACK = MODELS['gemini-4-argon'].price
-// Katalog dışı jüri modeli. Vertex liste fiyatı (0,30 / 1,20 USD) üçüncü taraf kaynaklardan; tavan güvenli kalsın diye iki katı sayılır.
+// Katalog dışı jüri modeli. Vertex liste fiyatı 0,30 / 1,20 USD (MTok), kaynak: cloudprice.net/models/deepseek-v4-1-flash-maas,
+// 2026-11-09 doğrulandı (Google'ın resmi sayfası bulunamadı). Tavan güvenli kalsın diye iki katı sayılır.
 const EXTRA: Record<string, { input: number; output: number }> = { 'deepseek-ai/deepseek-v4.1-flash-maas': { input: 0.6, output: 2.4 } }
 
 export class BudgetExceeded extends Error {}

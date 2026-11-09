@@ -141,9 +141,9 @@ export function loadSettings(raw: unknown, product: ProductInfo): LoadedSettings
   const invalid: string[] = []
   if (raw === null) return { settings: settingsDefaults(product), from: null, extras: {}, newer: false, invalid, shadow: {} }
   if (!isRecord(raw)) return { settings: settingsDefaults(product), from: null, extras: {}, newer: false, invalid: ['(dosya)'], shadow: {} }
-  // 1'den küçük ya da çok büyük sürüm numarası geçersiz sayılır: göç döngüsü sınırlı kalsın.
+  // Geçersiz sürüm numarası 1 sayılır. Çok büyük numara da "daha yeni" demektir; göç döngüsü SETTINGS_VERSION ile sınırlıdır.
   const ver = raw.version
-  const from = typeof ver === 'number' && Number.isInteger(ver) && ver >= 1 && ver <= 100 ? ver : 1
+  const from = typeof ver === 'number' && Number.isInteger(ver) && ver >= 1 && ver <= 1_000_000 ? ver : 1
   const newer = from > SETTINGS_VERSION
   let cur: Raw = { ...raw, version: from }
   for (let v = from; v < SETTINGS_VERSION; v++) {
@@ -152,8 +152,12 @@ export function loadSettings(raw: unknown, product: ProductInfo): LoadedSettings
   }
   const extras = Object.fromEntries(Object.entries(cur).filter(([k]) => !KNOWN.has(k)))
   const settings = sanitize({ ...cur, version: newer ? from : SETTINGS_VERSION }, product, invalid)
-  // Yeni sürümün biçimini bu sürüm anlamıyorsa değer kaybolmasın: yalnızca daha yeni dosyada, ham hâli saklanır.
-  const shadow: Raw = newer ? Object.fromEntries(invalid.filter((k) => KNOWN.has(k) && cur[k] !== undefined).map((k) => [k, cur[k]])) : {}
+  // Yeni sürümün yazdığı bir alanı bu sürüm okuyamadı ya da ürün kuralıyla değiştirdiyse değer kaybolmasın:
+  // yalnızca daha yeni dosyada, ham hâli saklanır.
+  const view: Raw = { ...settings }
+  const shadow: Raw = newer
+    ? Object.fromEntries([...KNOWN].filter((k) => k !== 'version' && cur[k] !== undefined && stable(cur[k]) !== stable(view[k])).map((k) => [k, cur[k]]))
+    : {}
   return { settings, from, extras, newer, invalid, shadow }
 }
 
@@ -165,6 +169,13 @@ export function serializeSettings(settings: Settings, extras: Raw, preserved?: {
   const out: Raw = { ...extras, ...settings }
   if (!preserved) return out
   const base: Raw = { ...preserved.base }
-  for (const [k, v] of Object.entries(preserved.shadow)) if (JSON.stringify(out[k]) === JSON.stringify(base[k])) out[k] = v
+  for (const [k, v] of Object.entries(preserved.shadow)) if (stable(out[k]) === stable(base[k])) out[k] = v
   return out
+}
+
+/** Anahtar sırasından bağımsız JSON: eşitlik karşılaştırması nesne sırasına takılmasın. */
+function stable(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(stable).join(',')}]`
+  if (isRecord(v)) return `{${Object.keys(v).toSorted().map((k) => `${JSON.stringify(k)}:${stable(v[k])}`).join(',')}}`
+  return JSON.stringify(v) ?? 'undefined'
 }

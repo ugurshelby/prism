@@ -40,5 +40,7 @@ export async function deepseekJson(cred: Credentials, system: string, user: stri
   const text = choice?.message.content ?? ''
   if (!text.trim()) throw new LlmError('DeepSeek boş yanıt döndü')
   if (choice?.finish_reason === 'length') throw new LlmError('DeepSeek yanıtı token sınırında kesildi')
-  return { text, usage: { promptTokens: data.usage?.prompt_tokens ?? 0, outputTokens: data.usage?.completion_tokens ?? 0, thoughtsTokens: 0 } }
+  // Kullanım bilgisi gelmezse harcama sayılamaz; sayaç sessizce açılmasın diye çağrı başarısız sayılır.
+  if (!data.usage) throw new LlmError('DeepSeek yanıtında kullanım bilgisi yok')
+  return { text, usage: { promptTokens: data.usage.prompt_tokens, outputTokens: data.usage.completion_tokens, thoughtsTokens: 0 } }
 }
