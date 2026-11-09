@@ -344,7 +344,8 @@ export async function runEval(argv: string[]) {
         // Kota (429) ya da zaman aşımında vaka bir dakika sonra bir kez daha baştan koşulur; harcanan kısım sayaçta kalır.
         for (let attempt = 0; ; attempt++) {
           try {
-            const r = await runCase(c, round, meter, suite, jurors, auto)
+            // Otomatik yol pahalıdır; yalnızca ilk turda ölçülür.
+            const r = await runCase(c, round, meter, suite, jurors, auto && round === 0)
             results.push(r)
             out(`  r${round + 1} ${c.id}: ${r.writing ? `${r.writing.vsRaw.outcome}/${r.writing.vsFix.outcome}` : 'ok'} · ${meter.usd.toFixed(3)} USD\n`)
             break
