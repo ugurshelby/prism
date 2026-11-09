@@ -9,7 +9,6 @@ import { generatePrompt } from './engine/generate'
 import { card, cardPaths } from './engine/knowledge'
 import { assertProviderUrl } from './llm/http'
 import { candidatePool, overrideEngine, providerViews, resolveEngine, targetAccess, verify } from './providers'
-import { runEval } from './eval/run'
 import { isAppUrl } from './window'
 
 const SAMPLE =
@@ -52,12 +51,6 @@ export async function selftest(argv: string[]) {
         cards: paths.length,
         providers: providerViews().map((p) => `${p.id}:${p.key.source}`)
       })
-      return app.exit(0)
-    }
-
-    // Eval kendi tavanı ve kaydıyla çalışır; ayrıntı eval/run.ts başında.
-    if (argv.includes('--eval')) {
-      await runEval(argv)
       return app.exit(0)
     }
 

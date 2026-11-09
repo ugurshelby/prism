@@ -110,7 +110,6 @@
         "src/main/index.ts",
         "src/main/engine/knowledge.ts",
         "src/main/engine/knowledge.test.ts",
-        "src/main/eval/**",
         "scripts/**"
       ],
       "rules": {

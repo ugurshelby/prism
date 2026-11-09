@@ -122,7 +122,7 @@ export function parseCard(raw: string, registry: SourcesFile): ParsedCard {
   return { meta, body, claims, unverified, issues }
 }
 
-/** Son doğrulaması `maxDays` günden eski kart mı (ROADMAP: 90 günü geçen kart eval öncesi yeniden doğrulanır). */
+/** Son doğrulaması `maxDays` günden eski kart mı (ROADMAP: 90 günü geçen kart yayından önce yeniden doğrulanır). */
 export function isStale(meta: CardMeta, today: Date, maxDays = 90): boolean {
   return (today.getTime() - Date.parse(meta.verified)) / 86_400_000 > maxDays
 }

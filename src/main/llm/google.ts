@@ -69,7 +69,6 @@ function body(call: LlmCall) {
     contents: [{ role: 'user', parts: [{ text: call.user }] }],
     generationConfig: {
       ...sampling,
-      ...(call.effort ? { thinkingConfig: { thinkingLevel: call.effort } } : {}),
       maxOutputTokens: call.maxTokens ?? 32768,
       responseMimeType: call.schema ? 'application/json' : 'text/plain',
       ...(call.schema ? { responseSchema: toGemini(call.schema) } : {})

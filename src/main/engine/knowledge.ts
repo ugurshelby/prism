@@ -36,7 +36,7 @@ function sources(): SourcesFile {
 /** Yalnızca Prism'in kendi yöntemini anlatan kart kaynaksız olabilir; kartın kendi beyanına güvenilmez. */
 const METHOD_CARDS = new Set(['vision.md'])
 
-export function parsedCard(path: string): ParsedCard {
+function parsedCard(path: string): ParsedCard {
   const parsed = parseCard(readKnowledge(path), sources())
   const expected = METHOD_CARDS.has(path) ? 'method' : 'model'
   if (parsed.meta.kind !== expected) parsed.issues.push(`kart türü ${expected} olmalı`)
@@ -46,7 +46,7 @@ export function parsedCard(path: string): ParsedCard {
 
 export const card = (path: string): string => parsedCard(path).body
 
-/** Motorun yüklediği bütün kartlar; smoke ve eval hepsini önceden denetler. */
+/** Motorun yüklediği bütün kartlar; smoke hepsini önceden denetler. */
 export const cardPaths = (): string[] => [
   'routing.md',
   'vision.md',
