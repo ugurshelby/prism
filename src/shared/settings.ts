@@ -29,7 +29,7 @@ export function settingsDefaults(product: ProductInfo): Settings {
     replyLanguage: 'tr',
     defaultSurface: 'agent',
     alwaysOnTop: true,
-    hotkey: 'CommandOrControl+Shift+Space',
+    hotkey: product.defaultHotkey,
     launchAtLogin: false,
     notifyWhenHidden: true,
     saveHistory: true,

@@ -4,7 +4,7 @@ import { dirname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import { FAMILY_INFO, MODELS, PROVIDERS, PROVIDER_INFO, type FamilyChoice } from '@shared/catalog'
-import { PRODUCT } from '@shared/product'
+import { PRODUCT, pickDataDir } from '@shared/product'
 import { msg } from '@shared/messages'
 import {
   AnalyzeRequestSchema,
@@ -47,11 +47,15 @@ import {
   toggleVisible
 } from './window'
 
-// Ürünün eski adı Prompter'dı: o adla kurulmuş sürümlerin ayarları, key'leri ve geçmişi olduğu klasörde kullanılır.
-// Chromium yeni klasörü açılışta önbellekler için kendisi oluşturduğundan klasöre değil içindeki verilere bakılır.
-const legacyData = join(app.getPath('appData'), 'Prompter')
-const hasData = (dir: string) => ['settings.json', 'history.json', 'history.enc'].some((f) => existsSync(join(dir, f)))
-if (!hasData(app.getPath('userData')) && hasData(legacyData)) app.setPath('userData', legacyData)
+// Ürün kimliği hiçbir yol okunmadan önce kurulur: ad, userData ve (aşağıda) tek kopya kilidi ürüne özeldir,
+// böylece Ray ve Spectrum yan yana çalışır. Eski adlarla (Prism 2.x, Prompter) kurulmuş verinin bulunduğu
+// klasör yalnızca Spectrum'da kullanılır. Chromium yeni klasörü açılışta kendisi oluşturduğundan klasöre değil
+// içindeki verilere bakılır.
+app.setName(PRODUCT.name)
+const appData = app.getPath('appData')
+const hasData = (dirName: string) =>
+  ['settings.json', 'history.json', 'history.enc'].some((f) => existsSync(join(appData, dirName, f)))
+app.setPath('userData', join(appData, pickDataDir(PRODUCT, hasData)))
 
 // Geliştirme ve testte gerçek ayar/geçmiş klasörüne dokunmamak için ayrı bir userData klasörü kullanılabilir.
 // Kurulu sürümde bu ve diğer PRISM_* değişkenleri yok sayılır (env.ts).
@@ -476,7 +480,7 @@ app
   .then(() => {
     if (SELFTEST) return selftest(process.argv)
     lockDownSession()
-    if (process.platform === 'win32') app.setAppUserModelId('com.prompter.app')
+    if (process.platform === 'win32') app.setAppUserModelId(PRODUCT.appId)
     if (process.platform === 'darwin') app.dock?.hide()
     registerIpc()
     // Ayar açıksa kaydı bu kopyanın yoluna göre tazele (ör. geliştirmeden kurulu sürüme geçince).
