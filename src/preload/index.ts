@@ -68,6 +68,19 @@ const api: PrismApi = {
       return () => ipcRenderer.off('ui:open', listener)
     }
   },
+  update: {
+    get: () => ipcRenderer.invoke('update:get'),
+    check: () => ipcRenderer.invoke('update:check'),
+    openRelease: () => ipcRenderer.invoke('update:openRelease'),
+    onChanged: (cb) => {
+      const listener = () => cb()
+      ipcRenderer.on('update:changed', listener)
+      return () => ipcRenderer.off('update:changed', listener)
+    }
+  },
+  data: {
+    deleteAll: () => ipcRenderer.invoke('data:deleteAll')
+  },
   platform: process.platform
 }
 

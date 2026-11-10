@@ -69,7 +69,8 @@ export const SettingsSchema = z.object({
   launchAtLogin: z.boolean(),
   notifyWhenHidden: z.boolean(),
   saveHistory: z.boolean(),
-  contentProtection: z.boolean()
+  contentProtection: z.boolean(),
+  updateCheck: z.boolean()
 })
 
 /**

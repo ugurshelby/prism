@@ -36,6 +36,8 @@ win:
       arch: [x64]
 nsis:
   oneClick: false
+  # Kaldırıcı: açılış kaydını siler, isteğe bağlı (varsayılan hayır) kullanıcı verisini siler.
+  include: build/installer.nsh
   allowToChangeInstallationDirectory: true
   artifactName: ${productName}-Setup-${version}-${arch}.${ext}
 

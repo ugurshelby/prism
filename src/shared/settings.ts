@@ -33,7 +33,8 @@ export function settingsDefaults(product: ProductInfo): Settings {
     launchAtLogin: false,
     notifyWhenHidden: true,
     saveHistory: true,
-    contentProtection: false
+    contentProtection: false,
+    updateCheck: true
   }
 }
 
@@ -118,7 +119,8 @@ function sanitize(raw: Raw, product: ProductInfo, invalid: string[]): Settings {
     launchAtLogin: field('launchAtLogin', s.launchAtLogin),
     notifyWhenHidden: field('notifyWhenHidden', s.notifyWhenHidden),
     saveHistory: field('saveHistory', s.saveHistory),
-    contentProtection: field('contentProtection', s.contentProtection)
+    contentProtection: field('contentProtection', s.contentProtection),
+    updateCheck: field('updateCheck', s.updateCheck)
   }
   return conform(out, product, invalid)
 }

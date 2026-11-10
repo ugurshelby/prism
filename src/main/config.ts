@@ -24,6 +24,7 @@ export type UserFileName =
   | 'history.json.tmp'
   | 'models.json'
   | 'window-state.json'
+  | 'update-state.json'
   | `${ProviderId}.key`
 
 export const userFile = (name: UserFileName) => join(app.getPath('userData'), name)

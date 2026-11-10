@@ -21,6 +21,10 @@ describe('product identity', () => {
     })
   })
 
+  it('keeps the data folder equal to the product name (installer.nsh deletes APPDATA/PRODUCT_NAME)', () => {
+    for (const p of all) expect(p.dataDir).toBe(p.name)
+  })
+
   it('never lets a product read another product folder as legacy data', () => {
     const dirs = new Set(all.map((p) => p.dataDir))
     for (const p of all) for (const d of p.legacyDataDirs) expect(dirs.has(d)).toBe(false)

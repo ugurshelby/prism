@@ -28,6 +28,8 @@ import { UserError } from './errors'
 import { logError, logWarn } from './log'
 import { clearKey, engineGenerate, resolveEngine, needsVerify, saveKey, setHotkeyOk, settingsView, verify, verifyPending } from './providers'
 import { selftest } from './selftest'
+import { checkForUpdate, openReleasePage, startUpdateChecks, updateView } from './update'
+import { wipeOwnData } from './wipe'
 import {
   applyContentProtection,
   applyPin,
@@ -274,6 +276,36 @@ function setLaunchAtLogin(enabled: boolean) {
   )
 }
 
+// Ürünün verisi: kullanılan userData ve (Spectrum'da) eski adlarla kurulmuş klasörler. Geliştirmede ayrı bir
+// userData verildiyse yalnızca o klasör silinir; gerçek kurulumların klasörlerine dokunulmaz.
+function dataDirs(): string[] {
+  const dirs = [app.getPath('userData')]
+  if (!DEV.userData) for (const d of [PRODUCT.dataDir, ...PRODUCT.legacyDataDirs]) dirs.push(join(appData, d))
+  return dirs
+}
+
+/**
+ * "Tüm verilerimi sil": süren istekler durdurulur, açılış kaydı kaldırılır, dosyalar silinir. Bir parça başarısız
+ * olursa hangi dosyaların kaldığı hata olarak döner ve uygulama açık kalır; her şey silindiyse uygulama boş verilerle
+ * yeniden başlar (bellekteki key, ayar ve geçmiş de böylece gider).
+ */
+function deleteAllData() {
+  for (const controller of running.values()) controller.abort()
+  const failed: string[] = []
+  try {
+    setLaunchAtLogin(false)
+  } catch (e) {
+    logWarn('wipe', 'açılış kaydı kaldırılamadı', e)
+    failed.push('autostart')
+  }
+  failed.push(...wipeOwnData(dataDirs()))
+  if (failed.length) throw new UserError(msg('err.deleteData', { files: failed.join(', ') }))
+  setImmediate(() => {
+    app.relaunch()
+    app.exit(0)
+  })
+}
+
 // Exec satırında çift tırnak içindeki yolda ", ters bölü, $, ters tırnak, % ya da satır sonu komut enjeksiyonuna
 // yol açar; böyle bir yol kabul edilmez. Tek tırnak (ör. O'Neil) çift tırnak içinde zararsızdır.
 const SAFE_EXEC_PATH = /^[^"`$\\\r\n%]+$/
@@ -434,6 +466,12 @@ function registerIpc() {
   on('window:dragEnd', z.tuple([z.boolean()]), (_e, animate) => dragEnd(animate), 'pill')
 
   handle('clipboard:write', z.tuple([ClipboardTextSchema]), (_e, text) => clipboard.writeText(text))
+
+  handle('update:get', none, () => updateView())
+  handle('update:check', none, () => checkForUpdate())
+  handle('update:openRelease', none, () => openReleasePage())
+
+  handle('data:deleteAll', none, () => deleteAllData())
 }
 
 // --- Oturum kilidi ------------------------------------------------------------------
@@ -504,6 +542,9 @@ app
         win.webContents.send('settings:changed')
       })
       .catch((e: unknown) => logWarn('providers', 'açılıştaki key doğrulaması tamamlanamadı', e))
+    startUpdateChecks(() => {
+      if (!win.isDestroyed()) win.webContents.send('update:changed')
+    })
     if (DEV.captureDir) captureStates(win, DEV.captureDir, DEV.capturePrompt)
   })
   .catch((e: unknown) => {
