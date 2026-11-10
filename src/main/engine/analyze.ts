@@ -139,7 +139,7 @@ function candidateLine(id: ModelId, req: AnalyzeRequest) {
   return `- \`${id}\` — ${m.name} (${FAMILY_INFO[m.family].vendor}) · levels: ${levels}${def} · $${m.price.input} / $${m.price.output} per MTok`
 }
 
-function systemPrompt(req: AnalyzeRequest, pool: ModelId[]) {
+export function analyzeSystemPrompt(req: AnalyzeRequest, pool: ModelId[]) {
   const families = FAMILIES.filter((f) => pool.some((m) => MODELS[m].family === f))
   const cross = families.length > 1
   const only = families[0]
@@ -175,7 +175,7 @@ ${manual}
 Language: every human-readable field is in ${uiLanguageName()}. Keep model names, effort names and technical terms as they are.`
 }
 
-function userPrompt(req: AnalyzeRequest) {
+export function analyzeUserPrompt(req: AnalyzeRequest) {
   return `<surface>${surfaceInfo(req.family, req.surface).label}</surface>
 
 ${fence('raw_prompt', req.prompt)}`
@@ -239,8 +239,8 @@ export async function analyze(req: AnalyzeRequest, signal?: AbortSignal): Promis
   const pool = candidatePool(req.family)
   if (req.manual && !pool.includes(req.manual.model)) pool.push(req.manual.model)
   const call = {
-    system: systemPrompt(req, pool),
-    user: userPrompt(req),
+    system: analyzeSystemPrompt(req, pool),
+    user: analyzeUserPrompt(req),
     schema: schemaFor(pool),
     temperature: 0.3,
     signal

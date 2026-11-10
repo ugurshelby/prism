@@ -17,7 +17,7 @@ function languageRule(lang: ReplyLanguage, surface: GenerateRequest['surface']):
   return '- The person wants the reply in English; no language line is needed.'
 }
 
-function systemPrompt(req: GenerateRequest, lang: ReplyLanguage) {
+export function generateSystemPrompt(req: GenerateRequest, lang: ReplyLanguage) {
   const model = MODELS[req.model]
   const family = FAMILY_INFO[model.family]
   const surface = family.surfaces[req.surface].label
@@ -62,7 +62,7 @@ Output exactly this, nothing before or after:
 </notes>`
 }
 
-function userPrompt(req: GenerateRequest) {
+export function generateUserPrompt(req: GenerateRequest) {
   const answers = req.answers.filter((a) => a.answer.trim())
   const clarifications = answers.length
     ? `\n${fence('clarifications', answers.map((a) => `Q: ${a.question}\nA: ${a.answer}`).join('\n\n'))}\n`
@@ -95,8 +95,8 @@ export async function generatePrompt(
   const { text, usage, engine } = await engineStream(
     'generation',
     {
-      system: systemPrompt(req, settings.replyLanguage),
-      user: userPrompt(req),
+      system: generateSystemPrompt(req, settings.replyLanguage),
+      user: generateUserPrompt(req),
       temperature: 0.6,
       signal
     },
