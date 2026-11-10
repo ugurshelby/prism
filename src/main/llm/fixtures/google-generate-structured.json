@@ -1,0 +1,22 @@
+{
+  "_source": "https://ai.google.dev/api/generate-content — belgelenmiş yanıt biçiminden elle yazıldı (2026-11-10); sayfa bu oturumda canlı okunmadı, içerik uydurmadır",
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [
+          {
+            "text": "{\"answer\":\"evet\"}"
+          }
+        ]
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 80,
+    "candidatesTokenCount": 7,
+    "totalTokenCount": 87
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "_source": "https://developers.openai.com/api/reference/resources/responses — belgelenmiş yanıt biçiminden elle yazıldı (2026-11-10); sayfa bu oturumda canlı okunmadı, içerik uydurmadır",
+  "id": "resp_fixture_0002",
+  "object": "response",
+  "status": "completed",
+  "output": [
+    {
+      "type": "message",
+      "id": "msg_fixture_2",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\"answer\":\"evet\"}"
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 140,
+    "output_tokens": 10,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    }
+  }
+}

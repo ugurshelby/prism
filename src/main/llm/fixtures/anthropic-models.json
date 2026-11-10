@@ -1,0 +1,20 @@
+{
+  "_source": "https://platform.claude.com/docs/en/api/models-list — belgelenmiş yanıt biçiminden elle yazıldı (2026-11-10); sayfa bu oturumda canlı okunmadı, içerik uydurmadır",
+  "data": [
+    {
+      "type": "model",
+      "id": "claude-opus-5-5",
+      "display_name": "Claude Opus 5.5",
+      "created_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "type": "model",
+      "id": "claude-haiku-5-5",
+      "display_name": "Claude Haiku 5.5",
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  ],
+  "has_more": false,
+  "first_id": "claude-opus-5-5",
+  "last_id": "claude-haiku-5-5"
+}

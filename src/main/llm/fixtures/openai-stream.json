@@ -1,0 +1,61 @@
+{
+  "_source": "https://developers.openai.com/api/reference/resources/responses/streaming-events — belgelenmiş yanıt biçiminden elle yazıldı (2026-11-10); sayfa bu oturumda canlı okunmadı, içerik uydurmadır",
+  "events": [
+    {
+      "event": "response.created",
+      "data": {
+        "type": "response.created",
+        "response": {
+          "id": "resp_fixture_0003",
+          "status": "in_progress"
+        }
+      }
+    },
+    {
+      "event": "response.output_text.delta",
+      "data": {
+        "type": "response.output_text.delta",
+        "delta": "Bir "
+      }
+    },
+    {
+      "event": "response.output_text.delta",
+      "data": {
+        "type": "response.output_text.delta",
+        "delta": "iki "
+      }
+    },
+    {
+      "event": "response.output_text.delta",
+      "data": {
+        "type": "response.output_text.delta",
+        "delta": "üç."
+      }
+    },
+    {
+      "event": "response.output_text.done",
+      "data": {
+        "type": "response.output_text.done",
+        "text": "Bir iki üç."
+      }
+    },
+    {
+      "event": "response.completed",
+      "data": {
+        "type": "response.completed",
+        "response": {
+          "id": "resp_fixture_0003",
+          "status": "completed",
+          "output": [],
+          "usage": {
+            "input_tokens": 55,
+            "output_tokens": 12,
+            "output_tokens_details": {
+              "reasoning_tokens": 4
+            }
+          }
+        }
+      }
+    }
+  ]
+}
