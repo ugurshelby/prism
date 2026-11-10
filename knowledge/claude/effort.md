@@ -1,7 +1,7 @@
 ---
 kind: model
-verified: 2026-11-08
-sources: claude-effort, claude-prompting-opus, claude-prompting-sonnet, claude-prompting-haiku, claude-prompting-fable
+verified: 2026-11-10
+sources: claude-effort, claude-prompting-opus, claude-prompting-sonnet, claude-prompting-haiku, claude-prompting-fable, claude-code-best-practices
 ---
 # Effort (Claude)
 
@@ -25,6 +25,6 @@ On the API, effort can change mid-conversation with a per-message `system` entry
 
 ## How the prompt should change with effort
 - **low:** explicit and complete; the model won't fill gaps. If the work must be verified, say so; at low effort it may report done without a real check. [s:claude-prompting-sonnet]
-- **medium:** goal, scope, what done looks like; name the verification step for code changes. [unverified]
+- **medium:** enough for everyday work with a clear scope: name the files, describe the problem, say what done looks like and give a pass/fail check to run. Haiku 5.5 may still report done without a check at `medium`; ask for one explicitly. [s:claude-code-best-practices, claude-prompting-haiku]
 - **high:** context, goal, constraints and the finish line matter more than steps; add scope guards for narrow changes. [s:claude-prompting-sonnet]
 - **xhigh / max:** spend words on boundaries and stopping conditions, and say extra review rounds or reviewer subagents are not wanted unless asked. [s:claude-prompting-sonnet]

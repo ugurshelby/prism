@@ -1,6 +1,6 @@
 ---
 kind: model
-verified: 2026-11-08
+verified: 2026-11-10
 sources: xai-models, xai-reasoning, xai-best-practices
 ---
 # Writing for Grok 4.7
@@ -17,7 +17,6 @@ sources: xai-models, xai-reasoning, xai-best-practices
 - `low` for latency-sensitive agent steps, `medium` for complex analysis, `high` for hard math and multi-step logic, `xhigh` when quality matters more than latency. [s:xai-reasoning]
 
 ## Tested patterns
-- Coding: goal, relevant files, done criteria and the verification command; scope guards for narrow changes. [unverified]
 - Current information: ask it to search and give today's date. [s:xai-best-practices]
 
 ## Failure modes

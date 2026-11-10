@@ -1,7 +1,7 @@
 ---
 kind: model
-verified: 2026-11-08
-sources: claude-prompting-sonnet, claude-models-overview, claude-effort
+verified: 2026-11-10
+sources: claude-prompting-sonnet, claude-models-overview, claude-effort, claude-choosing-model
 ---
 # Writing for Claude Sonnet 5.5
 
@@ -10,7 +10,7 @@ sources: claude-prompting-sonnet, claude-models-overview, claude-effort
 
 ## Strengths and weaknesses
 - Strong: speed with strong intelligence; efficient agentic coding on well-specified tasks; chat and latency-sensitive work. [s:claude-models-overview]
-- Weak fit: ambiguous, judgment-heavy work where Opus 5.5 is the safer default. [unverified]
+- Weak fit: the hardest long-horizon work and complex tasks needing nuanced understanding, where an Opus model is the better choice. [s:claude-prompting-sonnet, claude-choosing-model]
 
 ## Effort
 - Default `high` on the API, `medium` in Claude Code. From `medium` up it thinks briefly before almost every reply. [s:claude-effort, claude-prompting-sonnet]

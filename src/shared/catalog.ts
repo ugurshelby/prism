@@ -176,7 +176,8 @@ export const MODELS: Record<ModelId, TargetModel> = {
     latency: 'slow',
     price: { input: 10, output: 50 },
     efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
-    defaultEffort: { api: 'medium', agent: 'medium' },
+    // Codex'te başlangıç seviyesi: Astra low, Luna high (codex-best-practices, 2026-11-10).
+    defaultEffort: { api: 'medium', agent: 'low' },
     hue: '#b49cff'
   },
   'gpt-6.1-sol': {
@@ -209,7 +210,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     latency: 'fastest',
     price: { input: 0.1, output: 0.5 },
     efforts: ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
-    defaultEffort: { api: 'medium', agent: 'medium' },
+    defaultEffort: { api: 'medium', agent: 'high' },
     hue: '#9fb4ff'
   },
   'gemini-4-argon': {
@@ -263,7 +264,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     short: 'Grok 4.3',
     latency: 'fast',
     price: { input: 1.25, output: 2.5 },
-    efforts: ['none', 'low', 'medium', 'high'],
+    efforts: ['none', 'low', 'medium', 'high', 'xhigh'],
     defaultEffort: { api: 'low', agent: 'low' },
     hue: '#9aa7b8'
   },

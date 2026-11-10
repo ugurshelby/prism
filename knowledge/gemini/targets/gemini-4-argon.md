@@ -1,7 +1,7 @@
 ---
 kind: model
-verified: 2026-11-08
-sources: gemini-argon-guide, gemini-thinking, gemini-prompting, gemini-models
+verified: 2026-11-10
+sources: gemini-prompting, gemini-argon-guide, gemini-models, gemini-pricing, gemini-thinking, vertex-prompt-strategies
 ---
 # Writing for Gemini 4 Argon
 
@@ -12,7 +12,7 @@ sources: gemini-argon-guide, gemini-thinking, gemini-prompting, gemini-models
 
 ## Strengths and weaknesses
 - Strong: deep work in coding, finance, legal, security and science; very large inputs and very long single outputs within a 1,048,576-token unified limit. [s:gemini-argon-guide, gemini-models]
-- Weak fit: routine work that 3.8 Flash handles at a fraction of the cost; latency-sensitive calls. [unverified]
+- Weak fit: routine work; Argon's list price ($4 / $20 per MTok from 2026-12-01) is about 2.7x 3.8 Flash's ($1.50 / $7.50 from 2027-01-01). [s:gemini-pricing]
 
 ## Effort
 - `low`, `medium` (default), `high`; thinking can't be turned off. `minimal` and `thinking_budget` are errors. [s:gemini-argon-guide, gemini-thinking]
@@ -20,7 +20,7 @@ sources: gemini-argon-guide, gemini-thinking, gemini-prompting, gemini-models
 
 ## Tested patterns
 - Long deliverables: give the outline (sections, order, depth) up front. [s:gemini-argon-guide]
-- Hard reasoning at `high`: state the outcome and the acceptance check, not a step-by-step method. [unverified]
+- Hard reasoning at `high`: state the goal clearly; skip step-by-step reasoning instructions and test whether the prompt works without them. [s:gemini-prompting, vertex-prompt-strategies]
 - Current facts: ask it to use Search grounding and give today's date. [s:gemini-prompting]
 
 ## Failure modes

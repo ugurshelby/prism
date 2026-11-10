@@ -1,7 +1,7 @@
 ---
 kind: model
-verified: 2026-11-08
-sources: gemini-models, gemini-pricing, gemini-thinking, gemini-argon-guide
+verified: 2026-11-10
+sources: gemini-thinking, gemini-models, gemini-pricing, gemini-argon-guide
 ---
 # Target models (Gemini, lineup checked 2026-11-08)
 
@@ -18,6 +18,6 @@ Deprecated `gemini-2.5-pro` and `gemini-2.5-flash` route to 3.8 Flash and 3.5 Fl
 
 ## Choosing a model
 - **Gemini 4 Argon** for genuinely hard reasoning, very large inputs read at once, and very long single outputs. Thinking can't be turned off. [s:gemini-argon-guide, gemini-thinking]
-- **Gemini 3.8 Flash** as the default for serious everyday work: multi-step coding and agent tasks, analysis, writing. [unverified]
+- **Gemini 3.8 Flash** for long-running software engineering, autonomous agents and complex enterprise workflows. [s:gemini-models]
 - **Gemini 3.5 Flash-Lite** for simple, mechanical or high-volume work: classification, extraction, routing, short answers, quick transformations. [s:gemini-models]
 - For a short factual question or a one-line transformation, Flash-Lite at `minimal` is enough; a stronger model adds cost, not quality. [s:gemini-thinking]

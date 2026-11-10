@@ -1,7 +1,7 @@
 ---
 kind: model
-verified: 2026-11-08
-sources: gemini-thinking, gemini-argon-guide, gemini-prompting
+verified: 2026-11-10
+sources: gemini-thinking, gemini-argon-guide, gemini-prompting, vertex-prompt-strategies
 ---
 # Thinking level (Gemini)
 
@@ -22,5 +22,5 @@ Notes:
 ## How the prompt should change with thinking level
 - **minimal / low:** be explicit about the exact task, the output format and any check that must happen. One plain sentence asking it to think carefully can help a hard problem, at the cost of more thinking tokens. [s:gemini-prompting]
 - **medium:** goal, scope, constraints, what done looks like, stated concisely. [s:gemini-prompting]
-- **high:** describe the outcome and the acceptance check; spend words on boundaries and stopping conditions rather than a step-by-step method. [unverified]
+- **high:** state the goal clearly and leave out step-by-step reasoning instructions; Google suggests testing thinking prompts without them and comparing. [s:gemini-prompting, vertex-prompt-strategies]
 - At every level: don't ask it to show its reasoning steps in the visible answer. [s:gemini-prompting]

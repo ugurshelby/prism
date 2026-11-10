@@ -1,7 +1,7 @@
 ---
 kind: model
-verified: 2026-11-08
-sources: openai-models, openai-reasoning, openai-latest-model
+verified: 2026-11-10
+sources: openai-models, openai-reasoning, openai-latest-model, codex-best-practices
 ---
 # Target models (OpenAI, lineup checked 2026-11-08)
 
@@ -21,4 +21,4 @@ Choose the cheapest model and effort that will reliably do the job well. [s:open
 - **GPT-6.1 Sol** when the work is serious but cost matters: multi-file coding, debugging, analysis, professional writing. [s:openai-models, openai-latest-model]
 - **GPT-6.1 Terra** for everyday tasks, natural prose, screenshots and computer use, and latency-sensitive work; it can run with no reasoning. [s:openai-models, openai-latest-model]
 - **GPT-6 Luna** for simple, mechanical or high-volume work: classification, extraction with a clear schema, routing, short answers. [s:openai-models]
-- Signals that push up: ambiguity the model must resolve alone, many interacting parts, hard-to-verify correctness, long unattended runs. Signals that push down: the person reviews each step, the change is small, speed matters, the task runs many times. [unverified]
+- Raise effort for hard follow-ups, complex changes, debugging and long agentic runs; lower it for routine, well-scoped or latency-sensitive tasks. [s:openai-reasoning, codex-best-practices]

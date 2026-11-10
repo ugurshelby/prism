@@ -1,12 +1,12 @@
 ---
 kind: model
-verified: 2026-11-08
+verified: 2026-11-10
 sources: openai-models, openai-latest-model, openai-reasoning
 ---
 # Writing for GPT-6.1 Sol
 
 ## How it reads prompts
-- Same family habits as Astra; when they would get in the way, say to carry the task through, state the writing style and scale testing to the change. [unverified]
+- The GPT-6 guide's advice is written for Astra; use it as a starting point and evaluate on Sol: tell it to carry the task through, state the writing style, scale testing to the change. [s:openai-latest-model]
 - Lean system prompts with each rule stated once score better. [s:openai-latest-model]
 
 ## Strengths and weaknesses
@@ -17,7 +17,7 @@ sources: openai-models, openai-latest-model, openai-reasoning
 - `low` to `max`; no `none` or `minimal`; default `medium`. [s:openai-latest-model, openai-reasoning]
 
 ## Tested patterns
-- At `medium`, name the verification step and the riskiest edge case; at `high` and above, spend words on scope and stopping conditions. [unverified]
+- At `medium`, state the goal, scope, constraints and how to verify done; at `high` and above, spend words on scope and stopping conditions. [s:openai-reasoning]
 
 ## Failure modes
 - Sending `none` or `minimal` effort. [s:openai-reasoning]

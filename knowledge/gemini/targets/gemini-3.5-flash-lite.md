@@ -1,7 +1,7 @@
 ---
 kind: model
-verified: 2026-11-08
-sources: gemini-models, gemini-thinking, gemini-prompting, antigravity-models
+verified: 2026-11-10
+sources: gemini-prompting, gemini-models, antigravity-models, gemini-thinking, vertex-prompt-strategies
 ---
 # Writing for Gemini 3.5 Flash-Lite
 
@@ -20,4 +20,4 @@ sources: gemini-models, gemini-thinking, gemini-prompting, antigravity-models
 - Spell out edge-case rules: what to return when a field is missing or the input is off-topic. [s:gemini-prompting]
 
 ## Failure modes
-- Vague, multi-part prompts: split them or move to 3.8 Flash. [unverified]
+- Prompts that ask for several distinct tasks at once: break them into separate prompts. [s:vertex-prompt-strategies]

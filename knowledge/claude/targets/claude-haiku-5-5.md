@@ -1,12 +1,12 @@
 ---
 kind: model
-verified: 2026-11-08
-sources: claude-prompting-haiku, claude-models-overview
+verified: 2026-11-10
+sources: claude-prompting-haiku, claude-models-overview, claude-best-practices
 ---
 # Writing for Claude Haiku 5.5
 
 ## How it reads prompts
-- Short, explicit and concrete prompts work best: the exact format, the steps for multi-part work, an example when format matters. [unverified]
+- Be explicit about format and constraints, give numbered steps when order matters, and use examples to steer format. Long system prompts make skipped searches and early stops likelier, mostly at `low`. [s:claude-best-practices, claude-prompting-haiku]
 - Telling it in the prompt to answer directly doesn't stop it from thinking; lower the effort instead. [s:claude-prompting-haiku]
 
 ## Strengths and weaknesses

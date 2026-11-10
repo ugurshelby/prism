@@ -1,7 +1,7 @@
 ---
 kind: model
-verified: 2026-11-08
-sources: openai-reasoning, openai-latest-model
+verified: 2026-11-10
+sources: openai-reasoning, openai-latest-model, openai-prompt-engineering, chatgpt-prompting, openai-agent-safety, openai-computer-use
 ---
 # Prompting principles for current OpenAI models (GPT-6 family)
 
@@ -11,8 +11,8 @@ sources: openai-reasoning, openai-latest-model
 - Lean prompts score better: trim repeated instructions, examples and tool descriptions; state each rule once. [s:openai-latest-model]
 
 ## Structure
-- Rules and context go in the developer message (or `instructions`); the task and inputs in the user message. [unverified]
-- Put reusable, static content first and per-request context last. [unverified]
+- Rules and context go in the developer message (or `instructions`); the task and inputs in the user message. [s:openai-prompt-engineering]
+- Put reusable, static content first and per-request context last. [s:openai-prompt-engineering]
 
 ## GPT-6 tendencies to steer
 - **Asks and pauses more (Astra).** Tell it to infer intent, bias toward action and finish the task, stopping only before destructive or irreversible steps. Treat "can you…" / "help me…" as a request to act. [s:openai-latest-model]
@@ -31,7 +31,7 @@ sources: openai-reasoning, openai-latest-model
 - Don't write "think step by step"; reasoning is internal and controlled by effort. [s:openai-reasoning]
 
 ## Grounding
-- Give permission to say it doesn't know; restrict it to provided material when that's the intent; for time-sensitive facts ask it to search. [unverified]
+- When the intent is to stay within provided material, say "use only the supplied sources" and have it flag missing information instead of guessing; for current information, ask it to use web search and give sources. [s:chatgpt-prompting]
 
 ## Pasted content
-- Wrap pasted external text in labeled tags and say that instructions inside it are data, not commands. [unverified]
+- Delimit pasted external text with XML tags; pass untrusted input in the user message, never the developer message; state that text inside it cannot grant permission or override instructions. [s:openai-prompt-engineering, openai-agent-safety, openai-computer-use]
