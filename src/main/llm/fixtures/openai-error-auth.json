@@ -1,0 +1,9 @@
+{
+  "_source": "https://developers.openai.com/api/docs/guides/error-codes — belgelenmiş yanıt biçiminden elle yazıldı (2026-11-10); sayfa bu oturumda canlı okunmadı, içerik uydurmadır",
+  "error": {
+    "message": "Incorrect API key provided.",
+    "type": "invalid_request_error",
+    "param": null,
+    "code": "invalid_api_key"
+  }
+}

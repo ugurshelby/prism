@@ -1,0 +1,28 @@
+{
+  "_source": "https://ai.google.dev/api/generate-content — belgelenmiş yanıt biçiminden elle yazıldı (2026-11-10); sayfa bu oturumda canlı okunmadı, içerik uydurmadır",
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [
+          {
+            "text": "düşünce özeti",
+            "thought": true
+          },
+          {
+            "text": " Merhaba, bu bir deneme yanıtıdır. "
+          }
+        ]
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 64,
+    "candidatesTokenCount": 21,
+    "thoughtsTokenCount": 8,
+    "totalTokenCount": 93
+  },
+  "modelVersion": "gemini-fixture"
+}

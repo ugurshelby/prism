@@ -1,0 +1,34 @@
+{
+  "_source": "https://ai.google.dev/api/models — belgelenmiş yanıt biçiminden elle yazıldı (2026-11-10); sayfa bu oturumda canlı okunmadı, içerik uydurmadır",
+  "models": [
+    {
+      "name": "models/gemini-3.8-flash",
+      "displayName": "Gemini 3.8 Flash",
+      "supportedGenerationMethods": [
+        "generateContent",
+        "countTokens"
+      ]
+    },
+    {
+      "name": "models/gemini-fixture-tts",
+      "displayName": "Gemini Fixture TTS",
+      "supportedGenerationMethods": [
+        "generateContent"
+      ]
+    },
+    {
+      "name": "models/gemini-fixture-embed",
+      "displayName": "Embed",
+      "supportedGenerationMethods": [
+        "embedContent"
+      ]
+    },
+    {
+      "name": "models/embedding-fixture",
+      "displayName": "Embedding",
+      "supportedGenerationMethods": [
+        "generateContent"
+      ]
+    }
+  ]
+}

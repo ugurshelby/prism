@@ -1,0 +1,65 @@
+{
+  "_source": "https://ai.google.dev/api/generate-content — belgelenmiş yanıt biçiminden elle yazıldı (2026-11-10); sayfa bu oturumda canlı okunmadı, içerik uydurmadır",
+  "events": [
+    {
+      "data": {
+        "candidates": [
+          {
+            "content": {
+              "role": "model",
+              "parts": [
+                {
+                  "text": "Bir "
+                }
+              ]
+            },
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 30
+        }
+      }
+    },
+    {
+      "data": {
+        "candidates": [
+          {
+            "content": {
+              "role": "model",
+              "parts": [
+                {
+                  "text": "iki "
+                }
+              ]
+            },
+            "index": 0
+          }
+        ]
+      }
+    },
+    {
+      "data": {
+        "candidates": [
+          {
+            "content": {
+              "role": "model",
+              "parts": [
+                {
+                  "text": "üç."
+                }
+              ]
+            },
+            "finishReason": "STOP",
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 30,
+          "candidatesTokenCount": 11,
+          "thoughtsTokenCount": 3
+        }
+      }
+    }
+  ]
+}

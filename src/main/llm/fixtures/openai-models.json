@@ -1,0 +1,36 @@
+{
+  "_source": "https://developers.openai.com/api/reference/resources/models/methods/list — belgelenmiş yanıt biçiminden elle yazıldı (2026-11-10); sayfa bu oturumda canlı okunmadı, içerik uydurmadır",
+  "object": "list",
+  "data": [
+    {
+      "id": "gpt-6-luna",
+      "object": "model",
+      "created": 1760000000,
+      "owned_by": "system"
+    },
+    {
+      "id": "gpt-6.1-sol",
+      "object": "model",
+      "created": 1760000001,
+      "owned_by": "system"
+    },
+    {
+      "id": "text-embedding-fixture",
+      "object": "model",
+      "created": 1760000002,
+      "owned_by": "system"
+    },
+    {
+      "id": "gpt-6-tts-fixture",
+      "object": "model",
+      "created": 1760000003,
+      "owned_by": "system"
+    },
+    {
+      "id": "whisper-fixture",
+      "object": "model",
+      "created": 1760000004,
+      "owned_by": "system"
+    }
+  ]
+}

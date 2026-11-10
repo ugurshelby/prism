@@ -1,0 +1,9 @@
+{
+  "_source": "https://developers.openai.com/api/docs/guides/error-codes — belgelenmiş yanıt biçiminden elle yazıldı (2026-11-10); sayfa bu oturumda canlı okunmadı, içerik uydurmadır",
+  "error": {
+    "message": "Rate limit reached for requests",
+    "type": "requests",
+    "param": null,
+    "code": "rate_limit_exceeded"
+  }
+}
