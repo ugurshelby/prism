@@ -1,4 +1,4 @@
-# appId eski adla kalır: Windows'ta Prompter kurulumlarının üzerine güncelleme olarak kurulsun.
+# Ortak taban: ürünler build/<ürün>.yml ile derlenir (build/ray.yml, build/spectrum.yml); bu dosya yalnızca paylaşılan ayarları tutar.
 appId: com.prompter.app
 productName: Prism
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}

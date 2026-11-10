@@ -1,0 +1,21 @@
+# Prism Ray ürün yapılandırması: ortak tabanı (electron-builder.yml) genişletir, yalnızca kimliği ve çıktı adlarını değiştirir.
+extends: electron-builder.yml
+appId: com.prism.ray
+productName: Prism Ray
+extraMetadata:
+  version: 2.0.0
+artifactName: Prism-Ray-${version}-${os}-${arch}.${ext}
+icon: resources/ray/icon.png
+# Diziler birleşmez, değiştirilir: knowledge girdisi aynen tekrarlanır, tray girdisi ürün klasörüne bakar.
+extraResources:
+  - from: knowledge
+    to: knowledge
+  - from: resources/ray
+    to: .
+    filter:
+      - "tray*.png"
+      - "trayTemplate*.png"
+nsis:
+  artifactName: Prism-Ray-Setup-${version}-${arch}.${ext}
+linux:
+  executableName: prism-ray

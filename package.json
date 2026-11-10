@@ -45,6 +45,8 @@
     "test": "vitest run",
     "precommit": "npm run -s lint && npm run -s typecheck && npm run -s test",
     "icons": "node scripts/make-icons.mjs",
+    "dist:ray": "node scripts/build-product.mjs ray --dist",
+    "dist:spectrum": "node scripts/build-product.mjs spectrum --dist",
     "dist:win": "electron-vite build && electron-builder --win",
     "dist:mac": "electron-vite build && electron-builder --mac",
     "dist:linux": "electron-vite build && electron-builder --linux"
