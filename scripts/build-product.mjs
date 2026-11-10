@@ -14,7 +14,7 @@ function usage() {
 if (!known.includes(product)) usage()
 let dist = null
 if (rest.length > 0) {
-  if (rest.length !== 2 || rest[0] !== '--dist' || !(rest[1] in distFlags)) usage()
+  if (rest.length !== 2 || rest[0] !== '--dist' || !Object.hasOwn(distFlags, rest[1])) usage()
   dist = rest[1]
 }
 

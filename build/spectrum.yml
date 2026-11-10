@@ -3,6 +3,8 @@ extends: electron-builder.yml
 appId: com.prism.spectrum
 productName: Prism Spectrum
 extraMetadata:
+  # deb paket adı package.json name'den gelir; ürünler yan yana kurulabilsin diye ayrı ad.
+  name: prism-spectrum
   version: 3.0.0
 artifactName: Prism-Spectrum-${version}-${os}-${arch}.${ext}
 icon: resources/spectrum/icon.png

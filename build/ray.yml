@@ -3,6 +3,8 @@ extends: electron-builder.yml
 appId: com.prism.ray
 productName: Prism Ray
 extraMetadata:
+  # deb paket adı package.json name'den gelir; ürünler yan yana kurulabilsin diye ayrı ad.
+  name: prism-ray
   version: 2.0.0
 artifactName: Prism-Ray-${version}-${os}-${arch}.${ext}
 icon: resources/ray/icon.png
