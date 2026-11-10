@@ -105,3 +105,15 @@ describe('analyze: çoklu aile havuzu', () => {
     expect(p).toContain(`already chosen ${MODELS['claude-opus-5-5'].name} at \`high\` effort`)
   })
 })
+
+// Motor değişiklikleri (.work/reports/engine-changes.md): her biri tek satırla sabitlenir, tek commit'le geri alınabilir.
+describe('engine changes', () => {
+  it('C2: no questions on clear requests, never about a stated or changed-then-decided choice', () => {
+    for (const family of FAMILIES) {
+      const p = analyzeSystemPrompt(analyzeReq(family, 'chat'), modelsOf(family))
+      expect(p).toContain(
+        '- At most 3. Return none when nothing above is open and the request is one of these: a factual question, a translation, a proof, an explanation of a named concept, an edit of pasted text whose goal and constraints are stated, or a coding task fully specified by the request plus what the agent can read in the repository (product or behaviour decisions are not in the repository). Never ask about something the request already states, including a choice the person changed midway and then stated firmly: their final choice is the answer; ask only if they left it open.'
+      )
+    }
+  })
+})
