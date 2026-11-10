@@ -19,16 +19,26 @@ const toc =
   lang === 'tr'
     ? [
         ['start', 'Hızlı başlangıç'],
+        ['install', 'Kurulum ve ilk açılış'],
         ['keys', 'API key’leri'],
         ['use', 'Kullanım'],
-        ['data', 'Veri ve gizlilik'],
+        ['update', 'Güncelleme'],
+        ['uninstall', 'Kaldırma'],
+        ['data', 'Verin nerede'],
+        ['security', 'Güvenlik'],
+        ['privacy', 'Gizlilik'],
         ['help', 'Sorun giderme']
       ]
     : [
         ['start', 'Quick start'],
+        ['install', 'Install and first launch'],
         ['keys', 'API keys'],
         ['use', 'Everyday use'],
-        ['data', 'Data and privacy'],
+        ['update', 'Updates'],
+        ['uninstall', 'Uninstall'],
+        ['data', 'Where your data lives'],
+        ['security', 'Security'],
+        ['privacy', 'Privacy'],
         ['help', 'Troubleshooting']
       ]
 ---
@@ -59,6 +69,15 @@ const toc =
                 Ham promptunu yaz, <code>Ctrl+Enter</code>’a bas, öneriyi gözden geçir, varsa soruları yanıtla ve promptu kopyala.
               </li>
             </ol>
+
+            <h2 id="install">Kurulum ve ilk açılış</h2>
+            <p><a href={href(lang, 'download')}>İndirme sayfasından</a> önce ürünü, sonra sistemini seç; dosyayı çalıştır. Prism henüz ücretli bir sertifikayla imzalı değil, bu yüzden sistemin ilk açılışta bir kez sorar:</p>
+            <h3 id="first-launch">İlk açılış uyarısı</h3>
+            <ul>
+              <li><b>Windows:</b> {s.download.steps.win}</li>
+              <li><b>macOS:</b> {s.download.steps.mac}</li>
+              <li><b>Linux:</b> {s.download.steps.linux}</li>
+            </ul>
 
             <h2 id="keys">API key’leri</h2>
             <p>
@@ -91,18 +110,43 @@ const toc =
               <li>Pencereyi kapatmak Prism’i tray’e gizler; geçmiş son 200 promptu bu bilgisayarda tutar.</li>
             </ul>
 
-            <h2 id="data">Veri ve gizlilik</h2>
+            <h2 id="update">Güncelleme</h2>
             <ul>
-              <li>Key’ler işletim sisteminin güvenli deposuyla şifrelenir ve yalnızca kullanıcı klasöründe durur; loglara yazılmaz. Key’leri ayırt edebilmen için arayüze yalnızca son dört karakter gelir.</li>
-              <li>Geçmiş de şifreli saklanır; eski sürümlerin düz metin geçmişi ilk açılışta taşınıp silinir. Geçmişi kapatabilir, pencereyi ekran görüntüsünden gizleyebilirsin (Ayarlar → Gizlilik).</li>
-              <li>Promptlar yalnızca seçtiğin motor sağlayıcısına HTTPS ile gider. Telemetri, hata raporu, Prism sunucusu ve otomatik güncelleme yok.</li>
-              <li>Sağlayıcının ne sakladığını onun koşulları belirler. Google AI Studio’nun ücretsiz kullanımında promptlar ürün geliştirmede kullanılabilir ve insanlar tarafından okunabilir; gizli içerik için faturalandırılan bir proje ya da Vertex AI kullan.</li>
-              <li>İndirdiğin dosyayı sürümdeki <code>SHA256SUMS.txt</code> ile doğrula: macOS <code>shasum -a 256 -c SHA256SUMS.txt --ignore-missing</code>, Linux <code>sha256sum -c SHA256SUMS.txt --ignore-missing</code>, Windows <code>Get-FileHash</code>.</li>
-              <li>
-                Kullanıcı klasörü: <code>%APPDATA%\Prism</code> (Windows), <code>~/Library/Application Support/Prism</code> (macOS),
-                <code>~/.config/Prism</code> (Linux). Prompter’dan güncellediysen aynı yerdeki <code>Prompter</code> klasörü.
-              </li>
+              <li>Prism kendini güncellemez. Günde en fazla bir kez GitHub’ın herkese açık yayın listesine bakar; aynı ürünün daha yeni bir sürümü varsa yayın sayfasına bağlantı veren bir bildirim gösterir. İndirmeyi ve kurmayı sen yaparsın.</li>
+              <li>Kontrol, <code>api.github.com</code>’a giden tek bir istektir. Key, prompt metni, hesap ya da çerez taşımaz; yalnızca sabit bir istemci adı gider. GitHub bunu, IP adresin dahil, başka herhangi bir ziyaret gibi görür.</li>
+              <li>Kontrolü Ayarlar’dan kapatabilirsin. Kapalıyken Prism GitHub’a hiç bağlanmaz.</li>
+              <li>Güncellemek için yeni sürümü eskisinin üzerine kur; ayarların, key’lerin ve geçmişin yerinde kalır.</li>
+            </ul>
+
+            <h2 id="uninstall">Kaldırma</h2>
+            <ul>
+              <li><b>Windows:</b> Prism’i Ayarlar → Uygulamalar’dan kaldır. Kaldırıcı veri klasörünü de (kayıtlı key’ler, geçmiş, ayarlar) silmek isteyip istemediğini sorar; varsayılan olarak saklanır. Windows ile başlat kaydını da siler.</li>
+              <li><b>macOS:</b> uygulamayı Uygulamalar’dan Çöp Sepeti’ne sürükle. Aşağıdaki klasörü silmezsen verin kalır.</li>
+              <li><b>Linux:</b> AppImage’i sil ya da .deb paketini paket yöneticinle kaldır. Aşağıdaki klasörü silmezsen verin kalır.</li>
+              <li>Önce her şeyi silmek için Ayarlar’daki <b>Tüm verilerimi sil</b>’i kullan. Key’leri, geçmişi ve ayarları siler; bir kısmı silinemezse bunu söyler.</li>
+            </ul>
+
+            <h2 id="data">Verin nerede duruyor</h2>
+            <ul>
+              <li>Ray ve Spectrum 3 verilerini ürünün adını taşıyan bir klasörde tutar: <code>%APPDATA%\Prism Ray</code> ya da <code>%APPDATA%\Prism Spectrum</code> (Windows), <code>~/Library/Application Support/Prism Ray</code> ya da <code>…/Prism Spectrum</code> (macOS), <code>~/.config/Prism Ray</code> ya da <code>~/.config/Prism Spectrum</code> (Linux).</li>
+              <li>Şu an indirilebilen Spectrum olan Prism 2.x şunları kullanır: <code>%APPDATA%\Prism</code> (Windows), <code>~/Library/Application Support/Prism</code> (macOS), <code>~/.config/Prism</code> (Linux). Prompter’dan güncellediysen aynı yerdeki <code>Prompter</code> klasörü.</li>
+              <li>İçinde: ayarlar, şifreli key’ler, şifreli geçmiş, önbelleğe alınmış model listesi ve pencere konumu.</li>
+            </ul>
+
+            <h2 id="security">Güvenlik</h2>
+            <ul>
+              <li>Key’ler işletim sisteminin güvenli deposuyla şifrelenir ve yalnızca veri klasöründe durur; loglara yazılmaz. Key’leri ayırt edebilmen için arayüze yalnızca son dört karakter gelir.</li>
+              <li>Geçmiş de şifreli saklanır. Geçmişi kapatabilir, pencereyi ekran görüntüsünden gizleyebilirsin (Ayarlar → Gizlilik).</li>
+              <li>Promptlar ve key’ler yalnızca seçtiğin sağlayıcıya, HTTPS ile gider; başka hiçbir adrese gitmez.</li>
+              <li>Kurulum dosyaları henüz ücretli bir sertifikayla imzalı değil. İndirdiğin dosyayı sürümdeki <code>SHA256SUMS.txt</code> ile doğrula: macOS <code>shasum -a 256 -c SHA256SUMS.txt --ignore-missing</code>, Linux <code>sha256sum -c SHA256SUMS.txt --ignore-missing</code>, Windows <code>Get-FileHash</code>.</li>
               <li>Ayrıntılar: <a href={`${REPO}/blob/main/SECURITY.md`}>güvenlik politikası</a>.</li>
+            </ul>
+
+            <h2 id="privacy">Gizlilik</h2>
+            <ul>
+              <li>Telemetri, hata raporu, analitik ve Prism sunucusu yok. Prism’in yapabileceği tek başka istek, yukarıda anlatılan isteğe bağlı güncelleme kontrolüdür.</li>
+              <li>Promptlar yalnızca seçtiğin motor sağlayıcısına gider. Sağlayıcının ne sakladığını onun koşulları belirler. Google AI Studio’nun ücretsiz kullanımında promptlar ürün geliştirmede kullanılabilir ve insanlar tarafından okunabilir; gizli içerik için faturalandırılan bir proje ya da Vertex AI kullan.</li>
+              <li>Bu sitede analitik yok ve başka sitelerden hiçbir şey yüklenmez.</li>
             </ul>
 
             <h2 id="help">Sorun giderme</h2>
@@ -133,6 +177,15 @@ const toc =
               <li>Mark the apps you use through a subscription (for example Claude Code or ChatGPT) so cross-family recommendations include them.</li>
               <li>Write your rough prompt, press <code>Ctrl+Enter</code>, review the recommendation, answer any questions and copy the prompt.</li>
             </ol>
+
+            <h2 id="install">Install and first launch</h2>
+            <p>Pick the product, then your system, on the <a href={href(lang, 'download')}>download page</a> and run the file. Prism isn’t signed with a paid certificate yet, so your system asks once before opening it:</p>
+            <h3 id="first-launch">First-launch warning</h3>
+            <ul>
+              <li><b>Windows:</b> {s.download.steps.win}</li>
+              <li><b>macOS:</b> {s.download.steps.mac}</li>
+              <li><b>Linux:</b> {s.download.steps.linux}</li>
+            </ul>
 
             <h2 id="keys">API keys</h2>
             <p>
@@ -166,18 +219,43 @@ const toc =
             </ul>
             <p class="muted">The interface is in Turkish today; generated prompts are written in English.</p>
 
-            <h2 id="data">Data and privacy</h2>
+            <h2 id="update">Updates</h2>
             <ul>
-              <li>Keys are encrypted with your operating system’s secure storage and kept only in your user data folder; never written to logs. The interface sees only the last four characters so you can tell keys apart.</li>
-              <li>History is encrypted too; plain-text history from older versions is moved and deleted on first launch. You can turn history off and hide the window from screenshots (Settings → Gizlilik).</li>
-              <li>Prompts go only to the engine provider you chose, over HTTPS. No telemetry, no crash reports, no Prism server, no auto-updater.</li>
-              <li>What the provider keeps is up to its terms. On Google AI Studio’s free tier, prompts may be used to improve Google’s products and read by human reviewers; use a billed project or Vertex AI for confidential work.</li>
-              <li>Verify downloads against the release’s <code>SHA256SUMS.txt</code>: macOS <code>shasum -a 256 -c SHA256SUMS.txt --ignore-missing</code>, Linux <code>sha256sum -c SHA256SUMS.txt --ignore-missing</code>, Windows <code>Get-FileHash</code>.</li>
-              <li>
-                User data folder: <code>%APPDATA%\Prism</code> (Windows), <code>~/Library/Application Support/Prism</code> (macOS),
-                <code>~/.config/Prism</code> (Linux); if you upgraded from Prompter, the same folder named <code>Prompter</code>.
-              </li>
+              <li>Prism doesn’t update itself. About once a day it checks GitHub’s public release list for a newer version of the same product and, if there is one, shows a notice with a link to the release page. You download and install it yourself.</li>
+              <li>The check is one request to <code>api.github.com</code>. It carries no key, no prompt text, no account and no cookie, only a fixed client name. GitHub sees it like any other visit, including your IP address.</li>
+              <li>You can turn the check off in Settings. With it off, Prism never contacts GitHub.</li>
+              <li>To update, install the new version over the old one; settings, keys and history stay.</li>
+            </ul>
+
+            <h2 id="uninstall">Uninstall</h2>
+            <ul>
+              <li><b>Windows:</b> remove Prism in Settings → Apps. The uninstaller asks whether to delete the data folder too (saved keys, history, settings); the default is to keep it. It also removes the start-with-Windows entry.</li>
+              <li><b>macOS:</b> drag the app from Applications to the Bin. Your data stays until you delete the folder below.</li>
+              <li><b>Linux:</b> delete the AppImage, or remove the .deb package with your package manager. Your data stays until you delete the folder below.</li>
+              <li>To wipe everything first, use <b>Delete all my data</b> in Settings. It removes keys, history and settings, and tells you if any part could not be removed.</li>
+            </ul>
+
+            <h2 id="data">Where your data lives</h2>
+            <ul>
+              <li>Ray and Spectrum 3 each keep their data in a folder named after the product: <code>%APPDATA%\Prism Ray</code> or <code>%APPDATA%\Prism Spectrum</code> (Windows), <code>~/Library/Application Support/Prism Ray</code> or <code>…/Prism Spectrum</code> (macOS), <code>~/.config/Prism Ray</code> or <code>~/.config/Prism Spectrum</code> (Linux).</li>
+              <li>Prism 2.x, the current Spectrum download, uses <code>%APPDATA%\Prism</code> (Windows), <code>~/Library/Application Support/Prism</code> (macOS) and <code>~/.config/Prism</code> (Linux); if you upgraded from Prompter, the same folder named <code>Prompter</code>.</li>
+              <li>Inside: settings, the encrypted keys, the encrypted history, the cached model list and window position.</li>
+            </ul>
+
+            <h2 id="security">Security</h2>
+            <ul>
+              <li>Keys are encrypted with your operating system’s secure storage and kept only in the data folder; never written to logs. The interface sees only the last four characters so you can tell keys apart.</li>
+              <li>History is encrypted too. You can turn history off and hide the window from screenshots (Settings → Gizlilik).</li>
+              <li>Prompts and keys go only to the provider you chose, over HTTPS, and never to any other address.</li>
+              <li>Installers aren’t signed with a paid certificate yet. Verify downloads against the release’s <code>SHA256SUMS.txt</code>: macOS <code>shasum -a 256 -c SHA256SUMS.txt --ignore-missing</code>, Linux <code>sha256sum -c SHA256SUMS.txt --ignore-missing</code>, Windows <code>Get-FileHash</code>.</li>
               <li>Details: <a href={`${REPO}/blob/main/SECURITY.md`}>security policy</a>.</li>
+            </ul>
+
+            <h2 id="privacy">Privacy</h2>
+            <ul>
+              <li>No telemetry, no crash reports, no analytics and no Prism server. The only other request Prism can make is the optional update check described above.</li>
+              <li>Prompts go only to the engine provider you chose. What that provider keeps is up to its terms. On Google AI Studio’s free tier, prompts may be used to improve Google’s products and read by human reviewers; use a billed project or Vertex AI for confidential work.</li>
+              <li>This website has no analytics and loads nothing from other sites.</li>
             </ul>
 
             <h2 id="help">Troubleshooting</h2>

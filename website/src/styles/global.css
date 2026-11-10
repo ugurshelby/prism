@@ -475,7 +475,7 @@ h3 {
   border: 1px solid var(--line-2);
   color: var(--text-2);
 }
-.badge.current {
+.badge.available {
   border-color: transparent;
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
   color: var(--on-accent);

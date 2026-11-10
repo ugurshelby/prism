@@ -12,17 +12,27 @@ export function href(lang: Lang, path = '') {
 
 export const asset = (path: string) => `${import.meta.env.BASE_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
 
-// --- Sürümler (edition) ---------------------------------------------------------
+// --- Ürünler -------------------------------------------------------------------
 
-export type GenId = 'ray' | 'spectrum' | 'lens' | 'iris'
-export type GenStatus = 'available' | 'legacy' | 'current' | 'planned'
-export const GENERATIONS: { id: GenId; major: number; name: string; status: GenStatus }[] = [
-  { id: 'ray', major: 1, name: 'Ray', status: 'legacy' },
-  { id: 'spectrum', major: 2, name: 'Spectrum', status: 'current' },
-  { id: 'lens', major: 3, name: 'Lens', status: 'planned' },
-  { id: 'iris', major: 4, name: 'Iris', status: 'planned' }
+export type ProductId = 'ray' | 'spectrum' | 'lens' | 'iris'
+export type ProductStatus = 'available' | 'soon' | 'planned'
+export const PRODUCTS: { id: ProductId; name: string; released: boolean }[] = [
+  { id: 'ray', name: 'Ray', released: true },
+  { id: 'spectrum', name: 'Spectrum', released: true },
+  { id: 'lens', name: 'Lens', released: false },
+  { id: 'iris', name: 'Iris', released: false }
 ]
-export const genOf = (version: string) => GENERATIONS.find((g) => g.major === Number(version.split('.')[0]))
+export const productName = (id: ProductId) => PRODUCTS.find((p) => p.id === id)?.name ?? id
+
+/**
+ * Yayının ürünü etiketten çıkar: ray-v*, spectrum-v*. Ürün öncesi v2.* etiketleri Spectrum'dur (adı o zaman da
+ * "Prism Spectrum" idi). Eski v1.* yayınlar bir ürüne bağlanmaz; yalnızca GitHub Releases'ta durur.
+ */
+export function productOf(tag: string): ProductId | undefined {
+  const m = /^(ray|spectrum)-v\d/.exec(tag)
+  if (m) return m[1] === 'ray' ? 'ray' : 'spectrum'
+  return /^v2\./.test(tag) ? 'spectrum' : undefined
+}
 
 // --- GitHub Releases -----------------------------------------------------------
 
@@ -58,9 +68,12 @@ const newer = (a: Release, b: Release) => {
   return 0
 }
 
-export const releases = (releasesJson as Release[]).filter((r) => genOf(r.version)).sort(newer)
-export const releasesOf = (id: GenId) => releases.filter((r) => genOf(r.version)?.id === id)
-/** Ana sürümün (Spectrum) en yeni yayını; ana sayfadaki indirme düğmesi bunu verir. */
+export const releases = (releasesJson as Release[]).filter((r) => productOf(r.tag)).sort(newer)
+export const releasesOf = (id: ProductId) => releases.filter((r) => productOf(r.tag) === id)
+/** Yayınlanmış ürün için indirilebilir yayın var mı; yoksa "yakında" gösterilir. */
+export const statusOf = (id: ProductId): ProductStatus =>
+  PRODUCTS.find((p) => p.id === id)?.released ? (releasesOf(id).length ? 'available' : 'soon') : 'planned'
+/** Ana ürünün (Spectrum) en yeni yayını; ana sayfadaki indirme düğmesi bunu verir. */
 export const latest: Release | undefined = releasesOf('spectrum')[0] ?? releases[0]
 
 export function files(r: Release | undefined): Partial<Record<Platform, Asset>> {

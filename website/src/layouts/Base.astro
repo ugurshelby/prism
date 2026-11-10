@@ -4,12 +4,12 @@ import '@fontsource-variable/jetbrains-mono'
 import '../styles/global.css'
 import '../styles/components.css'
 import Mark from '../components/Mark.astro'
-import { REPO, asset, href, type Lang } from '../lib/site'
+import { REPO, asset, href, type Lang, type ProductId } from '../lib/site'
 import { t } from '../lib/i18n'
 
 interface Props {
   lang: Lang
-  page: '' | 'versions' | 'download' | 'docs' | 'how-it-works'
+  page: '' | 'products' | 'versions' | 'download' | 'docs' | 'how-it-works' | ProductId
   title?: string
   description?: string
 }
@@ -20,7 +20,7 @@ const pageTitle = title ? `${title} · Prism` : s.meta.title
 const desc = description ?? s.meta.description
 const canonical = new URL(href(lang, page), Astro.site).toString()
 const nav = [
-  { page: 'versions', label: s.nav.editions, sm: false },
+  { page: 'products', label: s.nav.products, sm: false },
   { page: 'download', label: s.nav.download, sm: true },
   { page: 'how-it-works', label: s.nav.how, sm: false },
   { page: 'docs', label: s.nav.docs, sm: false }

@@ -20,7 +20,8 @@ try {
     .filter((r) => !r.draft && !r.prerelease)
     .map((r) => ({
       tag: r.tag_name,
-      version: r.tag_name.replace(/^v/, ''),
+      // Etiket önekleri: ray-v*, spectrum-v* ve ürün öncesi v2.* (Spectrum'un eski etiketi).
+      version: r.tag_name.replace(/^(?:[a-z]+-)?v/, ''),
       published: r.published_at,
       url: r.html_url,
       assets: r.assets.map((a) => ({

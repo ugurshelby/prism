@@ -142,6 +142,14 @@ const flow =
               göndermez. Bizim bir sunucumuz yok.
             </p>
 
+            <h2>Ürün başına akış</h2>
+            <ul>
+              <li><b>Ray:</b> kurulumda aileni bir kez seçersin. İsteği yazarsın; Prism o ailenin içinden model ve seviye önerir, eksik olanı sorar ve onun için tek bir prompt yazar.</li>
+              <li><b>Spectrum:</b> kullandığın aileleri seçersin. Adımlar aynı, ama öneri seçtiğin ailelerin hepsinden gelebilir; sonuç yine tek model, tek prompt.</li>
+              <li><b>Lens (planda):</b> “tek model” ya da “en uygun akış” dersin. Bir iş, yalnızca bölmek açıkça kazandırıyorsa adımlara ya da paralel oturumlara bölünür; her oturumun promptunda ötekilerin ne yaptığını ve hangi dosyalara dokunmadığını söyleyen kısa bir not olur.</li>
+              <li><b>Iris (planda):</b> ne üreteceğini ve hangi modellerin olduğunu seçersin. Prism eksik olanı sorar, modeli seçer ve promptla birlikte en iyi üretim yolunu yazar: referans görsel, en-boy oranı, süre, seed.</li>
+            </ul>
+
             <h2>Bir sürüm sana nasıl ulaşıyor</h2>
             <p>
               Her değişiklik Windows, macOS ve Linux’ta derlenir ve bir duman testinden geçer: uygulama ağ ve key olmadan açılır, bütün bilgi kartlarını
@@ -149,7 +157,7 @@ const flow =
               dosyalar sağlama değerleriyle birlikte yayınlanır. Bu site de o listeden beslenir; indirme sayfasında gördüğün dosyalar, GitHub’daki dosyaların ta kendisi.
             </p>
             <p>
-              Sürümler ayrı dallarda yaşıyor. Ray ilk hâliyle duruyor ve hâlâ indirilebiliyor; Spectrum ana dalda gelişiyor. Lens ve Iris sırada.
+              Ray ve Spectrum aynı koddan derlenir ama ayrı yayınlanır: her birinin kendi kurulum dosyası ve kendi yayın etiketi (ray-v…, spectrum-v…) var. Lens ve Iris planda.
             </p>
 
             <p class="post-end">
@@ -256,13 +264,21 @@ const flow =
               don’t run a server.
             </p>
 
+            <h2>One flow per product</h2>
+            <ul>
+              <li><b>Ray:</b> pick your family once during setup. Write the request; Prism recommends a model and effort from that family, asks what is missing, then writes one prompt for it.</li>
+              <li><b>Spectrum:</b> pick the families you use. Same steps, but the recommendation can come from any of them; still one model and one prompt out.</li>
+              <li><b>Lens (planned):</b> you choose “one model” or “best flow”. A task is split into steps or parallel sessions only when that clearly pays off, and each session’s prompt carries a short note on what the others do and which files they leave alone.</li>
+              <li><b>Iris (planned):</b> pick what you want to make and which models you have. Prism asks what is missing, picks the model and writes the prompt along with the best way to produce it: reference image, aspect ratio, duration, seed.</li>
+            </ul>
+
             <h2>How a release reaches you</h2>
             <p>
               Every change is built on Windows, macOS and Linux and goes through a smoke test: the app starts with no network and no keys, loads every
               knowledge card and quits. When a version is tagged, the installers are built, each packaged app goes through the same test again, and the
               files are published with checksums. This site reads from that list, so the files on the download page are the exact files on GitHub.
             </p>
-            <p>Editions live on separate branches. Ray stays as it was and is still downloadable; Spectrum grows on the main branch. Lens and Iris are next.</p>
+            <p>Ray and Spectrum are built from the same code but released separately: each has its own installer and its own release tag (ray-v…, spectrum-v…). Lens and Iris are planned.</p>
 
             <p class="post-end">
               Stuck somewhere, or think you can do better? The code is right there. <a href={REPO}>Prism on GitHub</a> ·{' '}

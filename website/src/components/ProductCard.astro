@@ -1,0 +1,43 @@
+---
+import Mark from './Mark.astro'
+import { href, releasesOf, statusOf, type Lang, type ProductId } from '../lib/site'
+import { t } from '../lib/i18n'
+
+interface Props {
+  lang: Lang
+  id: ProductId
+  name: string
+  detail?: boolean
+}
+const { lang, id, name, detail = false } = Astro.props
+const s = t(lang)
+const status = statusOf(id)
+const count = releasesOf(id).length
+---
+
+<article id={detail ? id : undefined} class={`card gen ${status === 'available' ? 'is-current' : ''}`} data-reveal>
+  <div class="mark"><Mark variant={id} /></div>
+  <div class="gen-head">
+    <h3>Prism {name}</h3>
+    <span class={`badge ${status}`}>{s.products.status[status]}</span>
+  </div>
+  <p class="tagline">{s.products.items[id].tagline}</p>
+  <p>{s.products.items[id].body}</p>
+  {
+    detail && (
+      <ul>
+        {s.products.features[id].map((f) => (
+          <li>{f}</li>
+        ))}
+      </ul>
+    )
+  }
+  <div class="gen-foot">
+    <a class="btn btn-ghost btn-sm" href={href(lang, id)}>
+      {s.products.openPage(name)} →
+    </a>
+    <span class="muted">
+      {status === 'available' ? s.products.versions(count) : status === 'soon' ? s.products.status.soon : s.products.notYet}
+    </span>
+  </div>
+</article>

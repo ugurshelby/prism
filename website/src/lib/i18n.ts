@@ -1,4 +1,4 @@
-import type { GenId, GenStatus, Lang, Os, Platform } from './site'
+import type { ProductId, ProductStatus, Lang, Os, Platform } from './site'
 
 const en = {
   meta: {
@@ -6,7 +6,7 @@ const en = {
     description:
       'Prism is a free desktop app that turns a rough request into a prompt written for Claude, GPT, Gemini or Grok. It suggests the model and effort level, asks what’s missing, and runs on your own API key.'
   },
-  nav: { editions: 'Editions', download: 'Download', how: 'How it works', docs: 'Docs', github: 'GitHub', lang: 'Türkçe' },
+  nav: { products: 'Products', download: 'Download', how: 'How it works', docs: 'Docs', github: 'GitHub', lang: 'Türkçe' },
   cta: {
     download: 'Download',
     downloadFor: (os: string) => `Download for ${os}`,
@@ -24,7 +24,7 @@ const en = {
     deb: '.deb (Debian, Ubuntu)'
   } satisfies Record<Platform, string>,
   hero: {
-    eyebrow: 'Prism Spectrum · Windows, macOS, Linux',
+    eyebrow: 'Prism · Windows, macOS, Linux',
     title: ['Type what you want.', 'Prism writes the prompt.'],
     lead: 'Describe the task the way you’d say it out loud. Prism picks a model and an effort level, asks a question or two if something’s unclear, and hands back a prompt written for Claude, GPT, Gemini or Grok. It runs on your own API key, on your own machine.'
   },
@@ -89,43 +89,63 @@ const en = {
     body: 'Keys and history are encrypted by your operating system. Prompts go straight to the provider you picked, and what that provider keeps is up to its terms. We don’t run a server, so there’s nothing on our side to log.',
     link: 'Security policy'
   },
-  editions: {
-    title: 'Four editions',
-    lead: 'Prism grows one edition at a time. Each is named after something light does inside a prism.',
-    status: { available: 'Available', legacy: 'Legacy, no security fixes', current: 'Latest', planned: 'In the works' } satisfies Record<GenStatus, string>,
+  products: {
+    title: 'Four products',
+    lead: 'Prism is a small family of desktop apps that share one engine. Pick the one that fits how you work. Each is named after something light does inside a prism.',
+    status: { available: 'Available', soon: 'Coming soon', planned: 'Planned' } satisfies Record<ProductStatus, string>,
     items: {
-      ray: { tagline: 'One beam', body: 'The first Prism. Claude only, one engine. Small and focused, and it still works.' },
+      ray: {
+        tagline: 'One beam',
+        body: 'One model family, kept simple. Choose Claude, GPT, Gemini or Grok once and Prism writes every prompt for it.',
+        who: 'For people who stick to one family and want the least setup.'
+      },
       spectrum: {
         tagline: 'The beam, split',
-        body: 'Four model families, five key providers and recommendations across all of them. Most people want this one.'
+        body: 'Several families, one prompt. Choose the families you use; Prism recommends the best model among them and writes a single prompt for it.',
+        who: 'For people who use more than one family and want Prism to pick between them.'
       },
       lens: {
-        tagline: 'Many models, one job',
-        body: 'Big tasks get split across the models and tools you own, with a prompt for every step.'
+        tagline: 'One request, many sessions',
+        body: 'Splits a big task across models and parallel sessions, only when splitting pays off, and tells each session what the others are doing.',
+        who: 'For developers who run several models or coding sessions at once.'
       },
-      iris: { tagline: 'Past text', body: 'Prompts for image, video, audio and 3D models, in a workspace built around the tools you turn on.' }
-    } satisfies Record<GenId, { tagline: string; body: string }>,
+      iris: {
+        tagline: 'Past text',
+        body: 'Prompts for image, video, audio and 3D models, plus the best way to get the result you want out of each.',
+        who: 'For people who make images, video, music or 3D with generative models.'
+      }
+    } satisfies Record<ProductId, { tagline: string; body: string; who: string }>,
     features: {
-      ray: ['Claude Fable, Opus, Sonnet and Haiku', 'Model and effort recommendation', 'Engine: Gemini on Vertex AI', 'Installs next to Spectrum'],
+      ray: ['One target family: Claude, GPT, Gemini or Grok', 'Model and effort recommendation within that family', 'Bring your own engine key', 'Change the family any time in settings'],
       spectrum: [
-        'Claude, GPT, Gemini and Grok',
+        'Choose the families you use',
+        'Recommends one model across them, one prompt out',
         'Engines: Vertex AI, AI Studio, Anthropic, OpenAI, xAI',
         'Keys checked when you add them',
-        'Coding agent, chat and API prompts',
-        'Tray, shortcut, notifications, history'
+        'Coding agent, chat and API prompts'
       ],
-      lens: ['Multi-model workflows', 'Setup that knows your tools and plans', 'Engine routing across your keys'],
-      iris: ['Image, video, audio and 3D models', 'Only the models you turn on']
-    } satisfies Record<GenId, string[]>,
+      lens: ['Splits a task only when it pays off', 'Every session’s prompt names what the others do and which files to leave alone', 'Planned'],
+      iris: ['Image, video, audio and 3D models', 'Tells you how to get the best result: reference images, aspect ratio, duration, seed', 'Planned']
+    } satisfies Record<ProductId, string[]>,
     get: (name: string) => `Get ${name}`,
     notYet: 'Not released yet',
     versions: (n: number) => (n === 1 ? '1 version' : `${n} versions`),
-    noBuilds: 'No builds published yet'
+    noBuilds: 'No builds published yet',
+    openPage: (name: string) => `About ${name}`,
+    page: {
+      who: 'Who it’s for',
+      shared: 'Every product shares the same engine, the same encrypted key storage and the same knowledge cards. Your keys stay on your computer and prompts go straight to the provider you picked.',
+      plannedNote: 'Planned. There is no download yet; the work happens in the open on GitHub.',
+      soonNote: 'The first installer is being prepared. Check back soon, or watch the repository on GitHub.',
+      all: 'All products',
+      downloadPage: 'Go to downloads',
+      moved: 'This page is now called Products.'
+    }
   },
   download: {
     title: 'Download',
-    lead: 'Pick an edition, a version and your system. We guessed your system from your browser; switch it if you need another one.',
-    edition: 'Edition',
+    lead: 'Pick a product, a version and your system. We guessed your system from your browser; switch it if you need another one.',
+    product: 'Product',
     version: 'Version',
     system: 'System',
     detected: 'your system',
@@ -134,9 +154,11 @@ const en = {
     changesOnGitHub: 'Release notes on GitHub',
     released: 'Released',
     noFiles: 'This version has no build for this system.',
-    notReleased: 'This edition isn’t out yet.',
+    notReleased: 'This product isn’t out yet.',
     notReleasedBody: 'It’s being built in the open. Watch the repository on GitHub to hear when it ships.',
-    noReleases: 'No builds of this edition are published yet.',
+    comingSoon: 'Coming soon.',
+    comingSoonBody: 'The first installer is being prepared. Watch the repository on GitHub to hear when it ships.',
+    noReleases: 'No builds of this product are published yet.',
     unavailable: 'We couldn’t load the release list. Every installer is also on GitHub Releases.',
     checksum: 'SHA-256',
     sums: 'Checksums (SHA256SUMS.txt)',
@@ -173,7 +195,7 @@ const tr: Dict = {
     description:
       'Prism, ham bir isteği Claude, GPT, Gemini ya da Grok için yazılmış bir prompta çeviren ücretsiz bir masaüstü uygulaması. Modeli ve seviyeyi önerir, eksik olanı sorar ve kendi API key’inle çalışır.'
   },
-  nav: { editions: 'Sürümler', download: 'İndir', how: 'Nasıl çalışır', docs: 'Belgeler', github: 'GitHub', lang: 'English' },
+  nav: { products: 'Ürünler', download: 'İndir', how: 'Nasıl çalışır', docs: 'Belgeler', github: 'GitHub', lang: 'English' },
   cta: {
     download: 'İndir',
     downloadFor: (os: string) => `${os} için indir`,
@@ -191,7 +213,7 @@ const tr: Dict = {
     deb: '.deb (Debian, Ubuntu)'
   },
   hero: {
-    eyebrow: 'Prism Spectrum · Windows, macOS, Linux',
+    eyebrow: 'Prism · Windows, macOS, Linux',
     title: ['Ne istediğini yaz.', 'Promptu Prism yazsın.'],
     lead: 'İşi nasıl anlatıyorsan öyle yaz. Prism bir model ve seviye seçer, belirsiz bir şey varsa bir iki soru sorar ve Claude, GPT, Gemini ya da Grok için yazılmış promptu geri verir. Kendi API key’inle, kendi bilgisayarında çalışır.'
   },
@@ -256,40 +278,63 @@ const tr: Dict = {
     body: 'Key’ler ve geçmiş işletim sisteminin şifrelemesiyle saklanır. Promptlar doğrudan seçtiğin sağlayıcıya gider; sağlayıcının ne sakladığını onun koşulları belirler. Bizim bir sunucumuz yok; bizim tarafta kaydedilecek bir şey de yok.',
     link: 'Güvenlik politikası'
   },
-  editions: {
-    title: 'Dört sürüm',
-    lead: 'Prism her sürümde biraz büyüyor. Adlarını, ışığın bir prizmanın içinde yaptıklarından alıyorlar.',
-    status: { available: 'İndirilebilir', legacy: 'Eski sürüm, güvenlik desteği yok', current: 'En yeni', planned: 'Yolda' },
+  products: {
+    title: 'Dört ürün',
+    lead: 'Prism, aynı motoru paylaşan küçük bir masaüstü uygulamaları ailesi. Çalışma biçimine uyanı seç. Adlarını, ışığın bir prizmanın içinde yaptıklarından alıyorlar.',
+    status: { available: 'İndirilebilir', soon: 'Yakında', planned: 'Planda' },
     items: {
-      ray: { tagline: 'Tek ışın', body: 'İlk Prism. Yalnızca Claude, tek motor. Küçük, derli toplu ve hâlâ çalışıyor.' },
+      ray: {
+        tagline: 'Tek ışın',
+        body: 'Tek model ailesi, sade. Claude, GPT, Gemini ya da Grok’tan birini bir kez seç; Prism bütün promptları onun için yazar.',
+        who: 'Tek bir ailede kalan ve en az kurulum isteyenler için.'
+      },
       spectrum: {
         tagline: 'Işın renklerine ayrıldı',
-        body: 'Dört model ailesi, beş key sağlayıcısı ve hepsinin arasında öneri. Çoğu kişinin aradığı sürüm bu.'
+        body: 'Birden çok aile, tek prompt. Kullandığın aileleri seç; Prism aralarından en uygun modeli önerir ve onun için tek bir prompt yazar.',
+        who: 'Birden fazla aile kullanan ve aralarındaki seçimi Prism’e bırakmak isteyenler için.'
       },
-      lens: { tagline: 'Çok model, tek iş', body: 'Büyük işler, sahip olduğun model ve araçlara bölünür; her adım için ayrı prompt.' },
-      iris: { tagline: 'Metnin ötesi', body: 'Görsel, video, ses ve 3D modelleri için prompt; açtığın araçlara göre kurulan bir çalışma alanında.' }
+      lens: {
+        tagline: 'Tek istek, çok oturum',
+        body: 'Büyük bir işi modellere ve paralel oturumlara böler; yalnızca bölmek kazandırıyorsa. Her oturuma ötekilerin ne yaptığını söyler.',
+        who: 'Aynı anda birkaç model ya da kodlama oturumu çalıştıran geliştiriciler için.'
+      },
+      iris: {
+        tagline: 'Metnin ötesi',
+        body: 'Görsel, video, ses ve 3D modelleri için prompt; her birinden istediğin sonucu almanın en iyi yolu da yanında.',
+        who: 'Üretken modellerle görsel, video, müzik ya da 3D üretenler için.'
+      }
     },
     features: {
-      ray: ['Claude Fable, Opus, Sonnet ve Haiku', 'Model ve seviye önerisi', 'Motor: Vertex AI üzerinde Gemini', 'Spectrum’un yanına kurulur'],
+      ray: ['Tek hedef aile: Claude, GPT, Gemini ya da Grok', 'O ailenin içinde model ve seviye önerisi', 'Motor key’ini kendin getirirsin', 'Aileyi istediğin zaman ayarlardan değiştirirsin'],
       spectrum: [
-        'Claude, GPT, Gemini ve Grok',
+        'Kullandığın aileleri seçersin',
+        'Aralarından tek model önerir, tek prompt verir',
         'Motorlar: Vertex AI, AI Studio, Anthropic, OpenAI, xAI',
         'Key eklerken denenir',
-        'Kodlama ajanı, sohbet ve API promptları',
-        'Tray, kısayol, bildirim, geçmiş'
+        'Kodlama ajanı, sohbet ve API promptları'
       ],
-      lens: ['Çok modelli iş akışları', 'Araçlarını ve aboneliklerini bilen kurulum', 'Key’lerin arasında motor yönlendirme'],
-      iris: ['Görsel, video, ses ve 3D modelleri', 'Yalnızca açtığın modeller']
+      lens: ['Bir işi yalnızca kazandırıyorsa böler', 'Her oturumun promptu ötekilerin ne yaptığını ve hangi dosyalara dokunmaması gerektiğini söyler', 'Planda'],
+      iris: ['Görsel, video, ses ve 3D modelleri', 'En iyi sonucun yolunu söyler: referans görsel, en-boy oranı, süre, seed', 'Planda']
     },
     get: (name: string) => `İndir · ${name}`,
     notYet: 'Henüz çıkmadı',
     versions: (n: number) => `${n} yayın`,
-    noBuilds: 'Henüz yayın yok'
+    noBuilds: 'Henüz yayın yok',
+    openPage: (name: string) => `${name} hakkında`,
+    page: {
+      who: 'Kimin için',
+      shared: 'Bütün ürünler aynı motoru, aynı şifreli key deposunu ve aynı bilgi kartlarını paylaşır. Key’lerin bilgisayarında kalır, promptlar doğrudan seçtiğin sağlayıcıya gider.',
+      plannedNote: 'Planda. Henüz indirme yok; çalışma GitHub’da açıkça yürüyor.',
+      soonNote: 'İlk kurulum dosyası hazırlanıyor. Yakında tekrar bak ya da depoyu GitHub’da takip et.',
+      all: 'Bütün ürünler',
+      downloadPage: 'İndirme sayfasına git',
+      moved: 'Bu sayfanın adı artık Ürünler.'
+    }
   },
   download: {
     title: 'İndir',
-    lead: 'Bir sürüm, bir yayın ve sistemini seç. Sistemini tarayıcından tahmin ettik; başka biri lazımsa değiştir.',
-    edition: 'Sürüm',
+    lead: 'Bir ürün, bir yayın ve sistemini seç. Sistemini tarayıcından tahmin ettik; başka biri lazımsa değiştir.',
+    product: 'Ürün',
     version: 'Yayın',
     system: 'Sistem',
     detected: 'senin sistemin',
@@ -298,9 +343,11 @@ const tr: Dict = {
     changesOnGitHub: 'GitHub’daki yayın notları',
     released: 'Yayın tarihi',
     noFiles: 'Bu yayında bu sistem için dosya yok.',
-    notReleased: 'Bu sürüm henüz çıkmadı.',
+    notReleased: 'Bu ürün henüz çıkmadı.',
     notReleasedBody: 'Açık kaynak olarak yapılıyor. Çıktığında haberin olsun istersen depoyu GitHub’da takip et.',
-    noReleases: 'Bu sürümün henüz yayınlanmış bir dosyası yok.',
+    comingSoon: 'Yakında.',
+    comingSoonBody: 'İlk kurulum dosyası hazırlanıyor. Çıktığında haberin olsun istersen depoyu GitHub’da takip et.',
+    noReleases: 'Bu ürünün henüz yayınlanmış bir dosyası yok.',
     unavailable: 'Yayın listesini yükleyemedik. Bütün kurulum dosyaları GitHub Releases’ta da var.',
     checksum: 'SHA-256',
     sums: 'Sağlama değerleri (SHA256SUMS.txt)',

@@ -1,9 +1,9 @@
 import type { Lang } from '../lib/site'
 
-// Her yayının kısa değişiklik notu (CHANGELOG.md ile aynı içerik, iki dilde). Yeni bir sürüm çıkınca buraya eklenir;
-// eklenmezse sitede o yayın için GitHub'daki yayın notlarına bağlantı gösterilir.
+// Her yayının kısa değişiklik notu (CHANGELOG.md ile aynı içerik, iki dilde); anahtar yayının etiketidir (ray-v2.0.0 ile
+// eski v2.0.0 karışmasın). Yeni bir sürüm çıkınca buraya eklenir; eklenmezse sitede GitHub'daki yayın notlarına bağlantı gösterilir.
 export const CHANGES: Record<string, Record<Lang, string[]>> = {
-  '2.1.0': {
+  'v2.1.0': {
     en: [
       'Prompter is now called Prism. Installing over Prompter keeps your settings, keys and history.',
       'This website, with downloads for every edition and system.',
@@ -15,7 +15,7 @@ export const CHANGES: Record<string, Record<Lang, string[]>> = {
       'Yayın adlarında artık sürüm de yazıyor: “Prism Spectrum 2.1.0”.'
     ]
   },
-  '2.0.0': {
+  'v2.0.0': {
     en: [
       'Prompts for four families: Claude, GPT, Gemini and Grok.',
       'Bring your own key from Vertex AI, Google AI Studio, Anthropic, OpenAI or xAI. Keys are checked when you save them.',
@@ -29,7 +29,7 @@ export const CHANGES: Record<string, Record<Lang, string[]>> = {
       'Windows, macOS ve Linux kurulum dosyaları. Prompter adıyla yayınlandı.'
     ]
   },
-  '1.0.0': {
+  'v1.0.0': {
     en: [
       'The first Prism, packaged for Windows, macOS and Linux.',
       'Prompts for Claude Fable, Opus, Sonnet and Haiku, written by Gemini on Vertex AI.',
