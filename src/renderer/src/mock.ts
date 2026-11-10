@@ -157,6 +157,9 @@ export function installMock() {
     }
   }
   let history = location.hash.includes('empty') ? [] : seedHistory()
+  const showUpdate = location.hash.includes('update')
+  const failDelete = location.hash.includes('deletefail')
+  const mockLatest = { tag: 'v9.9.9', version: '9.9.9' }
   const streamListeners = new Set<(ev: StreamEvent) => void>()
   const timers = new Map<string, number>()
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -240,13 +243,20 @@ export function installMock() {
     clipboard: { write: async (t) => navigator.clipboard.writeText(t).catch((e: unknown) => console.warn('[mock] pano yazılamadı', e)) },
     ui: { onOpen: () => () => {} },
     // Sahte köprü ağa çıkmaz: güncelleme yok, silme yalnızca bellekteki geçmişi boşaltır.
+    // Görsel denemeler: #update bildirimi gösterir, #deletefail silmeyi kısmi hatayla bitirir.
     update: {
-      get: async () => ({ current: '0.0.0-mock', enabled: settings.updateCheck, checkedAt: null, latest: null }),
-      check: async () => ({ current: '0.0.0-mock', enabled: settings.updateCheck, checkedAt: Date.now(), latest: null }),
+      get: async () => ({ current: '0.0.0-mock', enabled: settings.updateCheck, checkedAt: null, latest: showUpdate ? mockLatest : null }),
+      check: async () => ({ current: '0.0.0-mock', enabled: settings.updateCheck, checkedAt: Date.now(), latest: showUpdate ? mockLatest : null }),
       openRelease: async () => {},
       onChanged: () => () => {}
     },
-    data: { deleteAll: async () => ((history = []), true) },
+    data: {
+      deleteAll: async () => {
+        if (failDelete) throw new Error('Could not remove the history file. Close other programs and try again.')
+        history = []
+        return true
+      }
+    },
     platform: 'win32'
   }
   window.prism = api

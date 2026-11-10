@@ -10,6 +10,7 @@ import { History } from './components/History'
 import { Logo } from './components/Prism'
 import { Settings } from './components/Settings'
 import { Setup } from './components/Setup'
+import { UpdateNotice } from './components/UpdateNotice'
 import { Analyzing, Compose, Result, Review, stageKey } from './components/Views'
 import { reportError } from './errors'
 
@@ -143,6 +144,8 @@ export default function App() {
           <X size={16} />
         </button>
       </header>
+
+      {!setup && <UpdateNotice />}
 
       <main className="body">
         <AnimatePresence initial={false}>
