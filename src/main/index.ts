@@ -4,7 +4,7 @@ import { dirname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import { FAMILY_INFO, MODELS, PROVIDERS, PROVIDER_INFO, type FamilyChoice } from '@shared/catalog'
-import { PRODUCT } from '@shared/product'
+import { PRODUCT, pickDataDir } from '@shared/product'
 import { msg } from '@shared/messages'
 import {
   AnalyzeRequestSchema,
@@ -47,11 +47,15 @@ import {
   toggleVisible
 } from './window'
 
-// Ürünün eski adı Prompter'dı: o adla kurulmuş sürümlerin ayarları, key'leri ve geçmişi olduğu klasörde kullanılır.
-// Chromium yeni klasörü açılışta önbellekler için kendisi oluşturduğundan klasöre değil içindeki verilere bakılır.
-const legacyData = join(app.getPath('appData'), 'Prompter')
-const hasData = (dir: string) => ['settings.json', 'history.json', 'history.enc'].some((f) => existsSync(join(dir, f)))
-if (!hasData(app.getPath('userData')) && hasData(legacyData)) app.setPath('userData', legacyData)
+// Ürün kimliği hiçbir yol okunmadan önce kurulur: ad, userData ve (aşağıda) tek kopya kilidi ürüne özeldir,
+// böylece Ray ve Spectrum yan yana çalışır. Eski adlarla (Prism 2.x, Prompter) kurulmuş verinin bulunduğu
+// klasör yalnızca Spectrum'da kullanılır. Chromium yeni klasörü açılışta kendisi oluşturduğundan klasöre değil
+// içindeki verilere bakılır (yalnızca key kaydedilmiş bir kurulum da veri sayılır).
+app.setName(PRODUCT.name)
+const appData = app.getPath('appData')
+const DATA_FILES = ['settings.json', 'history.json', 'history.enc', ...PROVIDERS.map((p) => `${p}.key`)]
+const hasData = (dirName: string) => DATA_FILES.some((f) => existsSync(join(appData, dirName, f)))
+app.setPath('userData', join(appData, pickDataDir(PRODUCT, hasData)))
 
 // Geliştirme ve testte gerçek ayar/geçmiş klasörüne dokunmamak için ayrı bir userData klasörü kullanılabilir.
 // Kurulu sürümde bu ve diğer PRISM_* değişkenleri yok sayılır (env.ts).
@@ -259,13 +263,14 @@ function createTray() {
 }
 
 // Kurulu sürümde uygulamanın kendisi, geliştirmede electron.exe + proje klasörü açılışta başlatılır.
-// Windows'ta kayıt adı AppUserModelId olduğu için ikisi aynı kaydı günceller.
+// Windows'ta kayıt adı ürünün appId'sidir: ikisi aynı kaydı günceller, iki ürün birbirinin kaydına dokunmaz.
 function setLaunchAtLogin(enabled: boolean) {
   if (process.platform === 'linux') return linuxAutostart(enabled)
+  const name = PRODUCT.appId
   app.setLoginItemSettings(
     app.isPackaged
-      ? { openAtLogin: enabled, args: ['--hidden'] }
-      : { openAtLogin: enabled, path: process.execPath, args: [app.getAppPath(), '--hidden'] }
+      ? { openAtLogin: enabled, name, args: ['--hidden'] }
+      : { openAtLogin: enabled, name, path: process.execPath, args: [app.getAppPath(), '--hidden'] }
   )
 }
 
@@ -274,14 +279,15 @@ function setLaunchAtLogin(enabled: boolean) {
 const SAFE_EXEC_PATH = /^[^"`$\\\r\n%]+$/
 
 // Electron'un Linux'ta açılış kaydı yok; XDG autostart girdisi yazılır. AppImage'ın gerçek yolu APPIMAGE'dadır.
+// Dosya adı ürüne özeldir: iki ürün birbirinin girdisini ezmez ya da silmez.
 function linuxAutostart(enabled: boolean) {
-  const file = join(app.getPath('appData'), 'autostart', 'prism.desktop')
+  const file = join(app.getPath('appData'), 'autostart', `prism-${PRODUCT.id}.desktop`)
   if (!enabled) return rmSync(file, { force: true })
   const paths = [appImagePath() ?? process.execPath, ...(app.isPackaged ? [] : [app.getAppPath()])]
   if (!paths.every((p) => SAFE_EXEC_PATH.test(p))) throw new UserError(msg('err.autostartPath'))
   const exec = `${paths.map((p) => `"${p}"`).join(' ')} --hidden`
   mkdirSync(dirname(file), { recursive: true })
-  writeFileSync(file, `[Desktop Entry]\nType=Application\nName=Prism\nExec=${exec}\nX-GNOME-Autostart-enabled=true\n`)
+  writeFileSync(file, `[Desktop Entry]\nType=Application\nName=${PRODUCT.name}\nExec=${exec}\nX-GNOME-Autostart-enabled=true\n`)
 }
 
 function applySettings(patch: z.infer<typeof SettingsPatchSchema>) {
@@ -476,7 +482,7 @@ app
   .then(() => {
     if (SELFTEST) return selftest(process.argv)
     lockDownSession()
-    if (process.platform === 'win32') app.setAppUserModelId('com.prompter.app')
+    if (process.platform === 'win32') app.setAppUserModelId(PRODUCT.appId)
     if (process.platform === 'darwin') app.dock?.hide()
     registerIpc()
     // Ayar açıksa kaydı bu kopyanın yoluna göre tazele (ör. geliştirmeden kurulu sürüme geçince).
