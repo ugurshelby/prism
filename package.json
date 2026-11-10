@@ -44,6 +44,7 @@
     "lint": "oxlint src scripts electron.vite.config.ts vite.mock.config.ts vitest.config.mts",
     "test": "vitest run",
     "precommit": "npm run -s lint && npm run -s typecheck && npm run -s test",
+    "cards:report": "node scripts/cards-report.mjs",
     "icons": "node scripts/make-icons.mjs",
     "dist:ray": "node scripts/build-product.mjs ray --dist",
     "dist:spectrum": "node scripts/build-product.mjs spectrum --dist"
