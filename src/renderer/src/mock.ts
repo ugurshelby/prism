@@ -80,6 +80,7 @@ let settings: SettingsView = {
   notifyWhenHidden: true,
   saveHistory: true,
   contentProtection: false,
+  updateCheck: true,
   providers: PROVIDERS.map(provider),
   engine: { provider: 'vertex', analysis: 'gemini-4-argon', generation: 'gemini-4-argon' },
   targets: {
@@ -238,6 +239,14 @@ export function installMock() {
     },
     clipboard: { write: async (t) => navigator.clipboard.writeText(t).catch((e: unknown) => console.warn('[mock] pano yazılamadı', e)) },
     ui: { onOpen: () => () => {} },
+    // Sahte köprü ağa çıkmaz: güncelleme yok, silme yalnızca bellekteki geçmişi boşaltır.
+    update: {
+      get: async () => ({ current: '0.0.0-mock', enabled: settings.updateCheck, checkedAt: null, latest: null }),
+      check: async () => ({ current: '0.0.0-mock', enabled: settings.updateCheck, checkedAt: Date.now(), latest: null }),
+      openRelease: async () => {},
+      onChanged: () => () => {}
+    },
+    data: { deleteAll: async () => ((history = []), true) },
     platform: 'win32'
   }
   window.prism = api

@@ -24,6 +24,7 @@ export type UserFileName =
   | 'history.json.tmp'
   | 'models.json'
   | 'window-state.json'
+  | 'update-state.json'
   | `${ProviderId}.key`
 
 export const userFile = (name: UserFileName) => join(app.getPath('userData'), name)
@@ -57,7 +58,15 @@ function quarantine(name: UserFileName) {
  * Yarım yazılmış dosya kalmasın diye önce benzersiz bir geçici dosyaya yazılır, diske işlenir, sonra yerine taşınır.
  * Dosyalar yalnızca sahibince okunabilir (0600; Windows'ta userData zaten kullanıcıya özeldir).
  */
+// "Tüm verilerimi sil" başlayınca diske yazım kapanır: bellekte kalan geçmiş, ayar ya da önbellek silinen
+// dosyaları geri yazamaz. Uygulama yeniden başlayınca açılır.
+let writesBlocked = false
+export function blockWrites() {
+  writesBlocked = true
+}
+
 export function writeFileAtomic(name: UserFileName, data: string | Buffer) {
+  if (writesBlocked) throw new UserError(msg('err.writesBlocked'))
   mkdirSync(app.getPath('userData'), { recursive: true })
   const path = userFile(name)
   const tmp = `${path}.${randomBytes(6).toString('hex')}.tmp`

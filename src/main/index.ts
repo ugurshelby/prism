@@ -1,4 +1,4 @@
-import { app, clipboard, globalShortcut, Menu, nativeImage, Notification, session, shell, Tray } from 'electron'
+import { app, clipboard, dialog, globalShortcut, Menu, nativeImage, Notification, session, shell, Tray } from 'electron'
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -17,7 +17,7 @@ import {
   WindowModeSchema
 } from '@shared/schemas'
 import type { GenerateRequest, StreamEvent } from '@shared/types'
-import { getSettings, knowledgeDir, updateSettings } from './config'
+import { blockWrites, getSettings, knowledgeDir, updateSettings } from './config'
 import { analyze } from './engine/analyze'
 import { generatePrompt } from './engine/generate'
 import { appImagePath, devEnv } from './env'
@@ -28,6 +28,8 @@ import { UserError } from './errors'
 import { logError, logWarn } from './log'
 import { clearKey, engineGenerate, resolveEngine, needsVerify, saveKey, setHotkeyOk, settingsView, verify, verifyPending } from './providers'
 import { selftest } from './selftest'
+import { checkForUpdate, openReleasePage, startUpdateChecks, updateView } from './update'
+import { wipeOwnData } from './wipe'
 import {
   applyContentProtection,
   applyPin,
@@ -274,6 +276,57 @@ function setLaunchAtLogin(enabled: boolean) {
   )
 }
 
+// Ürünün verisi: kullanılan userData ve (Spectrum'da) eski adlarla kurulmuş klasörler. Geliştirmede ayrı bir
+// userData verildiyse yalnızca o klasör silinir; gerçek kurulumların klasörlerine dokunulmaz.
+function dataDirs(): string[] {
+  const dirs = [app.getPath('userData')]
+  if (!DEV.userData) for (const d of [PRODUCT.dataDir, ...PRODUCT.legacyDataDirs]) dirs.push(join(appData, d))
+  return dirs
+}
+
+/**
+ * "Tüm verilerimi sil". Arayüz güvenilmez sayıldığı için onay ana süreçteki sistem penceresinden alınır (varsayılan
+ * Vazgeç). Sonra süren istekler durdurulur ve diske yazım kapatılır: bellekteki geçmiş, ayar ya da model önbelleği
+ * silinen dosyaları geri yazamaz. Açılış kaydı kaldırılır, dosyalar silinir. Bir parça başarısız olursa kalan dosyalar
+ * hata olarak döner ve uygulama yazımsız açık kalır; her şey silindiyse uygulama boş verilerle yeniden başlar.
+ */
+async function deleteAllData(): Promise<boolean> {
+  const win = getWindow()
+  const options = {
+    type: 'warning' as const,
+    title: PRODUCT.name,
+    message: msg('wipe.confirmTitle'),
+    detail: msg('wipe.confirmBody'),
+    buttons: [msg('wipe.cancel'), msg('wipe.confirm')],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true
+  }
+  const { response } = win ? await dialog.showMessageBox(win, options) : await dialog.showMessageBox(options)
+  if (response !== 1) return false
+  for (const controller of running.values()) controller.abort()
+  blockWrites()
+  const failed: string[] = []
+  // Geliştirmede ayrı userData ile çalışılıyorsa gerçek kurulumun açılış kaydına dokunulmaz.
+  if (!DEV.userData) {
+    try {
+      setLaunchAtLogin(false)
+    } catch (e) {
+      logWarn('wipe', 'açılış kaydı kaldırılamadı', e)
+      failed.push('autostart')
+    }
+  }
+  failed.push(...wipeOwnData(dataDirs()))
+  if (failed.length) throw new UserError(msg('err.deleteData', { files: failed.join(', ') }))
+  setImmediate(() => {
+    // AppImage'da process.execPath geçici bağlama noktasıdır; yeniden başlatma gerçek dosyadan yapılır.
+    // --hidden atılır: açılışta başlamış bir kopya silmeden sonra görünmez dönmesin.
+    app.relaunch({ execPath: appImagePath() ?? process.execPath, args: process.argv.slice(1).filter((a) => a !== '--hidden') })
+    app.exit(0)
+  })
+  return true
+}
+
 // Exec satırında çift tırnak içindeki yolda ", ters bölü, $, ters tırnak, % ya da satır sonu komut enjeksiyonuna
 // yol açar; böyle bir yol kabul edilmez. Tek tırnak (ör. O'Neil) çift tırnak içinde zararsızdır.
 const SAFE_EXEC_PATH = /^[^"`$\\\r\n%]+$/
@@ -434,6 +487,12 @@ function registerIpc() {
   on('window:dragEnd', z.tuple([z.boolean()]), (_e, animate) => dragEnd(animate), 'pill')
 
   handle('clipboard:write', z.tuple([ClipboardTextSchema]), (_e, text) => clipboard.writeText(text))
+
+  handle('update:get', none, () => updateView())
+  handle('update:check', none, () => checkForUpdate())
+  handle('update:openRelease', none, () => openReleasePage())
+
+  handle('data:deleteAll', none, () => deleteAllData())
 }
 
 // --- Oturum kilidi ------------------------------------------------------------------
@@ -504,6 +563,9 @@ app
         win.webContents.send('settings:changed')
       })
       .catch((e: unknown) => logWarn('providers', 'açılıştaki key doğrulaması tamamlanamadı', e))
+    startUpdateChecks(() => {
+      if (!win.isDestroyed()) win.webContents.send('update:changed')
+    })
     if (DEV.captureDir) captureStates(win, DEV.captureDir, DEV.capturePrompt)
   })
   .catch((e: unknown) => {

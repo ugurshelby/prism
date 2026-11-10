@@ -10,6 +10,7 @@ import type {
   PanelAnchor,
   PillState,
   StreamEvent,
+  UpdateView,
   WindowMode
 } from '../shared/types'
 
@@ -62,6 +63,22 @@ export interface PrismApi {
   ui: {
     /** Tray menüsünden "Geçmiş…" / "Ayarlar…" seçilince. */
     onOpen(cb: (target: 'settings' | 'history') => void): () => void
+  }
+  update: {
+    get(): Promise<UpdateView>
+    /** Şimdi denetle (ayar kapalı olsa da); ağ ya da biçim hatası reddedilir. */
+    check(): Promise<UpdateView>
+    /** Bilinen en yeni yayının sayfasını sistem tarayıcısında açar. */
+    openRelease(): Promise<void>
+    /** Otomatik denetim yeni bir sonuç bulduğunda. */
+    onChanged(cb: () => void): () => void
+  }
+  data: {
+    /**
+     * Ana süreç sistem penceresiyle onay ister; onaylanırsa key'leri, geçmişi, ayarları ve önbellekleri siler, açılış
+     * kaydını kaldırır ve uygulamayı yeniden başlatır. Vazgeçilirse false döner; kısmi silme hata ile reddedilir.
+     */
+    deleteAll(): Promise<boolean>
   }
   platform: string
 }

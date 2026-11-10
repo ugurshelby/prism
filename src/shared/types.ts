@@ -150,10 +150,21 @@ export interface Settings {
   saveHistory: boolean
   /** Pencerenin ekran görüntüsü ve ekran paylaşımında görünmesini engeller (Windows, macOS). */
   contentProtection: boolean
+  /** Günde bir kez GitHub'da bu ürünün yeni sürümüne bakılır (key'siz, yalnızca yayın listesi). */
+  updateCheck: boolean
 }
 
 /** Arayüzün gönderdiği ayar yaması (SettingsPatchSchema ile aynı biçim): Vertex proje ve konumu ayrı ayrı değişebilir. */
 export type SettingsPatch = Partial<Omit<Settings, 'version' | 'vertex'>> & { vertex?: Partial<Settings['vertex']> }
+
+/** Güncelleme bildiriminin arayüze giden durumu. */
+export interface UpdateView {
+  current: string
+  enabled: boolean
+  /** Son başarılı denetimin zamanı (ms); hiç denetlenmediyse null. */
+  checkedAt: number | null
+  latest: { tag: string; version: string } | null
+}
 
 export interface DiscoveredModel {
   id: string
