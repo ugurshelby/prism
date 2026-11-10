@@ -16,6 +16,7 @@ sources: xai-grok-build-model, xai-models, grok-build-settings
 - Reasoning is supported but no effort control is documented; treat the level as fixed. [s:xai-grok-build-model]
 
 ## Tested patterns
+- xAI publishes no prompt patterns for this model; the general rules above apply. [s:xai-grok-build-model]
 
 ## Failure modes
 - Prompts that depend on an effort setting. [s:xai-grok-build-model]

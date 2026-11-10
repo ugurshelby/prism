@@ -11,7 +11,7 @@ Used only when the person lets Prism pick among several families. The candidates
 - If the raw prompt names a tool or family ("in Claude Code", "Codex", "ChatGPT", "Gemini", "Antigravity", "Grok"), stay in that family when it is among the candidates.
 - Otherwise judge the task on its merits: capabilities needed, speed and cost. [s:claude-choosing-model]
 
-## Rough tiers (list prices per MTok input / output, checked 2026-11-08)
+## Rough tiers (list prices per MTok input / output, checked 2026-11-10)
 
 | Tier | Claude | OpenAI | Gemini | Grok |
 |---|---|---|---|---|

@@ -15,5 +15,6 @@ How to write it:
 - If the request may conflict with `AGENTS.md`, say the person's instructions take priority. [s:openai-latest-model]
 - For investigation requests, the deliverable is the explanation; no fix until asked. [s:openai-gpt56-guide, chatgpt-prompting]
 - Ask for a short, legible final report that names the checks run and their results. [s:openai-latest-model, chatgpt-prompting]
+- Codex start levels: GPT-6 Astra at `low`, GPT-6 Luna at `high`. [s:codex-best-practices]
 
 Setting model and effort: `model` and `model_reasoning_effort` in `~/.codex/config.toml`; `plan_mode_reasoning_effort` overrides effort for Plan mode. [s:codex-config]

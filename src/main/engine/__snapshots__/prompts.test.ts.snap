@@ -37,7 +37,7 @@ Used only when the person lets Prism pick among several families. The candidates
 - If the raw prompt names a tool or family ("in Claude Code", "Codex", "ChatGPT", "Gemini", "Antigravity", "Grok"), stay in that family when it is among the candidates.
 - Otherwise judge the task on its merits: capabilities needed, speed and cost.
 
-## Rough tiers (list prices per MTok input / output, checked 2026-11-08)
+## Rough tiers (list prices per MTok input / output, checked 2026-11-10)
 
 | Tier | Claude | OpenAI | Gemini | Grok |
 |---|---|---|---|---|
@@ -268,11 +268,11 @@ All are reasoning models served through the xAI API; the Responses API is recomm
 | Grok Build 0.1 | \`grok-build-0.1\` | Coding model for agentic software, engineering and workflow tasks. | 256k | $1 / $2 (≥200k: $2 / $4) | no documented control | — |
 
 Prompts of 200k tokens or more are billed at the higher rate for every token in the request.
-Reasoning tokens are billed; \`max_output_tokens\` caps only the visible answer, so reasoning can run long.
+Reasoning tokens are billed.
 
 ## Choosing a model
-- **Grok 4.7** for most serious work: coding, debugging, analysis, writing. Reasoning can't be turned off.
-- **Grok 4.3** for cheaper, faster or very long-context work: summaries of large inputs, extraction, simple Q&A, high volume.
+- **Grok 4.7**: xAI's most capable model, recommended for code and chat; reasoning can't be turned off.
+- **Grok 4.3** for cheaper, faster or very long-context work.
 - **Grok Build 0.1** for agentic coding, mainly through the Grok Build agent.
 </models>
 
@@ -290,7 +290,7 @@ xAI recommends setting effort explicitly on every request so a default never dec
 | \`low\` | Latency-sensitive agentic work and simple tool calls. |
 | \`medium\` | Complex data analysis. |
 | \`high\` | Hard math and multi-step logic. Default on Grok 4.7. |
-| \`xhigh\` | When answer quality matters more than latency (Grok 4.6 and later). |
+| \`xhigh\` | When answer quality matters more than latency. |
 
 ## How the prompt should change with effort
 - At every level: state task, constraints and output format directly; the model reasons before answering.
@@ -2222,11 +2222,11 @@ All are reasoning models served through the xAI API; the Responses API is recomm
 | Grok Build 0.1 | \`grok-build-0.1\` | Coding model for agentic software, engineering and workflow tasks. | 256k | $1 / $2 (≥200k: $2 / $4) | no documented control | — |
 
 Prompts of 200k tokens or more are billed at the higher rate for every token in the request.
-Reasoning tokens are billed; \`max_output_tokens\` caps only the visible answer, so reasoning can run long.
+Reasoning tokens are billed.
 
 ## Choosing a model
-- **Grok 4.7** for most serious work: coding, debugging, analysis, writing. Reasoning can't be turned off.
-- **Grok 4.3** for cheaper, faster or very long-context work: summaries of large inputs, extraction, simple Q&A, high volume.
+- **Grok 4.7**: xAI's most capable model, recommended for code and chat; reasoning can't be turned off.
+- **Grok 4.3** for cheaper, faster or very long-context work.
 - **Grok Build 0.1** for agentic coding, mainly through the Grok Build agent.
 </models>
 
@@ -2244,7 +2244,7 @@ xAI recommends setting effort explicitly on every request so a default never dec
 | \`low\` | Latency-sensitive agentic work and simple tool calls. |
 | \`medium\` | Complex data analysis. |
 | \`high\` | Hard math and multi-step logic. Default on Grok 4.7. |
-| \`xhigh\` | When answer quality matters more than latency (Grok 4.6 and later). |
+| \`xhigh\` | When answer quality matters more than latency. |
 
 ## How the prompt should change with effort
 - At every level: state task, constraints and output format directly; the model reasons before answering.
@@ -2348,7 +2348,6 @@ xAI publishes little prompt-writing advice; its core guidance is to state the ta
 - Current information: ask it to search and give today's date.
 
 ## Failure modes
-- "Think step by step" and requests to reveal reasoning add nothing.
 - API prompts that rely on \`stop\` sequences or penalties fail on this model.
 - High-effort requests can run long; short client timeouts look like failures.
 </target_model>
@@ -2367,7 +2366,7 @@ xAI recommends setting effort explicitly on every request so a default never dec
 | \`low\` | Latency-sensitive agentic work and simple tool calls. |
 | \`medium\` | Complex data analysis. |
 | \`high\` | Hard math and multi-step logic. Default on Grok 4.7. |
-| \`xhigh\` | When answer quality matters more than latency (Grok 4.6 and later). |
+| \`xhigh\` | When answer quality matters more than latency. |
 
 ## How the prompt should change with effort
 - At every level: state task, constraints and output format directly; the model reasons before answering.
@@ -2473,11 +2472,11 @@ All are reasoning models served through the xAI API; the Responses API is recomm
 | Grok Build 0.1 | \`grok-build-0.1\` | Coding model for agentic software, engineering and workflow tasks. | 256k | $1 / $2 (≥200k: $2 / $4) | no documented control | — |
 
 Prompts of 200k tokens or more are billed at the higher rate for every token in the request.
-Reasoning tokens are billed; \`max_output_tokens\` caps only the visible answer, so reasoning can run long.
+Reasoning tokens are billed.
 
 ## Choosing a model
-- **Grok 4.7** for most serious work: coding, debugging, analysis, writing. Reasoning can't be turned off.
-- **Grok 4.3** for cheaper, faster or very long-context work: summaries of large inputs, extraction, simple Q&A, high volume.
+- **Grok 4.7**: xAI's most capable model, recommended for code and chat; reasoning can't be turned off.
+- **Grok 4.3** for cheaper, faster or very long-context work.
 - **Grok Build 0.1** for agentic coding, mainly through the Grok Build agent.
 </models>
 
@@ -2495,7 +2494,7 @@ xAI recommends setting effort explicitly on every request so a default never dec
 | \`low\` | Latency-sensitive agentic work and simple tool calls. |
 | \`medium\` | Complex data analysis. |
 | \`high\` | Hard math and multi-step logic. Default on Grok 4.7. |
-| \`xhigh\` | When answer quality matters more than latency (Grok 4.6 and later). |
+| \`xhigh\` | When answer quality matters more than latency. |
 
 ## How the prompt should change with effort
 - At every level: state task, constraints and output format directly; the model reasons before answering.
@@ -2603,7 +2602,6 @@ xAI publishes little prompt-writing advice; its core guidance is to state the ta
 - Current information: ask it to search and give today's date.
 
 ## Failure modes
-- "Think step by step" and requests to reveal reasoning add nothing.
 - API prompts that rely on \`stop\` sequences or penalties fail on this model.
 - High-effort requests can run long; short client timeouts look like failures.
 </target_model>
@@ -2622,7 +2620,7 @@ xAI recommends setting effort explicitly on every request so a default never dec
 | \`low\` | Latency-sensitive agentic work and simple tool calls. |
 | \`medium\` | Complex data analysis. |
 | \`high\` | Hard math and multi-step logic. Default on Grok 4.7. |
-| \`xhigh\` | When answer quality matters more than latency (Grok 4.6 and later). |
+| \`xhigh\` | When answer quality matters more than latency. |
 
 ## How the prompt should change with effort
 - At every level: state task, constraints and output format directly; the model reasons before answering.
@@ -2732,11 +2730,11 @@ All are reasoning models served through the xAI API; the Responses API is recomm
 | Grok Build 0.1 | \`grok-build-0.1\` | Coding model for agentic software, engineering and workflow tasks. | 256k | $1 / $2 (≥200k: $2 / $4) | no documented control | — |
 
 Prompts of 200k tokens or more are billed at the higher rate for every token in the request.
-Reasoning tokens are billed; \`max_output_tokens\` caps only the visible answer, so reasoning can run long.
+Reasoning tokens are billed.
 
 ## Choosing a model
-- **Grok 4.7** for most serious work: coding, debugging, analysis, writing. Reasoning can't be turned off.
-- **Grok 4.3** for cheaper, faster or very long-context work: summaries of large inputs, extraction, simple Q&A, high volume.
+- **Grok 4.7**: xAI's most capable model, recommended for code and chat; reasoning can't be turned off.
+- **Grok 4.3** for cheaper, faster or very long-context work.
 - **Grok Build 0.1** for agentic coding, mainly through the Grok Build agent.
 </models>
 
@@ -2754,7 +2752,7 @@ xAI recommends setting effort explicitly on every request so a default never dec
 | \`low\` | Latency-sensitive agentic work and simple tool calls. |
 | \`medium\` | Complex data analysis. |
 | \`high\` | Hard math and multi-step logic. Default on Grok 4.7. |
-| \`xhigh\` | When answer quality matters more than latency (Grok 4.6 and later). |
+| \`xhigh\` | When answer quality matters more than latency. |
 
 ## How the prompt should change with effort
 - At every level: state task, constraints and output format directly; the model reasons before answering.
@@ -2858,7 +2856,6 @@ xAI publishes little prompt-writing advice; its core guidance is to state the ta
 - Current information: ask it to search and give today's date.
 
 ## Failure modes
-- "Think step by step" and requests to reveal reasoning add nothing.
 - API prompts that rely on \`stop\` sequences or penalties fail on this model.
 - High-effort requests can run long; short client timeouts look like failures.
 </target_model>
@@ -2877,7 +2874,7 @@ xAI recommends setting effort explicitly on every request so a default never dec
 | \`low\` | Latency-sensitive agentic work and simple tool calls. |
 | \`medium\` | Complex data analysis. |
 | \`high\` | Hard math and multi-step logic. Default on Grok 4.7. |
-| \`xhigh\` | When answer quality matters more than latency (Grok 4.6 and later). |
+| \`xhigh\` | When answer quality matters more than latency. |
 
 ## How the prompt should change with effort
 - At every level: state task, constraints and output format directly; the model reasons before answering.
@@ -3032,6 +3029,7 @@ How to write it:
 - If the request may conflict with \`AGENTS.md\`, say the person's instructions take priority.
 - For investigation requests, the deliverable is the explanation; no fix until asked.
 - Ask for a short, legible final report that names the checks run and their results.
+- Codex start levels: GPT-6 Astra at \`low\`, GPT-6 Luna at \`high\`.
 
 Setting model and effort: \`model\` and \`model_reasoning_effort\` in \`~/.codex/config.toml\`; \`plan_mode_reasoning_effort\` overrides effort for Plan mode.
 </surface>
@@ -3185,6 +3183,7 @@ How to write it:
 - If the request may conflict with \`AGENTS.md\`, say the person's instructions take priority.
 - For investigation requests, the deliverable is the explanation; no fix until asked.
 - Ask for a short, legible final report that names the checks run and their results.
+- Codex start levels: GPT-6 Astra at \`low\`, GPT-6 Luna at \`high\`.
 
 Setting model and effort: \`model\` and \`model_reasoning_effort\` in \`~/.codex/config.toml\`; \`plan_mode_reasoning_effort\` overrides effort for Plan mode.
 </surface>

@@ -24,7 +24,7 @@
     "gemini-argon-guide": { "kind": "doc", "title": "Developer's guide to Gemini 4 Argon", "publisher": "Google Cloud", "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/guides/gemini-4-argon", "retrieved": "2026-11-08" },
     "antigravity-models": { "kind": "doc", "title": "Antigravity: choose a model", "publisher": "Google", "url": "https://antigravity.google/docs/models", "retrieved": "2026-11-08" },
     "xai-models": { "kind": "doc", "title": "Models and pricing", "publisher": "xAI", "url": "https://docs.x.ai/docs/models", "retrieved": "2026-11-08" },
-    "xai-reasoning": { "kind": "doc", "title": "Reasoning", "publisher": "xAI", "url": "https://docs.x.ai/developers/model-capabilities/text/reasoning", "retrieved": "2026-11-08" },
+    "xai-reasoning": { "kind": "doc", "title": "Reasoning", "publisher": "xAI", "url": "https://docs.x.ai/developers/model-capabilities/text/reasoning", "retrieved": "2026-11-10" },
     "xai-best-practices": { "kind": "doc", "title": "Best practices guide", "publisher": "xAI", "url": "https://docs.x.ai/developers/model-capabilities/text/best-practices", "retrieved": "2026-11-08" },
     "xai-grok-4-3": { "kind": "doc", "title": "Grok 4.3", "publisher": "xAI", "url": "https://docs.x.ai/developers/models/grok-4.3", "retrieved": "2026-11-08" },
     "xai-grok-build-model": { "kind": "doc", "title": "Grok Build 0.1", "publisher": "xAI", "url": "https://docs.x.ai/developers/models/grok-build-0.1", "retrieved": "2026-11-08" },

@@ -20,6 +20,5 @@ sources: xai-models, xai-reasoning, xai-best-practices
 - Current information: ask it to search and give today's date. [s:xai-best-practices]
 
 ## Failure modes
-- "Think step by step" and requests to reveal reasoning add nothing. [s:xai-reasoning]
 - API prompts that rely on `stop` sequences or penalties fail on this model. [s:xai-reasoning]
 - High-effort requests can run long; short client timeouts look like failures. [s:xai-best-practices]

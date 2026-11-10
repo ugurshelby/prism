@@ -16,7 +16,7 @@ xAI recommends setting effort explicitly on every request so a default never dec
 | `low` | Latency-sensitive agentic work and simple tool calls. | [s:xai-reasoning]
 | `medium` | Complex data analysis. | [s:xai-reasoning]
 | `high` | Hard math and multi-step logic. Default on Grok 4.7. | [s:xai-reasoning]
-| `xhigh` | When answer quality matters more than latency (Grok 4.6 and later). | [s:xai-reasoning]
+| `xhigh` | When answer quality matters more than latency. | [s:xai-reasoning]
 
 ## How the prompt should change with effort
 - At every level: state task, constraints and output format directly; the model reasons before answering. [s:xai-best-practices]
