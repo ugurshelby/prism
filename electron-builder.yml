@@ -1,6 +1,7 @@
 # Ortak taban: ürünler build/<ürün>.yml ile derlenir (build/ray.yml, build/spectrum.yml); bu dosya yalnızca paylaşılan ayarları tutar.
-appId: com.prompter.app
-productName: Prism
+# Kimlik bilerek geçersiz: tabanı doğrudan paketlemek (--config olmadan) 2.x kurulumunun üzerine yazmasın.
+appId: invalid.base-config.use-build-product-yml
+productName: Prism-base-do-not-ship
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 directories:
   buildResources: resources
