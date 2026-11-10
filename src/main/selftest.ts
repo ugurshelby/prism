@@ -3,6 +3,7 @@
 //             --discover (yalnızca key'leri doğrulayıp erişilen modelleri listeler)
 //             --smoke (ağ ve key olmadan paketin bütünlüğünü dener; CI'da her platformda paketlenmiş uygulamayla çalışır)
 import { app } from 'electron'
+import { PRODUCT } from '@shared/product'
 import { FamilyChoiceSchema, ProviderIdSchema, SurfaceSchema } from '@shared/schemas'
 import { analyze } from './engine/analyze'
 import { generatePrompt } from './engine/generate'
@@ -46,6 +47,7 @@ export async function selftest(argv: string[]) {
       ].filter(Boolean)
       if (leaks.length) throw new Error(`Güvenlik denetimi başarısız: ${leaks.join(', ')}`)
       log('SMOKE', {
+        product: PRODUCT.id,
         version: app.getVersion(),
         platform: `${process.platform}-${process.arch}`,
         cards: paths.length,

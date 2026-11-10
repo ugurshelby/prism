@@ -34,17 +34,22 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
-      # İki ürün aynı commit'ten derlenir; her biri ağ ve key olmadan açılıp bütün bilgi kartlarını yükleyebilmeli.
-      - run: npm run build:ray
-      - name: Smoke test (Ray)
+      # İki ürün aynı commit'ten build/<ürün>.yml ile paketlenir (kurulum dosyası yok, yalnızca açılmış paket);
+      # her biri ağ ve key olmadan açılır, bütün bilgi kartlarını yükler ve doğru ürün olarak açıldığını söyler.
+      - name: Package and smoke both products
         shell: bash
         run: |
-          if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a npx electron . --no-sandbox --selftest --smoke; else npx electron . --selftest --smoke; fi
-      - run: npm run build:spectrum
-      - name: Smoke test (Spectrum)
-        shell: bash
-        run: |
-          if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a npx electron . --no-sandbox --selftest --smoke; else npx electron . --selftest --smoke; fi
+          for p in ray spectrum; do
+            case "$p" in ray) name="Prism Ray"; exe=prism-ray ;; spectrum) name="Prism Spectrum"; exe=prism-spectrum ;; esac
+            rm -rf release
+            node scripts/build-product.mjs "$p" --dist dir
+            case "$RUNNER_OS" in
+              Windows) "release/win-unpacked/$name.exe" --selftest --smoke | tee smoke.log ;;
+              macOS) app=$(ls -d release/mac*/"$name.app" | head -n 1); "$app/Contents/MacOS/$name" --selftest --smoke | tee smoke.log ;;
+              Linux) xvfb-run -a "release/linux-unpacked/$exe" --no-sandbox --selftest --smoke | tee smoke.log ;;
+            esac
+            grep -q "\"product\": \"$p\"" smoke.log
+          done
 
   audit:
     name: dependency audit
