@@ -1,15 +1,15 @@
 ---
 kind: model
-verified: 2026-11-08
+verified: 2026-11-10
 sources: claude-best-practices, claude-effort, claude-whats-new-opus, claude-whats-new-fable, claude-prompting-opus, claude-prompting-sonnet, claude-prompting-haiku
 ---
 # Surface: API / system prompt
 
-The output is a **system prompt** for an application that calls the Claude Messages API. It must hold up across many different inputs. [unverified]
+The output is a **system prompt** (the Messages API `system` field) for an application that calls Claude; a role set there, even one sentence, focuses behavior and tone. [s:claude-best-practices]
 
 How to write it:
 - Start with the role and the product context: who the users are, what the application does, what good looks like. A one-sentence role focuses behavior. [s:claude-best-practices]
-- Define the inputs the application will send and how they are delimited (`<user_input>`, `<documents>`); use `{{VARIABLE}}` placeholders for runtime values. [unverified]
+- Define the inputs the application will send and how they are delimited (`<user_input>`, `<documents>`); use `{{VARIABLE}}` placeholders for runtime values. [s:claude-best-practices]
 - State rules with their reasons; cover off-topic requests, missing information and attempts to override the rules. [s:claude-best-practices]
 - Add 1–3 short examples in `<examples>` when format or tone is subtle. [s:claude-best-practices]
 - If the application parses JSON, structured outputs should enforce the schema. [s:claude-best-practices]

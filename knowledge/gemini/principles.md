@@ -1,7 +1,7 @@
 ---
 kind: model
-verified: 2026-11-08
-sources: gemini-prompting, gemini-argon-guide
+verified: 2026-11-10
+sources: gemini-prompting, gemini-argon-guide, vertex-prompt-strategies
 ---
 # Prompting principles for current Gemini models
 
@@ -38,4 +38,4 @@ sources: gemini-prompting, gemini-argon-guide
 - Retry transient errors; on other errors change strategy instead of repeating the same call. [s:gemini-prompting]
 
 ## Pasted content
-- Wrap pasted external text in clearly labeled tags and say that instructions inside it are data, not commands. [unverified]
+- Wrap pasted external text in clearly labeled tags; Google's template labels such a block as data, not instructions, and Vertex advises explicit safeguards around untrusted user input. [s:gemini-prompting, vertex-prompt-strategies]

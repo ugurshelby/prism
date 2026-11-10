@@ -1,7 +1,7 @@
 ---
 kind: model
-verified: 2026-11-08
-sources: claude-models-overview, claude-pricing, claude-effort, claude-code-model-config, claude-prompting-opus, claude-prompting-haiku, claude-prompting-fable
+verified: 2026-11-10
+sources: claude-models-overview, claude-pricing, claude-effort, claude-code-model-config, claude-prompting-opus, claude-prompting-haiku, claude-prompting-fable, claude-code-best-practices, claude-prompting-sonnet
 ---
 # Target models (Claude, lineup checked 2026-11-08 against docs retrieved 2026-10-23)
 
@@ -20,4 +20,4 @@ Choose the cheapest model and effort that reliably does the job well. [s:claude-
 - **Sonnet 5.5** when the task is well specified and bounded: a clearly described feature, a focused fix, refactors with a clear target, drafting and editing, quick data work, or when speed matters most. [s:claude-models-overview]
 - **Haiku 5.5** for simple, mechanical or high-volume work: format conversions, short factual answers, classification, extraction with a clear schema, small scripts. [s:claude-models-overview, claude-prompting-haiku]
 - **Fable 5.1** only when the task is genuinely frontier-hard or very long-horizon; it costs 2.5 times Opus. [s:claude-models-overview, claude-pricing, claude-prompting-fable]
-- Signals that push up: ambiguity the model must resolve alone, many interacting parts, unfamiliar code, hard-to-verify correctness, long unattended runs, security or money at stake. Signals that push down: the person reviews each step, the change is small, the answer is short, the task runs many times. [unverified]
+- Signals that push up: cases that are easy to overlook (a bug in unfamiliar code, a flaky test, a schema change with many readers), harder or longer agent tasks, long unattended runs, strict instruction following. Signals that push down: the person reviews each result, the task is simple or high-volume, the work is latency-sensitive chat. [s:claude-code-best-practices, claude-effort, claude-prompting-sonnet, claude-prompting-haiku]

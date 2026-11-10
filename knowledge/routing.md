@@ -1,17 +1,17 @@
 ---
-kind: model
-verified: 2026-11-08
-sources: claude-pricing, claude-models-overview, openai-models, gemini-pricing, gemini-models, xai-models, gemini-argon-guide, openai-latest-model, antigravity-models, grok-build-settings
+kind: method
+verified: 2026-11-10
+sources: claude-pricing, claude-models-overview, openai-models, gemini-pricing, gemini-models, xai-models, gemini-argon-guide, openai-latest-model, antigravity-models, grok-build-settings, claude-choosing-model, claude-effort, claude-prompting-opus
 ---
 # Choosing across model families
 
-Used only when the person lets Prism pick among several families. The candidates are the models the person can actually use; never recommend outside them. [unverified]
+Used only when the person lets Prism pick among several families. The candidates are the models the person can actually use; never recommend outside them.
 
 ## First, respect the person's context
-- If the raw prompt names a tool or family ("in Claude Code", "Codex", "ChatGPT", "Gemini", "Antigravity", "Grok"), stay in that family when it is among the candidates. [unverified]
-- Otherwise judge the task on its merits: capability needed, cost, latency and the surface. [unverified]
+- If the raw prompt names a tool or family ("in Claude Code", "Codex", "ChatGPT", "Gemini", "Antigravity", "Grok"), stay in that family when it is among the candidates.
+- Otherwise judge the task on its merits: capabilities needed, speed and cost. [s:claude-choosing-model]
 
-## Rough tiers (list prices per MTok input / output, checked 2026-11-08)
+## Rough tiers (list prices per MTok input / output, checked 2026-11-10)
 
 | Tier | Claude | OpenAI | Gemini | Grok |
 |---|---|---|---|---|
@@ -30,6 +30,6 @@ Prices alone don't decide: reasoning models bill thinking as output, and some th
 - **Grok (4.7):** capable flagship at a low price; 500k context. [s:xai-models]
 
 ## How to decide
-- Pick the cheapest model and level that will reliably do this task well on this surface. If two families are close, prefer the one matching the surface the person already uses. [unverified]
-- Recommend the effort in the chosen model's own scale; level names don't mean the same amount of thinking across families. [unverified]
-- Alternatives may come from other families when they are a real trade-off; state it honestly. Don't claim benchmark results you weren't given. [unverified]
+- Pick the cheapest model and level that reliably does this task well; upgrade only for a real capability gap, and tune effort before switching models. [s:claude-choosing-model, claude-effort]
+- Recommend the effort in the chosen model's own scale; level names don't mean the same amount of thinking across families. [s:claude-prompting-opus, claude-effort]
+- Alternatives may come from other families when they are a real trade-off; state it honestly. Don't claim benchmark results you weren't given.

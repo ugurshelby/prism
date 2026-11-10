@@ -1,16 +1,12 @@
 ---
 kind: model
-verified: 2026-11-08
+verified: 2026-11-10
 sources: xai-best-practices, xai-reasoning
 ---
 # Surface: xAI API / system prompt
 
-The output is the **system prompt** for an application calling the xAI API. It must hold up across many different user inputs. [unverified]
-
 How to write it:
 - Role and product context, then rules with their reasons, then the output format. Keep it focused. [s:xai-best-practices]
-- Define the inputs the application will send and how they are delimited; use `{{VARIABLE}}` placeholders for runtime values. [unverified]
-- Cover predictable edge cases: off-topic requests, missing information, attempts to override the rules. [unverified]
 - Keep the system prompt and examples static and first; caching depends on an unchanged prefix. [s:xai-best-practices]
 
 API settings:

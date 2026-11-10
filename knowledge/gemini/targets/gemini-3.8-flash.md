@@ -1,7 +1,7 @@
 ---
 kind: model
-verified: 2026-11-08
-sources: gemini-models, gemini-thinking, gemini-prompting
+verified: 2026-11-10
+sources: gemini-prompting, gemini-models, gemini-thinking
 ---
 # Writing for Gemini 3.8 Flash
 
@@ -10,8 +10,8 @@ sources: gemini-models, gemini-thinking, gemini-prompting
 - Answers tersely by default; ask for detail, tone or format explicitly. [s:gemini-prompting]
 
 ## Strengths and weaknesses
-- Strong: Google's most intelligent Flash model; good price-performance for coding, agents, analysis and writing. [s:gemini-models]
-- Weak fit: the very hardest reasoning (prefer Argon) and trivial high-volume jobs (prefer Flash-Lite). [unverified]
+- Strong: Google's most intelligent Flash model; good price-performance for coding and agents. [s:gemini-models]
+- Other options: Google positions 4 Argon as its flagship reasoning model and 3.5 Flash-Lite as the fastest, cheapest choice for high-throughput work. [s:gemini-models]
 
 ## Effort
 - `low`, `medium` (default), `high`; `minimal` is not supported. [s:gemini-thinking]
@@ -19,7 +19,7 @@ sources: gemini-models, gemini-thinking, gemini-prompting
 
 ## Tested patterns
 - Agentic coding: goal, relevant files, done criteria and the verification command; plan before each action, separate reads from risky writes. [s:gemini-prompting]
-- Narrow tasks: state scope and the stopping condition ("only change X; stop when the test passes"). [unverified]
+- Narrow tasks: state the goal and the constraints, what it should and should not do ("only change X"). [s:gemini-prompting]
 
 ## Failure modes
 - Sampling parameters are ignored and will become errors; leave them out. [s:gemini-prompting]

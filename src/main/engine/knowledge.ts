@@ -34,7 +34,8 @@ function sources(): SourcesFile {
 }
 
 /** Yalnızca Prism'in kendi yöntemini anlatan kart kaynaksız olabilir; kartın kendi beyanına güvenilmez. */
-const METHOD_CARDS = new Set(['vision.md'])
+// routing.md Prism'in aileler arası seçim yöntemidir: satıcı iddiaları kaynaklı, Prism kuralları kaynaksız (K1, 2026-11-10).
+const METHOD_CARDS = new Set(['vision.md', 'routing.md'])
 
 function parsedCard(path: string): ParsedCard {
   const parsed = parseCard(readKnowledge(path), sources())

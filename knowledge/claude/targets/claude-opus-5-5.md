@@ -1,7 +1,7 @@
 ---
 kind: model
-verified: 2026-11-08
-sources: claude-prompting-opus, claude-models-overview, claude-whats-new-opus
+verified: 2026-11-10
+sources: claude-prompting-opus, claude-models-overview, claude-whats-new-opus, claude-choosing-model, claude-pricing, claude-code-best-practices
 ---
 # Writing for Claude Opus 5.5
 
@@ -11,7 +11,7 @@ sources: claude-prompting-opus, claude-models-overview, claude-whats-new-opus
 
 ## Strengths and weaknesses
 - Strong: long-running agentic coding and knowledge work, code review, analysis, dense visual inputs, computer use. [s:claude-models-overview]
-- Weak fit: trivial or very high-volume work, where Haiku or Sonnet cost far less. [unverified]
+- Weak fit: trivial or very high-volume work, where Haiku or Sonnet cost far less. [s:claude-choosing-model, claude-pricing, claude-code-best-practices]
 
 ## Effort
 - Default `medium`; thinking can't be turned off, so effort is the only control. [s:claude-prompting-opus]

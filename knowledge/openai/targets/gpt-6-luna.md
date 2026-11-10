@@ -1,22 +1,22 @@
 ---
 kind: model
-verified: 2026-11-08
-sources: openai-models, openai-reasoning, openai-latest-model
+verified: 2026-11-10
+sources: openai-models, openai-reasoning, openai-latest-model, openai-prompt-engineering, chatgpt-prompting
 ---
 # Writing for GPT-6 Luna
 
 ## How it reads prompts
-- One job per prompt; the exact output format (labels, JSON keys, length) and 2–4 short examples when format or category boundaries are subtle. [unverified]
+- One focused task per prompt; the exact output format, plus a few diverse input/output examples when format or category boundaries are subtle. [s:openai-models, openai-prompt-engineering]
 
 ## Strengths and weaknesses
 - Strong: OpenAI's most efficient model for focused, high-volume tasks; $0.10 / $0.50 per MTok. [s:openai-models]
-- Weak fit: open-ended, multi-step or judgment-heavy work; recommend Terra or Sol. [unverified]
+- Weak fit: complex multi-step work; the docs position Sol for complex work and Astra for the most demanding work. [s:openai-models, openai-latest-model]
 
 ## Effort
 - `none` to `max`; default `medium`. `none` or `low` fits most Luna work. [s:openai-reasoning, openai-latest-model]
 
 ## Tested patterns
-- Spell out the decision rules for edge cases; for extraction, say what to return when a field is missing. [unverified]
+- Spell out the rules for edge cases (what to do and never do); for extraction, enforce the schema with structured outputs and say to flag missing information instead of guessing. [s:openai-prompt-engineering, chatgpt-prompting]
 
 ## Failure modes
-- Relying on judgment it doesn't have budget for at `none`. [unverified]
+- Running tasks that need judgment at `none`, which is meant for latency-critical work that does not benefit from reasoning. [s:openai-reasoning]

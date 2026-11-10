@@ -1,16 +1,16 @@
 ---
 kind: model
-verified: 2026-11-08
-sources: gemini-prompting, gemini-argon-guide, gemini-thinking
+verified: 2026-11-10
+sources: vertex-system-instructions, gemini-prompting, vertex-prompt-templates, vertex-prompt-strategies, gemini-argon-guide, gemini-thinking
 ---
 # Surface: Gemini API / system instruction
 
-The output is the **system instruction** for an application calling the Gemini API (Google AI Studio or Vertex AI). It must hold up across many different user inputs. [unverified]
+The output is the **system instruction** for an application calling the Gemini API (Google AI Studio or Vertex AI). It applies to the entire request and across user and model turns, so it must hold up across many inputs. [s:vertex-system-instructions]
 
 How to write it:
 - Start with role and product context, then behavioral constraints and the output format; Google advises putting these first. [s:gemini-prompting]
-- Define the inputs the application will send and how they are delimited. Use `{{VARIABLE}}` placeholders for runtime values such as `{{CURRENT_DATE}}`. [unverified]
-- State rules with their reasons; cover off-topic requests, missing information and attempts to override the rules. [unverified]
+- Define the inputs the application will send, how they are delimited and how to handle missing data. Mark runtime values with placeholders; Vertex AI prompt templates use single braces, e.g. `{current_date}`. [s:vertex-prompt-templates, vertex-prompt-strategies]
+- State the rules and the fixed response for off-topic requests and missing information. System instructions don't fully prevent jailbreaks or leaks: keep secrets out and add safeguards for untrusted input. [s:vertex-system-instructions, vertex-prompt-strategies]
 - For grounded apps, restrict answers to the provided context and say what to do when the information is missing. [s:gemini-prompting]
 - Include a few consistently formatted examples when format or tone is subtle. [s:gemini-prompting]
 - Keep the static part first and unchanged so requests share a cached prefix. [s:gemini-argon-guide]

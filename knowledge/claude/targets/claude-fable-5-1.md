@@ -1,7 +1,7 @@
 ---
 kind: model
-verified: 2026-11-08
-sources: claude-prompting-fable, claude-models-overview, claude-whats-new-fable
+verified: 2026-11-10
+sources: claude-prompting-fable, claude-models-overview, claude-whats-new-fable, claude-pricing
 ---
 # Writing for Claude Fable 5.1
 
@@ -11,7 +11,7 @@ sources: claude-prompting-fable, claude-models-overview, claude-whats-new-fable
 
 ## Strengths and weaknesses
 - Strong: the most capable model; demanding reasoning and long-horizon agentic work. [s:claude-models-overview]
-- Weak fit: ordinary work; it costs 2.5 times Opus 5.5. [unverified]
+- Weak fit: routine work at its default `high`; per token it costs 2.5 times Opus 5.5, though at `low` it is often competitive on cost per task while scoring higher. [s:claude-pricing, claude-prompting-fable]
 
 ## Effort
 - Default `high`. At `low` it searches less; at `xhigh`/`max` it may draft long deliverables in thinking and write them again. [s:claude-prompting-fable]

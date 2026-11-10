@@ -23,6 +23,18 @@ describe('knowledge/ cards', () => {
     expect(files.toSorted()).toEqual(expected.toSorted())
   })
 
+  // routing.md bir yöntem kartıdır: kaynaksız olabilen yalnızca Prism'in kendi kuralları; satıcıya dair her satır kaynaklı.
+  it('routing.md leaves only its own policy lines unsourced', () => {
+    const lines = readFileSync(join(dir, 'routing.md'), 'utf8').split(/\r?\n/)
+    const body = lines.slice(lines.indexOf('---', 1) + 1)
+    const unsourced = body.filter((l) => l.trim() && !l.startsWith('#') && !l.startsWith('|---') && !l.startsWith('| Tier') && !l.includes('[s:'))
+    expect(unsourced.map((l) => l.slice(0, 40))).toEqual([
+      'Used only when the person lets Prism pic',
+      '- If the raw prompt names a tool or fami',
+      '- Alternatives may come from other famil'
+    ])
+  })
+
   it.each(files)('%s is valid and fully sourced', (f) => {
     const p = parseCard(readFileSync(join(dir, f), 'utf8'), sources)
     expect(p.issues).toEqual([])
