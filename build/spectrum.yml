@@ -1,0 +1,23 @@
+# Prism Spectrum ürün yapılandırması: ortak tabanı (electron-builder.yml) genişletir, yalnızca kimliği ve çıktı adlarını değiştirir.
+extends: electron-builder.yml
+appId: com.prism.spectrum
+productName: Prism Spectrum
+extraMetadata:
+  # deb paket adı package.json name'den gelir; ürünler yan yana kurulabilsin diye ayrı ad.
+  name: prism-spectrum
+  version: 3.0.0
+artifactName: Prism-Spectrum-${version}-${os}-${arch}.${ext}
+icon: resources/spectrum/icon.png
+# Diziler birleşmez, değiştirilir: knowledge girdisi aynen tekrarlanır, tray girdisi ürün klasörüne bakar.
+extraResources:
+  - from: knowledge
+    to: knowledge
+  - from: resources/spectrum
+    to: .
+    filter:
+      - "tray*.png"
+      - "trayTemplate*.png"
+nsis:
+  artifactName: Prism-Spectrum-Setup-${version}-${arch}.${ext}
+linux:
+  executableName: prism-spectrum
