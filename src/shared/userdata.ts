@@ -6,6 +6,8 @@
 import { PROVIDERS } from './catalog'
 
 const BASES: ReadonlySet<string> = new Set([
+  // Eski sürümler key'leri userData/.env'de düz metin tutabiliyordu (env.ts leftoverEnvNames); o da silinir.
+  '.env',
   'settings.json',
   'history.json',
   'history.v1.json',

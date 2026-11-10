@@ -22,7 +22,7 @@ describe('wipeOwnData', () => {
     mkdirSync(join(a, 'Cache'))
     writeFileSync(join(b, 'vertex.key'), 'x')
     expect(wipeOwnData([a, b, join(a, 'missing')])).toEqual([])
-    expect(readdirSync(a).sort()).toEqual(['.env', 'Cache', 'notes.txt'])
+    expect(readdirSync(a).sort()).toEqual(['Cache', 'notes.txt'])
     expect(readdirSync(b)).toEqual([])
   })
 

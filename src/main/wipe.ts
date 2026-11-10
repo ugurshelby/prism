@@ -29,7 +29,8 @@ export function wipeOwnData(dirs: readonly string[]): string[] {
       try {
         const st = lstatSync(path)
         // Bağlantının hedefi ezilmez (klasör dışındaki bir dosyayı sıfırlamasın); yalnızca bağlantı kaldırılır.
-        if (st.isSymbolicLink()) rmSync(path, { force: true })
+        // Birden çok bağlantısı olan dosya da ezilmez: ezmek klasör dışındaki aynı dosyayı da sıfırlar.
+        if (st.isSymbolicLink() || (st.isFile() && st.nlink > 1)) rmSync(path, { force: true })
         else if (st.isFile()) wipeFile(path)
         else failed.add(name)
       } catch (e) {

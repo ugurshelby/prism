@@ -1,4 +1,4 @@
-import { app, clipboard, globalShortcut, Menu, nativeImage, Notification, session, shell, Tray } from 'electron'
+import { app, clipboard, dialog, globalShortcut, Menu, nativeImage, Notification, session, shell, Tray } from 'electron'
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -17,7 +17,7 @@ import {
   WindowModeSchema
 } from '@shared/schemas'
 import type { GenerateRequest, StreamEvent } from '@shared/types'
-import { getSettings, knowledgeDir, updateSettings } from './config'
+import { blockWrites, getSettings, knowledgeDir, updateSettings } from './config'
 import { analyze } from './engine/analyze'
 import { generatePrompt } from './engine/generate'
 import { appImagePath, devEnv } from './env'
@@ -285,25 +285,46 @@ function dataDirs(): string[] {
 }
 
 /**
- * "Tüm verilerimi sil": süren istekler durdurulur, açılış kaydı kaldırılır, dosyalar silinir. Bir parça başarısız
- * olursa hangi dosyaların kaldığı hata olarak döner ve uygulama açık kalır; her şey silindiyse uygulama boş verilerle
- * yeniden başlar (bellekteki key, ayar ve geçmiş de böylece gider).
+ * "Tüm verilerimi sil". Arayüz güvenilmez sayıldığı için onay ana süreçteki sistem penceresinden alınır (varsayılan
+ * Vazgeç). Sonra süren istekler durdurulur ve diske yazım kapatılır: bellekteki geçmiş, ayar ya da model önbelleği
+ * silinen dosyaları geri yazamaz. Açılış kaydı kaldırılır, dosyalar silinir. Bir parça başarısız olursa kalan dosyalar
+ * hata olarak döner ve uygulama yazımsız açık kalır; her şey silindiyse uygulama boş verilerle yeniden başlar.
  */
-function deleteAllData() {
+async function deleteAllData(): Promise<boolean> {
+  const win = getWindow()
+  const options = {
+    type: 'warning' as const,
+    title: PRODUCT.name,
+    message: msg('wipe.confirmTitle'),
+    detail: msg('wipe.confirmBody'),
+    buttons: [msg('wipe.cancel'), msg('wipe.confirm')],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true
+  }
+  const { response } = win ? await dialog.showMessageBox(win, options) : await dialog.showMessageBox(options)
+  if (response !== 1) return false
   for (const controller of running.values()) controller.abort()
+  blockWrites()
   const failed: string[] = []
-  try {
-    setLaunchAtLogin(false)
-  } catch (e) {
-    logWarn('wipe', 'açılış kaydı kaldırılamadı', e)
-    failed.push('autostart')
+  // Geliştirmede ayrı userData ile çalışılıyorsa gerçek kurulumun açılış kaydına dokunulmaz.
+  if (!DEV.userData) {
+    try {
+      setLaunchAtLogin(false)
+    } catch (e) {
+      logWarn('wipe', 'açılış kaydı kaldırılamadı', e)
+      failed.push('autostart')
+    }
   }
   failed.push(...wipeOwnData(dataDirs()))
   if (failed.length) throw new UserError(msg('err.deleteData', { files: failed.join(', ') }))
   setImmediate(() => {
-    app.relaunch()
+    // AppImage'da process.execPath geçici bağlama noktasıdır; yeniden başlatma gerçek dosyadan yapılır.
+    // --hidden atılır: açılışta başlamış bir kopya silmeden sonra görünmez dönmesin.
+    app.relaunch({ execPath: appImagePath() ?? process.execPath, args: process.argv.slice(1).filter((a) => a !== '--hidden') })
     app.exit(0)
   })
+  return true
 }
 
 // Exec satırında çift tırnak içindeki yolda ", ters bölü, $, ters tırnak, % ya da satır sonu komut enjeksiyonuna

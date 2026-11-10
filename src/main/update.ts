@@ -61,11 +61,26 @@ async function fetchReleases() {
     signal: AbortSignal.timeout(TIMEOUT_MS)
   })
   if (!res.ok) throw new Error(`GitHub ${res.status}`)
-  const declared = Number(res.headers.get('content-length') ?? 0)
-  if (declared > MAX_RESPONSE_BYTES) throw new Error('yanıt çok büyük')
-  const text = await res.text()
-  if (text.length > MAX_RESPONSE_BYTES) throw new Error('yanıt çok büyük')
-  return ReleaseListSchema.parse(JSON.parse(text))
+  return ReleaseListSchema.parse(JSON.parse(await readCapped(res)))
+}
+
+// Gövde parça parça okunur ve sınır aşılınca kesilir; content-length olmayan (sıkıştırılmış) yanıt da sınırlıdır.
+async function readCapped(res: Response): Promise<string> {
+  if (!res.body) throw new Error('yanıt gövdesi yok')
+  const reader: ReadableStreamDefaultReader<Uint8Array> = res.body.getReader()
+  const chunks: Uint8Array[] = []
+  let size = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > MAX_RESPONSE_BYTES) {
+      await reader.cancel()
+      throw new Error('yanıt çok büyük')
+    }
+    chunks.push(value)
+  }
+  return Buffer.concat(chunks).toString('utf8')
 }
 
 /** Yayın listesini getirir ve durumu kaydeder. Ağ ya da biçim hatası kayda geçer ve atılır; eski durum korunur. */

@@ -246,7 +246,7 @@ export function installMock() {
       openRelease: async () => {},
       onChanged: () => () => {}
     },
-    data: { deleteAll: async () => void (history = []) },
+    data: { deleteAll: async () => ((history = []), true) },
     platform: 'win32'
   }
   window.prism = api

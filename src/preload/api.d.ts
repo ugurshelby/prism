@@ -74,8 +74,11 @@ export interface PrismApi {
     onChanged(cb: () => void): () => void
   }
   data: {
-    /** Key'leri, geçmişi, ayarları ve önbellekleri siler, açılış kaydını kaldırır ve uygulamayı yeniden başlatır. Kısmi silme hata ile reddedilir. */
-    deleteAll(): Promise<void>
+    /**
+     * Ana süreç sistem penceresiyle onay ister; onaylanırsa key'leri, geçmişi, ayarları ve önbellekleri siler, açılış
+     * kaydını kaldırır ve uygulamayı yeniden başlatır. Vazgeçilirse false döner; kısmi silme hata ile reddedilir.
+     */
+    deleteAll(): Promise<boolean>
   }
   platform: string
 }

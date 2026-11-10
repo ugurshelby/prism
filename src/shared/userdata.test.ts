@@ -18,6 +18,7 @@ describe('isOwnDataFile', () => {
       'update-state.json',
       'anthropic.key',
       'vertex.key',
+      '.env',
       'settings.json.a1b2c3d4e5f6.tmp',
       'models.json.bozuk-1731200000000'
     ]) {
@@ -30,7 +31,7 @@ describe('isOwnDataFile', () => {
   })
 
   it('leaves other files alone', () => {
-    for (const name of ['.env', 'Cookies', 'Local State', 'Preferences', 'notes.txt', 'xsettings.json', 'settings.json.bak', 'evil.key', '../settings.json']) {
+    for (const name of ['.env.local', 'Cookies', 'Local State', 'Preferences', 'notes.txt', 'xsettings.json', 'settings.json.bak', 'evil.key', '../settings.json']) {
       expect(isOwnDataFile(name), name).toBe(false)
     }
   })
