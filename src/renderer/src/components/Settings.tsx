@@ -1,9 +1,9 @@
 import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
-import { Cpu, FolderOpen, Plug, Power, RotateCcw, X } from 'lucide-react'
+import { Cpu, FolderOpen, Plug, Power, RefreshCw, RotateCcw, Trash2, X } from 'lucide-react'
 import { FAMILY_SHORT, PROVIDERS, PROVIDER_INFO, SURFACES, type FamilyChoice, type Surface } from '@shared/catalog'
 import { PRODUCT } from '@shared/product'
-import type { EngineRef, ReplyLanguage, SettingsPatch, SettingsView, UiLanguage } from '@shared/types'
+import type { EngineRef, ReplyLanguage, SettingsPatch, SettingsView, UiLanguage, UpdateView } from '@shared/types'
 import { cleanError } from '../errors'
 import { fmtNumber, surfaceLabel, t } from '../i18n'
 import { FamilyPicker, ProviderCard, ToggleRow } from './Fields'
@@ -22,6 +22,10 @@ export function Settings({
   const [hotkey, setHotkey] = useState('')
   const [test, setTest] = useState<{ ok: boolean; ms: number; message?: string; engine?: EngineRef } | 'running' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [upd, setUpd] = useState<{ state: 'idle' | 'checking' | 'error'; view?: UpdateView; message?: string }>({ state: 'idle' })
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     window.prism.settings
@@ -47,6 +51,28 @@ export function Settings({
       changed(await window.prism.settings.set(patch))
     } catch (e) {
       setError(cleanError(e))
+    }
+  }
+
+  const checkNow = async () => {
+    setUpd({ state: 'checking' })
+    try {
+      setUpd({ state: 'idle', view: await window.prism.update.check() })
+    } catch (e) {
+      setUpd({ state: 'error', message: cleanError(e) })
+    }
+  }
+
+  // Onaylanırsa ana süreç uygulamayı yeniden başlatır; vazgeçilirse false döner, kısmi silme hata olarak gelir.
+  const deleteAll = async () => {
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      if (!(await window.prism.data.deleteAll())) setConfirmDelete(false)
+    } catch (e) {
+      setDeleteError(cleanError(e))
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -279,6 +305,73 @@ export function Settings({
                 />
               )}
               <span className="hint">{t('settings.privacyHint')}</span>
+            </div>
+
+            <div className="group">
+              <span className="label">{t('settings.updates')}</span>
+              <ToggleRow label={t('settings.updateCheck')} on={v.updateCheck} onChange={(updateCheck) => apply({ updateCheck })} />
+              <span className="hint">{t('settings.updateHint', { product: PRODUCT.name })}</span>
+              <div className="row">
+                <button className="ghost" onClick={checkNow} disabled={upd.state === 'checking'}>
+                  <RefreshCw size={14} /> {upd.state === 'checking' ? t('settings.updateChecking') : t('settings.updateNow')}
+                </button>
+              </div>
+              {upd.view && (
+                <span className="hint ok-text" role="status">
+                  {upd.view.latest
+                    ? t('settings.updateFound', { version: upd.view.latest.version })
+                    : t('settings.updateUpToDate', { version: upd.view.current })}
+                </span>
+              )}
+              {upd.state === 'error' && (
+                <span className="hint bad-text" role="alert">
+                  {t('settings.updateFailed', { message: upd.message ?? '' })}
+                </span>
+              )}
+            </div>
+
+            <div className="group">
+              <span className="label">{t('settings.data')}</span>
+              <span className="hint">{t('settings.dataHint')}</span>
+              {confirmDelete ? (
+                <div
+                  className="confirm"
+                  role="alertdialog"
+                  aria-labelledby="delete-title"
+                  aria-describedby="delete-body"
+                  onKeyDown={(e) => {
+                    // Esc önce bu onayı kapatır; ayarlar sayfası açık kalır.
+                    if (e.key === 'Escape' && !deleting) {
+                      e.stopPropagation()
+                      setConfirmDelete(false)
+                    }
+                  }}
+                >
+                  <b id="delete-title">{t('settings.deleteConfirmTitle')}</b>
+                  <span id="delete-body" className="hint">
+                    {t('settings.deleteConfirmBody', { product: PRODUCT.name })}
+                  </span>
+                  <div className="row">
+                    <button className="ghost" autoFocus disabled={deleting} onClick={() => setConfirmDelete(false)}>
+                      {t('common.cancel')}
+                    </button>
+                    <button className="ghost danger" disabled={deleting} onClick={deleteAll}>
+                      <Trash2 size={14} /> {deleting ? t('settings.deleting') : t('settings.deleteConfirm')}
+                    </button>
+                  </div>
+                  {deleteError && (
+                    <span className="hint bad-text" role="alert">
+                      {deleteError}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="row">
+                  <button className="ghost danger" onClick={() => setConfirmDelete(true)}>
+                    <Trash2 size={14} /> {t('settings.deleteAll')}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="group">
