@@ -1,10 +1,8 @@
-// Uygulama ve tray ikonlarını bağımlılıksız üretir: `npm run icons`.
-// Çizim: koyu küre + gökkuşağı halka + ışını kıran prizma (arayüzdeki logo ile aynı).
+// Ürün başına uygulama ve tray ikonlarını bağımlılıksız üretir: `npm run icons` (hepsi) ya da `npm run icons -- ray`.
+// Çıktı resources/<ürün>/ altına yazılır; kökteki resources/icon.png ve tray*.png'ye dokunulmaz (mevcut build onları okur).
+// Ara çizimler: Spectrum ışını gökkuşağına ayırır, Ray tek ışını kırmadan geçirir. Son logolar sahibin seçimidir.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { deflateSync } from 'node:zlib'
-
-const OUT = new URL('../resources/', import.meta.url)
-mkdirSync(OUT, { recursive: true })
 
 // ---- PNG kodlayıcı ----
 const CRC = new Uint32Array(256).map((_, n) => {
@@ -61,8 +59,20 @@ function inTri(x, y) {
 const triEdge = (x, y) => Math.min(...TRI.map((a, i) => segDist(x, y, ...a, ...TRI[(i + 1) % 3])))
 const RING = ['#f78fb3', '#ff9a5a', '#ffd36e', '#6cc9ff', '#8be28f', '#f78fb3'].map(hex)
 
-/** Bir alt-pikselin rengi: [r,g,b,a] (0-255, a 0-1). */
-function sample(x, y, kind) {
+/** Katmanları üst üste bindirir: [r,g,b,a] (0-255, a 0-1). */
+function over(layers) {
+  let out = [0, 0, 0, 0]
+  for (const [lr, lg, lb, la] of layers) {
+    const a = la + out[3] * (1 - la)
+    out = [0, 1, 2].map((i) => (([lr, lg, lb][i] * la + out[i] * out[3] * (1 - la)) / (a || 1))).concat(a)
+  }
+  return out
+}
+
+// ---- Ürün çizimleri: (x, y, kind) -> [r,g,b,a]; kind 'app' | 'tray' | 'template' ----
+
+/** Spectrum: koyu küre, gökkuşağı halka, ışını iki renge kıran prizma (vurgu --warm #ff8a4c). */
+function drawSpectrum(x, y, kind) {
   const layers = []
   const cx = x - 0.5, cy = y - 0.5, r = Math.hypot(cx, cy)
   if (kind === 'app') {
@@ -82,16 +92,32 @@ function sample(x, y, kind) {
   ]
   if (kind === 'app') for (const [s, c] of beams) if (segDist(x, y, ...s) < 0.018) layers.push([...hex(c), 0.95])
   if (triEdge(x, y) < w) layers.push(kind === 'template' ? [0, 0, 0, 1] : [...mix(hex('#ffd36e'), hex('#ff8a4c'), y), 1])
-  // üst üste bindir
-  let out = [0, 0, 0, 0]
-  for (const [lr, lg, lb, la] of layers) {
-    const a = la + out[3] * (1 - la)
-    out = [0, 1, 2].map((i) => (([lr, lg, lb][i] * la + out[i] * out[3] * (1 - la)) / (a || 1))).concat(a)
-  }
-  return out
+  return over(layers)
 }
 
-function render(size, kind) {
+/** Ray: aynı küre ve prizma, tek renk (vurgu --beam #eef0f4); ışın prizmadan kırılmadan düz geçer. */
+const BEAM = hex('#eef0f4')
+function drawRay(x, y, kind) {
+  const layers = []
+  const r = Math.hypot(x - 0.5, y - 0.5)
+  const ink = kind === 'template' ? [0, 0, 0] : BEAM
+  if (kind === 'app') {
+    if (r < 0.47) layers.push([...mix(hex('#1d2029'), hex('#0b0c10'), y), 1])
+    if (r > 0.425 && r < 0.47) layers.push([...BEAM, 1])
+    if (inTri(x, y)) layers.push([...BEAM, 0.1])
+  }
+  // tek düz ışın: tray boyutunda kalın, 16 px'te Spectrum'dan ayıran işaret budur
+  const bw = kind === 'app' ? 0.018 : 0.06
+  if (segDist(x, y, 0.06, 0.55, 0.94, 0.55) < bw) layers.push([...ink, kind === 'app' ? 0.95 : 1])
+  if (triEdge(x, y) < (kind === 'app' ? 0.028 : 0.075)) layers.push([...ink, 1])
+  return over(layers)
+}
+
+// Yeni ürün buraya eklenir. Bir ürünün çizimi ileride rasterleştirilmiş SVG ile değiştirilecekse yalnızca
+// `draw` değişir: (x, y, kind) imzası korunur, PNG kodlayıcı ve boyut listesi aynı kalır.
+const PRODUCTS = { ray: { draw: drawRay }, spectrum: { draw: drawSpectrum } }
+
+function render(size, kind, draw) {
   const buf = Buffer.alloc(size * size * 4)
   const SS = 4
   for (let py = 0; py < size; py++)
@@ -99,7 +125,7 @@ function render(size, kind) {
       let acc = [0, 0, 0, 0]
       for (let sy = 0; sy < SS; sy++)
         for (let sx = 0; sx < SS; sx++) {
-          const c = sample((px + (sx + 0.5) / SS) / size, (py + (sy + 0.5) / SS) / size, kind)
+          const c = draw((px + (sx + 0.5) / SS) / size, (py + (sy + 0.5) / SS) / size, kind)
           acc = [acc[0] + c[0] * c[3], acc[1] + c[1] * c[3], acc[2] + c[2] * c[3], acc[3] + c[3]]
         }
       const a = acc[3] / (SS * SS)
@@ -112,12 +138,22 @@ function render(size, kind) {
   return png(size, buf)
 }
 
-const files = {
-  'icon.png': render(512, 'app'),
-  'tray.png': render(16, 'tray'),
-  'tray@2x.png': render(32, 'tray'),
-  'trayTemplate.png': render(16, 'template'),
-  'trayTemplate@2x.png': render(32, 'template')
+const SIZES = [
+  ['icon.png', 1024, 'app'],
+  ['tray.png', 16, 'tray'],
+  ['tray@2x.png', 32, 'tray'],
+  ['trayTemplate.png', 16, 'template'],
+  ['trayTemplate@2x.png', 32, 'template']
+]
+
+const arg = process.argv[2]
+if (arg !== undefined && !Object.hasOwn(PRODUCTS, arg)) {
+  console.error(`kullanım: node scripts/make-icons.mjs [${Object.keys(PRODUCTS).join('|')}]`)
+  process.exit(2)
 }
-for (const [name, data] of Object.entries(files)) writeFileSync(new URL(name, OUT), data)
-console.log('ikonlar yazıldı:', Object.keys(files).join(', '))
+for (const name of arg === undefined ? Object.keys(PRODUCTS) : [arg]) {
+  const out = new URL(`../resources/${name}/`, import.meta.url)
+  mkdirSync(out, { recursive: true })
+  for (const [file, size, kind] of SIZES) writeFileSync(new URL(file, out), render(size, kind, PRODUCTS[name].draw))
+  console.log(`${name}: ${SIZES.map(([f]) => f).join(', ')}`)
+}
