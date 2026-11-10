@@ -129,4 +129,12 @@ describe('engine changes', () => {
       )
     }
   })
+
+  it('C3: the writer adds no facts about the person and no commitments on their behalf', () => {
+    for (const family of FAMILIES) {
+      expect(generateSystemPrompt(generateReq(family, 'chat'), 'none')).toContain(
+        "- Never add facts about the person (where they live, what they own, how to reach them) or commitments on their behalf (availability, promises, follow-ups) that are not in their request, their answers or text they pasted; leave them out (an ordinary sign-off is fine), and use a placeholder only if the task can't be done without it."
+      )
+    }
+  })
 })

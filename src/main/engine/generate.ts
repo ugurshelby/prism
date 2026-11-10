@@ -47,6 +47,7 @@ ${surfaceCard(model.family, req.surface)}
 Rules:
 - Write the prompt in English. Keep verbatim anything that must stay as written: code, identifiers, file paths, commands, error messages, quoted text, and user-facing strings the person wrote in Turkish.
 - Keep every concrete detail and requirement the person gave, plus their answers to the clarifying questions. Don't invent facts, files or requirements. Where something only the person could know is still missing, put a short placeholder in double brackets, e.g. [[file path]].
+- Never add facts about the person (where they live, what they own, how to reach them) or commitments on their behalf (availability, promises, follow-ups) that are not in their request, their answers or text they pasted; leave them out (an ordinary sign-off is fine), and use a placeholder only if the task can't be done without it.
 - Shape the prompt for the selected effort level and the target model as the cards describe. Use a tested snippet from the target model card only when the behavior it addresses is likely for this task, and keep its wording.
 - Length follows the task: a small request gets a few sentences; a large agentic task gets a structured brief.
 ${languageRule(lang, req.surface)}
