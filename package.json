@@ -35,7 +35,7 @@
     "dev": "electron-vite dev",
     "setup": "node scripts/setup.mjs",
     "mock": "vite --config vite.mock.config.ts",
-    "build": "electron-vite build",
+    "build": "node scripts/build-product.mjs spectrum",
     "build:ray": "node scripts/build-product.mjs ray",
     "build:spectrum": "node scripts/build-product.mjs spectrum",
     "start": "electron-vite preview",
@@ -46,10 +46,7 @@
     "precommit": "npm run -s lint && npm run -s typecheck && npm run -s test",
     "icons": "node scripts/make-icons.mjs",
     "dist:ray": "node scripts/build-product.mjs ray --dist",
-    "dist:spectrum": "node scripts/build-product.mjs spectrum --dist",
-    "dist:win": "electron-vite build && electron-builder --win",
-    "dist:mac": "electron-vite build && electron-builder --mac",
-    "dist:linux": "electron-vite build && electron-builder --linux"
+    "dist:spectrum": "node scripts/build-product.mjs spectrum --dist"
   },
   "devDependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",

@@ -1,31 +1,73 @@
 name: Release
 
-# `v2.1.0` gibi bir etiket gönderildiğinde üç platformda kurulum dosyaları derlenir,
+# `ray-v2.0.0` ya da `spectrum-v3.0.0` gibi bir etiket gönderildiğinde yalnızca o ürün üç platformda derlenir,
 # paketlenmiş uygulama duman testinden geçer ve hepsi tek bir GitHub Release'e yüklenir.
 on:
   push:
-    tags: ['v*']
+    tags: ['ray-v*', 'spectrum-v*']
 
 permissions:
   contents: read
 
 jobs:
+  # Etiketten ürün ve sürüm çıkar. Sürüm depodaki build/<ürün>.yml ile aynı olmalı: etiketle paket sürümü
+  # ayrışmasın, sürüm yükseltmesi her zaman bir commit'le görünür olsun.
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      product: ${{ steps.tag.outputs.product }}
+      name: ${{ steps.tag.outputs.name }}
+      exe: ${{ steps.tag.outputs.exe }}
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: tag
+        shell: bash
+        run: |
+          tag="$GITHUB_REF_NAME"
+          if [[ "$tag" =~ ^(ray|spectrum)-v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            product="${BASH_REMATCH[1]}"
+            version="${BASH_REMATCH[2]}"
+          else
+            echo "::error::Etiket biçimi ray-vX.Y.Z ya da spectrum-vX.Y.Z olmalı: $tag"
+            exit 1
+          fi
+          declared=$(sed -n 's/^  version: \([0-9.]*\)$/\1/p' "build/$product.yml")
+          if [ "$declared" != "$version" ]; then
+            echo "::error::Etiket sürümü ($version) build/$product.yml sürümüyle ($declared) aynı değil."
+            exit 1
+          fi
+          case "$product" in
+            ray) name="Prism Ray"; exe="prism-ray" ;;
+            spectrum) name="Prism Spectrum"; exe="prism-spectrum" ;;
+          esac
+          {
+            echo "product=$product"
+            echo "version=$version"
+            echo "name=$name"
+            echo "exe=$exe"
+          } >> "$GITHUB_OUTPUT"
+
   build:
     name: build (${{ matrix.os }})
+    needs: meta
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
-            dist: --win
-            smoke: release/win-unpacked/Prism.exe --selftest --smoke
+            dist: win
           - os: macos-latest
-            dist: --mac
-            smoke: release/mac-arm64/Prism.app/Contents/MacOS/Prism --selftest --smoke
+            dist: mac
           - os: ubuntu-latest
-            dist: --linux
-            smoke: xvfb-run -a release/linux-unpacked/prism --no-sandbox --selftest --smoke
+            dist: linux
     runs-on: ${{ matrix.os }}
+    env:
+      PRODUCT: ${{ needs.meta.outputs.product }}
+      APP_NAME: ${{ needs.meta.outputs.name }}
+      APP_EXE: ${{ needs.meta.outputs.exe }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -41,14 +83,20 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
-      - run: npm run build
-      - run: npx electron-builder ${{ matrix.dist }} --publish never
+      # Ürün derlenir ve build/<ürün>.yml ile paketlenir (kimlik, ikon, sürüm ürüne özel).
+      - run: node scripts/build-product.mjs "$PRODUCT" --dist ${{ matrix.dist }}
+        shell: bash
       - name: Smoke test (packaged app)
         shell: bash
-        run: ${{ matrix.smoke }}
+        run: |
+          case "${{ runner.os }}" in
+            Windows) "release/win-unpacked/$APP_NAME.exe" --selftest --smoke ;;
+            macOS) "release/mac-arm64/$APP_NAME.app/Contents/MacOS/$APP_NAME" --selftest --smoke ;;
+            Linux) xvfb-run -a "release/linux-unpacked/$APP_EXE" --no-sandbox --selftest --smoke ;;
+          esac
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: prism-${{ runner.os }}
+          name: prism-${{ needs.meta.outputs.product }}-${{ runner.os }}
           path: |
             release/*.exe
             release/*.dmg
@@ -57,7 +105,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    needs: build
+    needs: [meta, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -73,23 +121,22 @@ jobs:
       - name: Checksums
         working-directory: dist
         run: sha256sum * > SHA256SUMS.txt
-      # Büyük sürüm numarası kuşak adını belirler: 1 Ray, 2 Spectrum, 3 Lens, 4 Iris.
       # Yayımlanmış bir sürümün dosyaları ve SHA256SUMS.txt hiçbir zaman değiştirilmez: indirip doğrulamış
       # kişilerin elindeki özetler geçerli kalmalı. Etiket yeniden gönderilirse iş açık bir mesajla durur;
       # düzeltme yeni bir sürüm numarasıyla yayımlanır.
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
+          APP_NAME: ${{ needs.meta.outputs.name }}
+          VERSION: ${{ needs.meta.outputs.version }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          case "${version%%.*}" in 1) gen=Ray ;; 2) gen=Spectrum ;; 3) gen=Lens ;; 4) gen=Iris ;; *) gen= ;; esac
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             echo "::error::$GITHUB_REF_NAME için yayın zaten var; yayımlanmış dosyalar değiştirilmez. Yeni bir sürüm numarası kullan."
             exit 1
           fi
           gh release create "$GITHUB_REF_NAME" dist/* \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Prism ${gen:+$gen }$version" \
+            --title "$APP_NAME $VERSION" \
             --notes-file .github/release-notes.md \
             --generate-notes \
             --verify-tag

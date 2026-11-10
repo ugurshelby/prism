@@ -34,14 +34,17 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
-      - run: npm run build
-      # Uygulama ağ ve key olmadan açılıp bütün bilgi kartlarını yükleyebiliyor mu?
-      - name: Smoke test
-        if: runner.os != 'Linux'
-        run: npx electron . --selftest --smoke
-      - name: Smoke test (Linux)
-        if: runner.os == 'Linux'
-        run: xvfb-run -a npx electron . --no-sandbox --selftest --smoke
+      # İki ürün aynı commit'ten derlenir; her biri ağ ve key olmadan açılıp bütün bilgi kartlarını yükleyebilmeli.
+      - run: npm run build:ray
+      - name: Smoke test (Ray)
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a npx electron . --no-sandbox --selftest --smoke; else npx electron . --selftest --smoke; fi
+      - run: npm run build:spectrum
+      - name: Smoke test (Spectrum)
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a npx electron . --no-sandbox --selftest --smoke; else npx electron . --selftest --smoke; fi
 
   audit:
     name: dependency audit
