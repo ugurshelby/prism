@@ -1,4 +1,5 @@
 import releasesJson from '../data/releases.json'
+import { parseStored, type Asset, type Release } from '../../scripts/releases.mjs'
 
 export type Lang = 'en' | 'tr'
 export const REPO = 'https://github.com/ugurshelby/prism'
@@ -24,31 +25,9 @@ export const PRODUCTS: { id: ProductId; name: string; released: boolean }[] = [
 ]
 export const productName = (id: ProductId) => PRODUCTS.find((p) => p.id === id)?.name ?? id
 
-/**
- * Yayının ürünü etiketten çıkar: ray-v*, spectrum-v*. Ürün öncesi v2.* etiketleri Spectrum'dur (adı o zaman da
- * "Prism Spectrum" idi). Eski v1.* yayınlar bir ürüne bağlanmaz; yalnızca GitHub Releases'ta durur.
- */
-export function productOf(tag: string): ProductId | undefined {
-  const m = /^(ray|spectrum)-v\d/.exec(tag)
-  if (m) return m[1] === 'ray' ? 'ray' : 'spectrum'
-  return /^v2\./.test(tag) ? 'spectrum' : undefined
-}
-
 // --- GitHub Releases -----------------------------------------------------------
 
-export interface Asset {
-  name: string
-  url: string
-  size: number
-  sha256: string | null
-}
-export interface Release {
-  tag: string
-  version: string
-  published: string
-  url: string
-  assets: Asset[]
-}
+export type { Asset, Release }
 export type Platform = 'win' | 'macArm' | 'macIntel' | 'appimage' | 'deb'
 export type Os = 'win' | 'mac' | 'linux'
 export const OS_PLATFORMS: Record<Os, Platform[]> = { win: ['win'], mac: ['macArm', 'macIntel'], linux: ['appimage', 'deb'] }
@@ -68,8 +47,9 @@ const newer = (a: Release, b: Release) => {
   return 0
 }
 
-export const releases = (releasesJson as Release[]).filter((r) => productOf(r.tag)).sort(newer)
-export const releasesOf = (id: ProductId) => releases.filter((r) => productOf(r.tag) === id)
+// releases.json derleme öncesi sync.mjs ile doğrulanarak yazılır; burada aynı denetim bir kez daha uygulanır.
+export const releases = parseStored(releasesJson).sort(newer)
+export const releasesOf = (id: ProductId) => releases.filter((r) => r.product === id)
 /** Yayınlanmış ürün için indirilebilir yayın var mı; yoksa "yakında" gösterilir. */
 export const statusOf = (id: ProductId): ProductStatus =>
   PRODUCTS.find((p) => p.id === id)?.released ? (releasesOf(id).length ? 'available' : 'soon') : 'planned'
