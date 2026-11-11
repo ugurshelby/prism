@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "sync": "node scripts/sync.mjs",
+    "test": "node --test scripts/releases.test.mjs",
     "dev": "npm run sync && astro dev",
     "build": "npm run sync && astro build",
     "preview": "astro preview"

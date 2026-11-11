@@ -1,0 +1,54 @@
+---
+import Base from '../layouts/Base.astro'
+import Mark from '../components/Mark.astro'
+import { PRODUCTS, href, releasesOf, statusOf, type Lang, type ProductId } from '../lib/site'
+import { t } from '../lib/i18n'
+
+interface Props {
+  lang: Lang
+  id: ProductId
+}
+const { lang, id } = Astro.props
+const s = t(lang)
+const name = PRODUCTS.find((p) => p.id === id)?.name ?? id
+const item = s.products.items[id]
+const status = statusOf(id)
+const latest = releasesOf(id)[0]
+---
+
+<Base lang={lang} page={id} title={`Prism ${name}`} description={item.body}>
+  <section class="hero">
+    <div class="container prose">
+      <div class="mark"><Mark variant={id} /></div>
+      <h1>Prism {name}</h1>
+      <p class="lead">{item.tagline}. {item.body}</p>
+      <p>
+        <span class={`badge ${status}`}>{s.products.status[status]}</span>
+        {latest && <span class="muted mono"> v{latest.version}</span>}
+      </p>
+
+      <h2>{s.products.page.who}</h2>
+      <p>{item.who}</p>
+
+      <ul>
+        {s.products.features[id].map((f) => <li>{f}</li>)}
+      </ul>
+
+      <p class="muted">{s.products.page.shared}</p>
+
+      {status === 'planned' && <p class="callout">{s.products.page.plannedNote}</p>}
+      {status === 'soon' && <p class="callout">{s.products.page.soonNote}</p>}
+
+      <p class="actions">
+        {
+          status !== 'planned' && (
+            <a class="btn btn-primary" href={`${href(lang, 'download')}#${id}`}>
+              {s.products.page.downloadPage}
+            </a>
+          )
+        }
+        <a class="btn btn-ghost" href={href(lang, 'products')}>{s.products.page.all}</a>
+      </p>
+    </div>
+  </section>
+</Base>

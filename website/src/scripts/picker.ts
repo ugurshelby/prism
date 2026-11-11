@@ -19,7 +19,7 @@ interface Version {
   changes: string[]
   files: Record<Os, FileRow[]>
 }
-interface Edition {
+interface Product {
   id: string
   name: string
   status: string
@@ -27,7 +27,7 @@ interface Edition {
   versions: Version[]
 }
 interface Data {
-  editions: Edition[]
+  products: Product[]
   initial: string
   text: Record<string, string>
   steps: Record<Os, string>
@@ -46,6 +46,8 @@ const TEXT_KEYS = [
   'changes',
   'changesOnGitHub',
   'checksum',
+  'comingSoon',
+  'comingSoonBody',
   'firstLaunch',
   'latest',
   'noFiles',
@@ -73,13 +75,13 @@ const isVersion = (v: unknown): v is Version =>
   Array.isArray(v.changes) &&
   v.changes.every(isStr) &&
   isFiles(v.files)
-const isEdition = (v: unknown): v is Edition =>
+const isProduct = (v: unknown): v is Product =>
   isObj(v) && isStr(v.id) && isStr(v.name) && isStr(v.status) && isStr(v.tagline) && Array.isArray(v.versions) && v.versions.every(isVersion)
 const isData = (v: unknown): v is Data =>
   isObj(v) &&
-  Array.isArray(v.editions) &&
-  v.editions.length > 0 &&
-  v.editions.every(isEdition) &&
+  Array.isArray(v.products) &&
+  v.products.length > 0 &&
+  v.products.every(isProduct) &&
   isStr(v.initial) &&
   isStrMap(v.text, TEXT_KEYS) &&
   isStrMap(v.steps, OSES)
@@ -110,7 +112,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 }
 
 function init(root: HTMLElement, data: Data) {
-  const tabs = root.querySelector<HTMLElement>('[data-editions]')!
+  const tabs = root.querySelector<HTMLElement>('[data-products]')!
   const osTabs = root.querySelector<HTMLElement>('[data-os]')!
   const select = root.querySelector<HTMLSelectElement>('[data-version]')!
   const body = root.querySelector<HTMLElement>('[data-body]')!
@@ -118,8 +120,8 @@ function init(root: HTMLElement, data: Data) {
 
   const params = new URLSearchParams(location.search)
   const fromHash = location.hash.slice(1)
-  let edition = data.editions.find((e) => e.id === fromHash) ?? data.editions.find((e) => e.id === data.initial) ?? data.editions[0]!
-  let version = edition.versions[0]
+  let product = data.products.find((e) => e.id === fromHash) ?? data.products.find((e) => e.id === data.initial) ?? data.products[0]!
+  let version = product.versions[0]
   const fromQuery = params.get('os')
   let os: Os = isOs(fromQuery) ? fromQuery : 'win'
   let detected: Os | null = null
@@ -137,8 +139,8 @@ function init(root: HTMLElement, data: Data) {
   }
 
   const renderTabs = () => {
-    for (const b of tabs.querySelectorAll<HTMLButtonElement>('[data-edition]')) {
-      b.setAttribute('aria-selected', String(b.dataset.edition === edition.id))
+    for (const b of tabs.querySelectorAll<HTMLButtonElement>('[data-product]')) {
+      b.setAttribute('aria-selected', String(b.dataset.product === product.id))
     }
     for (const b of osTabs.querySelectorAll<HTMLButtonElement>('[data-os-tab]')) {
       b.setAttribute('aria-selected', String(b.dataset.osTab === os))
@@ -150,15 +152,15 @@ function init(root: HTMLElement, data: Data) {
 
   const renderVersions = () => {
     select.replaceChildren(
-      ...edition.versions.map((v, i) => {
-        const o = el('option', undefined, `${edition.name} ${v.version}${i === 0 ? ` · ${data.text.latest}` : ''}`)
+      ...product.versions.map((v, i) => {
+        const o = el('option', undefined, `${product.name} ${v.version}${i === 0 ? ` · ${data.text.latest}` : ''}`)
         o.value = v.version
         o.selected = v === version
         return o
       })
     )
-    controls.toggleAttribute('data-empty', edition.versions.length === 0)
-    select.disabled = edition.versions.length < 2
+    controls.toggleAttribute('data-empty', product.versions.length === 0)
+    select.disabled = product.versions.length < 2
   }
 
   const renderBody = () => {
@@ -166,8 +168,8 @@ function init(root: HTMLElement, data: Data) {
     if (!version) {
       const box = el('div', 'empty')
       box.append(
-        el('b', undefined, edition.status === 'planned' ? data.text.notReleased : data.text.noReleases),
-        el('p', undefined, edition.status === 'planned' ? data.text.notReleasedBody : '')
+        el('b', undefined, product.status === 'planned' ? data.text.notReleased : product.status === 'soon' ? data.text.comingSoon : data.text.noReleases),
+        el('p', undefined, product.status === 'planned' ? data.text.notReleasedBody : product.status === 'soon' ? data.text.comingSoonBody : '')
       )
       nodes.push(box)
     } else {
@@ -194,7 +196,7 @@ function init(root: HTMLElement, data: Data) {
       first.append(el('b', undefined, data.text.firstLaunch), el('p', undefined, data.steps[os]))
 
       const notes = el('div', 'notes')
-      notes.append(el('h3', undefined, data.text.changes.replace('{v}', `${edition.name} ${version.version}`)))
+      notes.append(el('h3', undefined, data.text.changes.replace('{v}', `${product.name} ${version.version}`)))
       notes.append(el('p', 'muted', `${data.text.released}: ${version.date}`))
       if (version.changes.length) {
         const ul = el('ul')
@@ -235,11 +237,11 @@ function init(root: HTMLElement, data: Data) {
   }
 
   tabs.addEventListener('click', (e) => {
-    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-edition]')
-    if (!b || b.dataset.edition === edition.id) return
-    edition = data.editions.find((x) => x.id === b.dataset.edition)!
-    version = edition.versions[0]
-    history.replaceState(null, '', `#${edition.id}`)
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-product]')
+    if (!b || b.dataset.product === product.id) return
+    product = data.products.find((x) => x.id === b.dataset.product)!
+    version = product.versions[0]
+    history.replaceState(null, '', `#${product.id}`)
     render()
   })
   osTabs.addEventListener('click', (e) => {
@@ -250,7 +252,7 @@ function init(root: HTMLElement, data: Data) {
     renderBody()
   })
   select.addEventListener('change', () => {
-    version = edition.versions.find((v) => v.version === select.value)!
+    version = product.versions.find((v) => v.version === select.value)!
     renderBody()
   })
   // Sekmelerde ok tuşlarıyla gezinme.

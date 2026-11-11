@@ -1,4 +1,5 @@
 import releasesJson from '../data/releases.json'
+import { parseStored, type Asset, type Release } from '../../scripts/releases.mjs'
 
 export type Lang = 'en' | 'tr'
 export const REPO = 'https://github.com/ugurshelby/prism'
@@ -12,33 +13,21 @@ export function href(lang: Lang, path = '') {
 
 export const asset = (path: string) => `${import.meta.env.BASE_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
 
-// --- Sürümler (edition) ---------------------------------------------------------
+// --- Ürünler -------------------------------------------------------------------
 
-export type GenId = 'ray' | 'spectrum' | 'lens' | 'iris'
-export type GenStatus = 'available' | 'legacy' | 'current' | 'planned'
-export const GENERATIONS: { id: GenId; major: number; name: string; status: GenStatus }[] = [
-  { id: 'ray', major: 1, name: 'Ray', status: 'legacy' },
-  { id: 'spectrum', major: 2, name: 'Spectrum', status: 'current' },
-  { id: 'lens', major: 3, name: 'Lens', status: 'planned' },
-  { id: 'iris', major: 4, name: 'Iris', status: 'planned' }
+export type ProductId = 'ray' | 'spectrum' | 'lens' | 'iris'
+export type ProductStatus = 'available' | 'soon' | 'planned'
+export const PRODUCTS: { id: ProductId; name: string; released: boolean }[] = [
+  { id: 'ray', name: 'Ray', released: true },
+  { id: 'spectrum', name: 'Spectrum', released: true },
+  { id: 'lens', name: 'Lens', released: false },
+  { id: 'iris', name: 'Iris', released: false }
 ]
-export const genOf = (version: string) => GENERATIONS.find((g) => g.major === Number(version.split('.')[0]))
+export const productName = (id: ProductId) => PRODUCTS.find((p) => p.id === id)?.name ?? id
 
 // --- GitHub Releases -----------------------------------------------------------
 
-export interface Asset {
-  name: string
-  url: string
-  size: number
-  sha256: string | null
-}
-export interface Release {
-  tag: string
-  version: string
-  published: string
-  url: string
-  assets: Asset[]
-}
+export type { Asset, Release }
 export type Platform = 'win' | 'macArm' | 'macIntel' | 'appimage' | 'deb'
 export type Os = 'win' | 'mac' | 'linux'
 export const OS_PLATFORMS: Record<Os, Platform[]> = { win: ['win'], mac: ['macArm', 'macIntel'], linux: ['appimage', 'deb'] }
@@ -58,9 +47,13 @@ const newer = (a: Release, b: Release) => {
   return 0
 }
 
-export const releases = (releasesJson as Release[]).filter((r) => genOf(r.version)).sort(newer)
-export const releasesOf = (id: GenId) => releases.filter((r) => genOf(r.version)?.id === id)
-/** Ana sürümün (Spectrum) en yeni yayını; ana sayfadaki indirme düğmesi bunu verir. */
+// releases.json derleme öncesi sync.mjs ile doğrulanarak yazılır; burada aynı denetim bir kez daha uygulanır.
+export const releases = parseStored(releasesJson).sort(newer)
+export const releasesOf = (id: ProductId) => releases.filter((r) => r.product === id)
+/** Yayınlanmış ürün için indirilebilir yayın var mı; yoksa "yakında" gösterilir. */
+export const statusOf = (id: ProductId): ProductStatus =>
+  PRODUCTS.find((p) => p.id === id)?.released ? (releasesOf(id).length ? 'available' : 'soon') : 'planned'
+/** Ana ürünün (Spectrum) en yeni yayını; ana sayfadaki indirme düğmesi bunu verir. */
 export const latest: Release | undefined = releasesOf('spectrum')[0] ?? releases[0]
 
 export function files(r: Release | undefined): Partial<Record<Platform, Asset>> {

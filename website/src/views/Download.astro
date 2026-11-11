@@ -3,7 +3,7 @@ import Base from '../layouts/Base.astro'
 import Icon from '../components/Icon.astro'
 import Mark from '../components/Mark.astro'
 import { CHANGES } from '../data/changes'
-import { GENERATIONS, OS_PLATFORMS, REPO, date, files, latest, mb, releasesOf, sums, type Lang, type Os } from '../lib/site'
+import { OS_PLATFORMS, PRODUCTS, REPO, date, files, latest, mb, releasesOf, statusOf, sums, type Lang, type Os } from '../lib/site'
 import { t } from '../lib/i18n'
 
 interface Props {
@@ -13,11 +13,11 @@ const { lang } = Astro.props
 const s = t(lang)
 const OSES: Os[] = ['win', 'mac', 'linux']
 
-const editions = GENERATIONS.map((g) => ({
+const products = PRODUCTS.map((g) => ({
   id: g.id,
   name: g.name,
-  status: g.status,
-  tagline: s.editions.items[g.id].tagline,
+  status: statusOf(g.id),
+  tagline: s.products.items[g.id].tagline,
   versions: releasesOf(g.id).map((r) => {
     const f = files(r)
     return {
@@ -25,7 +25,7 @@ const editions = GENERATIONS.map((g) => ({
       date: date(r.published, lang),
       url: r.url,
       sums: sums(r)?.url ?? null,
-      changes: CHANGES[r.version]?.[lang] ?? [],
+      changes: CHANGES[r.tag]?.[lang] ?? [],
       files: Object.fromEntries(
         OSES.map((os) => [
           os,
@@ -36,7 +36,7 @@ const editions = GENERATIONS.map((g) => ({
   })
 }))
 const data = {
-  editions,
+  products,
   initial: 'spectrum',
   text: {
     latest: s.download.latest,
@@ -46,6 +46,8 @@ const data = {
     noFiles: s.download.noFiles,
     notReleased: s.download.notReleased,
     notReleasedBody: s.download.notReleasedBody,
+    comingSoon: s.download.comingSoon,
+    comingSoonBody: s.download.comingSoonBody,
     noReleases: s.download.noReleases,
     checksum: s.download.checksum,
     sums: s.download.sums,
@@ -65,18 +67,18 @@ const fallback = files(latest)
       </div>
 
       <div class="picker card" data-picker>
-        <div class="picker-label">{s.download.edition}</div>
-        <div class="tabs editions" role="tablist" aria-label={s.download.edition} data-editions>
+        <div class="picker-label">{s.download.product}</div>
+        <div class="tabs editions" role="tablist" aria-label={s.download.product} data-products>
           <span class="tab-indicator" aria-hidden="true"></span>
           {
-            GENERATIONS.map((g) => (
-              <button type="button" role="tab" data-edition={g.id} aria-selected={g.id === 'spectrum' ? 'true' : 'false'}>
+            PRODUCTS.map((g) => (
+              <button type="button" role="tab" data-product={g.id} aria-selected={g.id === 'spectrum' ? 'true' : 'false'}>
                 <span class="tab-mark">
                   <Mark variant={g.id} />
                 </span>
                 <span class="tab-text">
                   <b>{g.name}</b>
-                  <small>{s.editions.status[g.status]}</small>
+                  <small>{s.products.status[statusOf(g.id)]}</small>
                 </span>
               </button>
             ))

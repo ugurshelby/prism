@@ -152,15 +152,12 @@
   flex-wrap: wrap;
   font-size: 14px;
 }
-.badge.available {
-  border-color: color-mix(in srgb, var(--gpt) 50%, transparent);
-  color: var(--gpt);
-}
-.badge.legacy {
-  color: var(--muted);
-}
+.badge.soon,
 .badge.planned {
   border-style: dashed;
+}
+.badge.soon {
+  color: var(--muted);
 }
 
 /* --- İndirme seçicisi -------------------------------------------------------- */

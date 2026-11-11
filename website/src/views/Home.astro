@@ -1,9 +1,9 @@
 ---
 import Base from '../layouts/Base.astro'
 import DownloadButton from '../components/DownloadButton.astro'
-import EditionCard from '../components/EditionCard.astro'
+import ProductCard from '../components/ProductCard.astro'
 import Icon from '../components/Icon.astro'
-import { GENERATIONS, REPO, asset, href, type Lang } from '../lib/site'
+import { PRODUCTS, REPO, asset, href, type Lang } from '../lib/site'
 import { t } from '../lib/i18n'
 
 interface Props {
@@ -111,11 +111,11 @@ const families = [
   <section>
     <div class="container">
       <div class="section-head" data-reveal>
-        <h2>{s.editions.title}</h2>
-        <p class="lead">{s.editions.lead}</p>
+        <h2>{s.products.title}</h2>
+        <p class="lead">{s.products.lead}</p>
       </div>
       <div class="grid-2">
-        {GENERATIONS.map((g) => <EditionCard lang={lang} {...g} />)}
+        {PRODUCTS.map((p) => <ProductCard lang={lang} id={p.id} name={p.name} />)}
       </div>
     </div>
   </section>
