@@ -27,7 +27,7 @@ import { LlmError } from './llm'
 import { UserError } from './errors'
 import { logError, logWarn } from './log'
 import { clearKey, engineGenerate, forgetAllKeys, resolveEngine, needsVerify, saveKey, setHotkeyOk, settingsView, verify, verifyPending } from './providers'
-import { inspectDir, migrateLegacyData } from './migrate'
+import { MIGRATION_MARKER, inspectDir, markMigrationDone, migrateLegacyData } from './migrate'
 import { selftest } from './selftest'
 import { checkForUpdate, openReleasePage, startUpdateChecks, updateView } from './update'
 import { wipeOwnData } from './wipe'
@@ -60,8 +60,6 @@ app.setPath('userData', join(appData, PRODUCT.dataDir))
 // Geliştirme ve testte gerçek ayar/geçmiş klasörüne dokunmamak için ayrı bir userData klasörü kullanılabilir.
 // Kurulu sürümde bu ve diğer PRISM_* değişkenleri yok sayılır (env.ts). Geliştirmede gerçek klasörlere göç yapılmaz.
 const DEV = devEnv()
-const MIGRATED_FROM = DEV.userData ? null : migrateLegacyData(appData, PRODUCT)
-if (MIGRATED_FROM) logWarn('migrate', `${MIGRATED_FROM} klasöründeki veriler ${PRODUCT.dataDir} klasörüne kopyalandı`)
 if (DEV.userData) {
   const dir = resolve(DEV.userData)
   mkdirSync(dir, { recursive: true })
@@ -79,7 +77,15 @@ if (app.isPackaged && UNSAFE_SWITCHES.some((s) => app.commandLine.hasSwitch(s) |
 // Kurulu sürümde yalnızca çevrimdışı --smoke denetimi çalışır; kayıtlı key'lerle ağa çıkan selftest yolları geliştirmeye özeldir.
 const SELFTEST = process.argv.includes('--selftest') && (!app.isPackaged || process.argv.includes('--smoke'))
 // İkinci kopya hiçbir şey başlatmadan hemen çıkar; ilk kopya pencereyi öne getirir (second-instance).
-if (!SELFTEST && !app.requestSingleInstanceLock()) app.exit(0)
+const PRIMARY = SELFTEST || app.requestSingleInstanceLock()
+if (!PRIMARY) app.exit(0)
+
+// Eski sürüm verisinin bir kerelik göçü yalnızca kilidi alan kopyada ve gerçek kurulumda yapılır (iki eşzamanlı ilk
+// açılış birbirinin göçünü bozmasın; geliştirme ve smoke gerçek klasörlere dokunmasın).
+if (PRIMARY && !SELFTEST && !DEV.userData) {
+  const from = migrateLegacyData(appData, PRODUCT)
+  if (from) logWarn('migrate', `${from} klasöründeki veriler ${PRODUCT.dataDir} klasörüne kopyalandı`)
+}
 
 // Ekran görüntüleri retina ekranlarda da net görünsün diye 1,5x çizilir (2x'te panel çoğu ekrana sığmaz).
 if (DEV.captureDir) app.commandLine.appendSwitch('force-device-scale-factor', '1.5')
@@ -331,6 +337,15 @@ async function deleteAllData(): Promise<boolean> {
     }
   }
   failed.push(...wipeOwnData(dataDirs()))
+  // Göç işareti silinmiş olsa da göç bir daha çalışmasın: eski klasörde kalan bir dosya silinen verileri geri getirmesin.
+  if (!DEV.userData && PRODUCT.legacyDataDirs.length) {
+    try {
+      markMigrationDone(join(appData, PRODUCT.dataDir), 'wiped')
+    } catch (e) {
+      logWarn('wipe', 'göç işareti yazılamadı', e)
+      failed.push(MIGRATION_MARKER)
+    }
+  }
   if (failed.length) throw new UserError(msg('err.deleteData', { files: failed.join(', ') }))
   setImmediate(() => {
     // AppImage'da process.execPath geçici bağlama noktasıdır; yeniden başlatma gerçek dosyadan yapılır.

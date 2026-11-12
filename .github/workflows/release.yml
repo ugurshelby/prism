@@ -9,6 +9,11 @@ on:
 permissions:
   contents: read
 
+# Aynı ürünün iki etiketi aynı anda yayımlanmaz ("latest" ve taslak denetimi yarışmasın).
+concurrency:
+  group: release-${{ startsWith(github.ref_name, 'ray-v') && 'ray' || 'spectrum' }}
+  cancel-in-progress: false
+
 jobs:
   # Etiketten ürün ve sürüm çıkar. Sürüm depodaki build/<ürün>.yml ile aynı olmalı: etiketle paket sürümü
   # ayrışmasın, sürüm yükseltmesi her zaman bir commit'le görünür olsun.
@@ -174,7 +179,11 @@ jobs:
           # sürümü (3.0.1, 3.1.0'dan sonra) "latest"ı geri almaz: yalnızca mevcut en yeniden büyükse.
           latest=false
           if [ "$PRODUCT" = spectrum ]; then
-            current=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName 2>/dev/null || true)
+            # Hiç yayın yoksa (404) boş; başka bir API hatasında iş durur, latest tahminle verilmez.
+            if ! current=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name 2>err.txt); then
+              grep -q 'Not Found' err.txt || { cat err.txt; exit 1; }
+              current=""
+            fi
             current="${current#spectrum-v}"; current="${current#v}"
             top=$(printf '%s\n%s\n' "$current" "$VERSION" | sort -V | tail -n 1)
             if [ -z "$current" ] || { [ "$top" = "$VERSION" ] && [ "$current" != "$VERSION" ]; }; then latest=true; fi

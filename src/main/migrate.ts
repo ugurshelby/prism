@@ -16,8 +16,24 @@ import { logWarn } from './log'
 export const MIGRATION_MARKER = 'migrated.json'
 const LOCAL_STATE = 'Local State'
 
-// Geçici, yedek ve kenara alınmış dosyalar taşınmaz; yalnızca kullanılan veri.
-const isMigratable = (name: string) => isOwnDataFile(name) && !/\.(tmp|bak)$|\.bozuk-\d+$|\.unreadable-\d+$/.test(name)
+// Geçici, yedek ve kenara alınmış dosyalar taşınmaz; yalnızca kullanılan veri. Düz metin `.env` (eski sürümlerin key'leri)
+// ikinci bir yere çoğaltılmaz.
+const isMigratable = (name: string) =>
+  isOwnDataFile(name) && name !== '.env' && name !== MIGRATION_MARKER && !/\.(tmp|bak)$|\.bozuk-\d+$|\.unreadable-\d+$/.test(name)
+
+// Prism'in settings.json'ı: sürüm numarası, kısayol ve aile/motor alanlarından biri. Aynı adlı başka bir uygulamanın
+// ayar dosyası bu şekli taşımaz.
+function looksLikePrismSettings(raw: unknown): boolean {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return false
+  const has = (k: string) => Object.hasOwn(raw, k)
+  return (
+    'version' in raw &&
+    typeof raw.version === 'number' &&
+    'hotkey' in raw &&
+    typeof raw.hotkey === 'string' &&
+    ['defaultFamily', 'families', 'analysisModel', 'engineProvider'].some(has)
+  )
+}
 
 function regularFiles(dir: string): string[] {
   if (!existsSync(dir)) return []
@@ -35,8 +51,7 @@ export function inspectDir(dir: string): { hasOwnData: boolean; hasSignature: bo
   if (own.includes('settings.json')) {
     // Okunamayan ya da başka biçimde bir settings.json imza sayılmaz; klasör başka bir uygulamanın olabilir.
     try {
-      const raw: unknown = JSON.parse(readFileSync(join(dir, 'settings.json'), 'utf8'))
-      settingsLooksOurs = typeof raw === 'object' && raw !== null && typeof (raw as { version?: unknown }).version === 'number'
+      settingsLooksOurs = looksLikePrismSettings(JSON.parse(readFileSync(join(dir, 'settings.json'), 'utf8')))
     } catch {
       settingsLooksOurs = false
     }
@@ -48,20 +63,37 @@ export function inspectDir(dir: string): { hasOwnData: boolean; hasSignature: bo
   }
 }
 
+/** Göç işaretini yazar; `wiped` ise "Tüm verilerimi sil" sonrası göçün bir daha çalışmaması içindir. */
+export function markMigrationDone(target: string, from: string) {
+  mkdirSync(target, { recursive: true })
+  writeFileSync(join(target, MIGRATION_MARKER), JSON.stringify({ from, at: new Date().toISOString() }))
+}
+
+// Önceki bir göç yarıda kesildiyse (çökme, güç kesilmesi) kalan geçici klasör silinir: içinde key ve geçmiş olabilir.
+function removeLeftovers(appData: string, product: ProductInfo) {
+  const prefix = `${product.dataDir}.migrating-`
+  for (const name of readdirSync(appData).filter((n) => n.startsWith(prefix))) {
+    rmSync(join(appData, name), { recursive: true, force: true, maxRetries: 3, retryDelay: 100 })
+  }
+}
+
 /**
  * Ürünün klasöründe veri yoksa ve Prism imzası taşıyan bir eski klasör varsa verileri bir kez kopyalar. Kopya önce geçici
- * bir klasöre yapılır, sonra dosyalar hedefe taşınır, en son işaret dosyası yazılır. Başarısızlıkta hedefe yarım veri
- * bırakılmaz (geçici klasör silinir) ve uygulama boş verilerle açılır; bir sonraki açılış yeniden dener.
+ * bir klasöre yapılır, sonra dosyalar hedefe taşınır, en son işaret dosyası yazılır. Başarısızlıkta hedefe taşınan dosyalar
+ * geri silinir ve uygulama boş verilerle açılır; bir sonraki açılış yeniden dener. Hiçbir hata açılışı durdurmaz.
  * Dönen değer kopyalanan eski klasörün adı ya da null.
  */
 export function migrateLegacyData(appData: string, product: ProductInfo): string | null {
+  if (!product.legacyDataDirs.length) return null
   const target = join(appData, product.dataDir)
-  const from = legacySource(product, (name) => inspectDir(join(appData, name)))
-  if (!from) return null
-  const source = join(appData, from)
-  const temp = `${target}.migrating-${Date.now()}`
   const moved: string[] = []
+  let temp: string | null = null
   try {
+    removeLeftovers(appData, product)
+    const from = legacySource(product, (name) => inspectDir(join(appData, name)))
+    if (!from) return null
+    const source = join(appData, from)
+    temp = `${target}.migrating-${Date.now()}`
     mkdirSync(temp, { recursive: true })
     const names = regularFiles(source).filter((n) => isMigratable(n) || n === LOCAL_STATE)
     for (const name of names) copyFileSync(join(source, name), join(temp, name))
@@ -70,7 +102,8 @@ export function migrateLegacyData(appData: string, product: ProductInfo): string
       renameSync(join(temp, name), join(target, name))
       moved.push(name)
     }
-    writeFileSync(join(target, MIGRATION_MARKER), JSON.stringify({ from, at: new Date().toISOString(), files: names.length }))
+    // Tek seferlik: işaret zaten varsa (başka bir kopya yazdıysa) üzerine yazılmaz.
+    writeFileSync(join(target, MIGRATION_MARKER), JSON.stringify({ from, at: new Date().toISOString(), files: names.length }), { flag: 'wx' })
     return from
   } catch (e) {
     // Yarım taşınan dosyalar geri alınır: hedefte veri kalırsa bir sonraki açılış göçü yeniden denemez.
@@ -78,6 +111,13 @@ export function migrateLegacyData(appData: string, product: ProductInfo): string
     logWarn('migrate', 'eski sürüm verisi kopyalanamadı; uygulama boş verilerle açılıyor, bir sonraki açılışta yeniden denenecek', e)
     return null
   } finally {
-    rmSync(temp, { recursive: true, force: true })
+    // Geçici klasör silinemezse (Windows kilidi) bir sonraki açılışta removeLeftovers yeniden dener.
+    if (temp) {
+      try {
+        rmSync(temp, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 })
+      } catch (e) {
+        logWarn('migrate', 'geçici göç klasörü silinemedi; bir sonraki açılışta silinecek', e)
+      }
+    }
   }
 }

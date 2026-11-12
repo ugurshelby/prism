@@ -22,12 +22,12 @@ const put = (dir: string, files: Record<string, string>) => {
 describe('migrateLegacyData', () => {
   it('copies Prism files and Local State from the 2.x folder once, leaving the old folder untouched', () => {
     const root = appData()
-    put(join(root, 'Prism'), { 'settings.json': '{"version":2}', 'anthropic.key': 'sealed', 'history.enc': 'sealed', 'Local State': '{}', 'notes.txt': 'x', 'history.enc.1.bak': 'old' })
+    put(join(root, 'Prism'), { 'settings.json': '{"version":2,"hotkey":"Alt+P","defaultFamily":"claude"}', 'anthropic.key': 'sealed', 'history.enc': 'sealed', 'Local State': '{}', 'notes.txt': 'x', 'history.enc.1.bak': 'old', '.env': 'ANTHROPIC_API_KEY=x' })
     expect(migrateLegacyData(root, PRODUCT_INFO.spectrum)).toBe('Prism')
     const target = join(root, 'Prism Spectrum')
     expect(readdirSync(target).sort()).toEqual(['Local State', 'anthropic.key', 'history.enc', MIGRATION_MARKER, 'settings.json'].sort())
     expect(JSON.parse(readFileSync(join(target, MIGRATION_MARKER), 'utf8'))).toMatchObject({ from: 'Prism' })
-    expect(readdirSync(join(root, 'Prism')).length).toBe(6)
+    expect(readdirSync(join(root, 'Prism')).length).toBe(7)
     expect(readdirSync(root).some((n) => n.includes('.migrating-'))).toBe(false)
     // İkinci açılışta yeniden kopyalanmaz.
     expect(migrateLegacyData(root, PRODUCT_INFO.spectrum)).toBeNull()
@@ -35,9 +35,16 @@ describe('migrateLegacyData', () => {
 
   it('does not adopt a folder of the same name without a Prism signature', () => {
     const root = appData()
-    put(join(root, 'Prism'), { 'settings.json': '{"theme":"dark"}', 'window-state.json': '{}' })
+    put(join(root, 'Prism'), { 'settings.json': '{"version":4,"theme":"dark"}', 'window-state.json': '{}' })
     expect(migrateLegacyData(root, PRODUCT_INFO.spectrum)).toBeNull()
     expect(readdirSync(root)).toEqual(['Prism'])
+  })
+
+  it('removes a temp folder left by an interrupted migration', () => {
+    const root = appData()
+    put(join(root, 'Prism Spectrum.migrating-1'), { 'anthropic.key': 'sealed' })
+    expect(migrateLegacyData(root, PRODUCT_INFO.spectrum)).toBeNull()
+    expect(readdirSync(root)).toEqual([])
   })
 
   it('does nothing for Ray', () => {

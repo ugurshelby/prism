@@ -30,17 +30,35 @@ export type UserFileName =
 export const userFile = (name: UserFileName) => join(app.getPath('userData'), name)
 
 
-/** Dosya yoksa null (beklenen durum). Bozuksa kayıt düşülür, dosya yedeklenir ve null döner. */
-export function readJsonFile(name: UserFileName): unknown {
+export type JsonRead = { status: 'missing' } | { status: 'ok'; value: unknown } | { status: 'corrupt' } | { status: 'io' }
+
+/**
+ * Dosyayı okur ve ayrıştırır. Okuma hatası (kilit, izin; ör. virüs tarayıcı) dosyaya dokunmaz: bir sonraki açılış yeniden
+ * dener. Yalnızca JSON olarak okunamayan dosya kenara alınır.
+ */
+export function readJsonFileResult(name: UserFileName): JsonRead {
   const path = userFile(name)
-  if (!existsSync(path)) return null
+  if (!existsSync(path)) return { status: 'missing' }
+  let text: string
   try {
-    return JSON.parse(readFileSync(path, 'utf8')) as unknown
+    text = readFileSync(path, 'utf8')
   } catch (e) {
-    logWarn('config', `${name} okunamadı, varsayılanlar kullanılacak`, e)
-    quarantine(name)
-    return null
+    logWarn('config', `${name} okunamadı (dosya yerinde bırakıldı)`, e)
+    return { status: 'io' }
   }
+  try {
+    return { status: 'ok', value: JSON.parse(text) as unknown }
+  } catch (e) {
+    logWarn('config', `${name} JSON değil, kenara alındı`, e)
+    quarantine(name)
+    return { status: 'corrupt' }
+  }
+}
+
+/** Dosya yoksa ya da okunamıyorsa null. */
+export function readJsonFile(name: UserFileName): unknown {
+  const r = readJsonFileResult(name)
+  return r.status === 'ok' ? r.value : null
 }
 
 /** Okunamayan dosya silinmez, kenara alınır; kullanıcı verisi kaybolmasın. */
@@ -121,8 +139,10 @@ let preserved: { shadow: Record<string, unknown>; base: Settings } | undefined
 
 export function getSettings(): Settings {
   if (settings) return settings
-  const existed = existsSync(userFile('settings.json'))
-  const raw = readJsonFile('settings.json')
+  const read = readJsonFileResult('settings.json')
+  const raw = read.status === 'ok' ? read.value : null
+  // Dosya vardı ama okunamadı ya da bozuktu: yeni kurulum gibi değil, gizlilik kapalı başlar.
+  const unreadable = read.status === 'corrupt' || read.status === 'io'
   // v1, ayarlar hiç değiştirilmediyse settings.json yazmazdı. Geçmiş ya da key dosyası olup v2'nin model listesi
   // yoksa bu kurulum yine v1'den geliyordur; yeni kullanıcı sayılırsa Claude akışı kaybolur.
   const legacy =
@@ -131,8 +151,7 @@ export function getSettings(): Settings {
     (['history.json', 'vertex.key'] as const).some((f) => existsSync(userFile(f)))
   const loaded = loadSettings(legacy ? { version: 1 } : raw, PRODUCT)
   if (loaded.invalid.length) logWarn('config', `settings.json içindeki geçersiz alanlar varsayılana döndü: ${loaded.invalid.join(', ')}`)
-  // Dosya vardı ama JSON olarak okunamadı (kenara alındı): yeni kurulum gibi değil, gizlilik kapalı başlar.
-  const next = existed && raw === null ? failClosed(loaded.settings, [], true) : loaded.settings
+  const next = unreadable ? failClosed(loaded.settings, [], true) : loaded.settings
   extras = loaded.extras
   preserved = Object.keys(loaded.shadow).length ? { shadow: loaded.shadow, base: next } : undefined
   // .env'deki Vertex projesi bir kez ayarlara yazılır; kurulu sürüm geliştirme .env'ini görmez.
@@ -149,7 +168,8 @@ export function getSettings(): Settings {
   settings = next
   setMessageLanguage(next.uiLanguage)
   try {
-    if (legacy || migrated || (raw !== null && projectFromEnv)) writeJson('settings.json', serializeSettings(settings, extras, preserved))
+    // Bozuk dosya kenara alındıysa kapalı gizlilik ayarları hemen yazılır: ikinci açılış varsayılanlara dönmesin.
+    if (legacy || migrated || read.status === 'corrupt' || (raw !== null && projectFromEnv)) writeJson('settings.json', serializeSettings(settings, extras, preserved))
   } catch (e) {
     logWarn('config', 'taşınan ayarlar yazılamadı; bellekteki ayarlarla devam ediliyor', e)
   }

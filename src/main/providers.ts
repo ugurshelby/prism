@@ -51,7 +51,8 @@ function savedKey(p: ProviderId): KeyState | null {
       state = { key: null, source: 'none', unreadable: true, problem: msg('err.keyUnreadable', { label: PROVIDER_INFO[p].label }) }
     }
   }
-  savedCache.set(p, state)
+  // Okunamayan key önbelleğe alınmaz: anahtarlık açılışta kilitliyse sonraki istekte yeniden denenir.
+  if (!(state?.key === null && state.unreadable)) savedCache.set(p, state)
   return state
 }
 

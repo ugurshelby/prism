@@ -39,15 +39,33 @@ function parseEntries(raw: unknown, source: string): { entries: HistoryEntry[]; 
   return { entries: valid, complete: dropped === 0 }
 }
 
-/** Şifreli geçmiş açılamazsa null. Dosyaya dokunulmaz: anahtarlık geçici olarak kilitli olabilir (ör. oturum açılışı). */
-function readEncrypted(): HistoryEntry[] | null {
-  const path = userFile('history.enc')
+type EncryptedRead = { kind: 'ok'; entries: HistoryEntry[] } | { kind: 'undecryptable' } | { kind: 'unavailable' }
+
+/**
+ * Şifreli geçmişi okur. "undecryptable" yalnızca okunan dosyanın çözülemediği durumdur; okuma hatası, ayrıştırma hatası ya
+ * da yedek alınamaması "unavailable" sayılır ve dosyaya dokunulmaz (anahtarlık kilitli, disk dolu, dosya kilitli olabilir).
+ */
+function readEncrypted(path = userFile('history.enc')): EncryptedRead {
+  let sealed: Buffer
+  try {
+    sealed = readFileSync(path)
+  } catch (e) {
+    logWarn('history', 'şifreli geçmiş okunamadı; dosya yerinde bırakıldı, bu oturumda geçmiş yalnızca bellekte', e)
+    return { kind: 'unavailable' }
+  }
+  let text: string
+  try {
+    text = unseal(sealed)
+  } catch (e) {
+    logWarn('history', 'şifreli geçmiş çözülemedi', e)
+    return { kind: 'undecryptable' }
+  }
   let parsed: { entries: HistoryEntry[]; complete: boolean }
   try {
-    parsed = parseEntries(JSON.parse(unseal(readFileSync(path))) as unknown, 'history.enc')
+    parsed = parseEntries(JSON.parse(text) as unknown, 'history.enc')
   } catch (e) {
-    logWarn('history', 'şifreli geçmiş açılamadı; dosya yerinde bırakıldı, bu oturumda geçmiş yalnızca bellekte', e)
-    return null
+    logWarn('history', 'şifreli geçmiş beklenen biçimde değil; dosya yerinde bırakıldı, bu oturumda geçmiş yalnızca bellekte', e)
+    return { kind: 'unavailable' }
   }
   // Atlanan kayıtlar bir sonraki yazımda kaybolmasın: dosyanın şifreli hâli olduğu gibi yedeklenir.
   if (!parsed.complete) {
@@ -57,10 +75,36 @@ function readEncrypted(): HistoryEntry[] | null {
       logWarn('history', 'atlanan kayıtlar için şifreli geçmişin yedeği alındı')
     } catch (e) {
       logWarn('history', 'atlanan kayıtlar için yedek alınamadı; bu oturumda geçmiş yalnızca bellekte', e)
+      return { kind: 'unavailable' }
+    }
+  }
+  return { kind: 'ok', entries: parsed.entries }
+}
+
+/**
+ * Daha önce kenara alınmış bir geçmiş bu anahtarla yeniden açılabiliyorsa (ör. Linux'ta masaüstü oturumu ve anahtarlık arka
+ * ucu değişip geri döndü) en yenisi geri konur. Geçerli geçmiş boşken denenir; dolu geçmişin üzerine yazılmaz.
+ */
+function restoreSetAside(): HistoryEntry[] | null {
+  const path = userFile('history.enc')
+  const dir = dirname(path)
+  const candidates = readdirSync(dir)
+    .filter((n) => /^history\.enc\.unreadable-\d+$/.test(n))
+    .toSorted()
+    .toReversed()
+  for (const name of candidates) {
+    const r = readEncrypted(join(dir, name))
+    if (r.kind !== 'ok') continue
+    try {
+      renameSync(join(dir, name), path)
+      logWarn('history', 'kenara alınmış geçmiş bu anahtarla açıldı ve geri kondu')
+      return r.entries
+    } catch (e) {
+      logWarn('history', 'kenara alınmış geçmiş geri konamadı', e)
       return null
     }
   }
-  return parsed.entries
+  return null
 }
 
 const LEGACY_FILES = ['history.json', 'history.v1.json', 'history.json.tmp'] as const
@@ -123,12 +167,15 @@ function load(): HistoryEntry[] {
     storage = 'memory'
     return (entries = [])
   }
-  let current = existsSync(userFile('history.enc')) ? readEncrypted() : []
-  if (current === null && vaultRoundTrips() && setAsideUnreadable()) {
+  const read: EncryptedRead = existsSync(userFile('history.enc')) ? readEncrypted() : { kind: 'ok', entries: [] }
+  let current: HistoryEntry[] | null = read.kind === 'ok' ? read.entries : null
+  if (read.kind === 'undecryptable' && vaultRoundTrips() && setAsideUnreadable()) {
     // Anahtarlık çalışıyor ama dosya çözülmüyor: başka bir anahtarla yazılmış (ör. 2.x'ten Spectrum'a ad değişimi).
     // Dosya silinmeden kenara alındı; geçmiş baştan başlar ve arayüz bunu söyler (owner kararı, R3 yedek davranışı).
     reset = true
     current = []
+  } else if (current !== null && current.length === 0) {
+    current = restoreSetAside() ?? current
   }
   if (current === null) {
     // Açılamayan dosyanın üzerine yazılmasın diye bu oturum bellek kipinde sürer.
@@ -251,6 +298,6 @@ export function clearHistory() {
   wipeFile(archive)
   const dir = dirname(archive)
   for (const name of readdirSync(dir)) {
-    if (/^history\.(enc|legacy\.enc)\.\d+\.bak$|^history\.enc\.unreadable-\d+$/.test(name)) wipeFile(join(dir, name))
+    if (/^history\.(enc|legacy\.enc)\.\d+\.bak$|^history\.enc\.unreadable-\d+$|^history\.(enc|legacy\.enc)\.[0-9a-f]{12}\.tmp$/.test(name)) wipeFile(join(dir, name))
   }
 }
