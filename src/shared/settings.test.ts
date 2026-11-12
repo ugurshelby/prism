@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PRODUCT_INFO } from './product'
-import { SETTINGS_VERSION, conform, loadSettings, serializeSettings, settingsDefaults } from './settings'
+import { SETTINGS_VERSION, conform, failClosed, loadSettings, serializeSettings, settingsDefaults } from './settings'
 
 const ray = PRODUCT_INFO.ray
 const spectrum = PRODUCT_INFO.spectrum
@@ -87,5 +87,22 @@ describe('conform', () => {
   it('drops a default family that is no longer selected', () => {
     const s = conform({ ...settingsDefaults(spectrum), families: ['gemini'], defaultFamily: 'claude' }, spectrum)
     expect(s.defaultFamily).toBe('auto')
+  })
+})
+
+describe('privacy fails closed', () => {
+  it('turns history, update check and screen protection to their closed values for a broken file', () => {
+    const r = loadSettings('not an object', PRODUCT_INFO.spectrum)
+    expect(r.settings).toMatchObject({ saveHistory: false, updateCheck: false, contentProtection: true })
+  })
+
+  it('closes only the privacy fields that were invalid', () => {
+    const r = loadSettings({ version: 3, saveHistory: 'yes', updateCheck: true, contentProtection: false }, PRODUCT_INFO.spectrum)
+    expect(r.settings).toMatchObject({ saveHistory: false, updateCheck: true, contentProtection: false })
+  })
+
+  it('keeps the normal defaults for a new install', () => {
+    expect(loadSettings(null, PRODUCT_INFO.ray).settings).toMatchObject({ saveHistory: true, updateCheck: true, contentProtection: false })
+    expect(failClosed(settingsDefaults(PRODUCT_INFO.ray), [], false)).toEqual(settingsDefaults(PRODUCT_INFO.ray))
   })
 })

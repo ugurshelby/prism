@@ -2,7 +2,7 @@
 // API key'leri ve prompt geçmişi diske yalnızca bu yoldan yazılır. Güvenli depolama yoksa düz metne düşülmez.
 
 import { safeStorage } from 'electron'
-import { closeSync, existsSync, fstatSync, fsyncSync, openSync, rmSync, writeSync } from 'node:fs'
+import { closeSync, existsSync, fstatSync, fsyncSync, lstatSync, openSync, rmSync, writeSync } from 'node:fs'
 import { UserError } from './errors'
 import { msg } from '@shared/messages'
 
@@ -53,9 +53,18 @@ export function vaultRoundTrips(): boolean {
  */
 export function wipeFile(path: string) {
   if (!existsSync(path)) return
+  // Sembolik ya da çoklu bağlantılı dosya ezilmez (klasör dışındaki aynı dosyayı sıfırlamasın); yalnızca bağlantı kaldırılır.
+  const link = lstatSync(path)
+  if (link.isSymbolicLink() || !link.isFile() || link.nlink > 1) return rmSync(path, { force: true })
   const fd = openSync(path, 'r+')
   try {
-    const size = fstatSync(fd).size
+    const st = fstatSync(fd)
+    // lstat ile open arasında dosya değiştirildiyse ezilmez.
+    if (st.ino !== link.ino || st.nlink > 1) {
+      closeSync(fd)
+      return rmSync(path, { force: true })
+    }
+    const size = st.size
     const zeros = Buffer.alloc(Math.min(size, 1 << 20))
     for (let pos = 0; pos < size; pos += zeros.length) writeSync(fd, zeros, 0, Math.min(zeros.length, size - pos), pos)
     // Sıfırlar silmeden önce diske işlensin; yoksa üzerine yazma hiç diske inmeyebilir.

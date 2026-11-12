@@ -47,9 +47,10 @@ export function devEnv(): DevEnv {
 
 /** AppImage'ın gerçek yolu (yalnızca Linux AppImage içinden çalışırken). */
 export function appImagePath(): string | undefined {
+  if (process.platform !== 'linux' || !app.isPackaged) return undefined
   const path = process.env.APPIMAGE
-  // Başka bir kurulumdan kalmış değer açılış kaydına yanlış dosya yazdırmasın: dosya gerçekten var olmalı.
-  return path && existsSync(path) ? path : undefined
+  // Başka bir kurulumdan kalmış değer açılış kaydına yanlış dosya yazdırmasın: dosya gerçekten var olan bir AppImage olmalı.
+  return path && path.endsWith('.AppImage') && existsSync(path) ? path : undefined
 }
 
 // --- Sağlayıcı key'leri ve Vertex hedefi (yalnızca geliştirme) ----------------------

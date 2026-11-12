@@ -26,7 +26,7 @@ import { handle, on, rendererMessage } from './ipc'
 import { LlmError } from './llm'
 import { UserError } from './errors'
 import { logError, logWarn } from './log'
-import { clearKey, engineGenerate, resolveEngine, needsVerify, saveKey, setHotkeyOk, settingsView, verify, verifyPending } from './providers'
+import { clearKey, engineGenerate, forgetAllKeys, resolveEngine, needsVerify, saveKey, setHotkeyOk, settingsView, verify, verifyPending } from './providers'
 import { inspectDir, migrateLegacyData } from './migrate'
 import { selftest } from './selftest'
 import { checkForUpdate, openReleasePage, startUpdateChecks, updateView } from './update'
@@ -68,6 +68,14 @@ if (DEV.userData) {
   app.setPath('userData', dir)
 }
 
+// Kurulu sürüm uzaktan hata ayıklama anahtarlarıyla açılmaz: bu anahtarlarla arayüze bağlanan biri key'lerle istek
+// başlatabilir, geçmişi okuyabilir.
+const UNSAFE_SWITCHES = ['remote-debugging-port', 'remote-debugging-pipe', 'remote-debugging-address', 'inspect', 'inspect-brk']
+if (app.isPackaged && UNSAFE_SWITCHES.some((s) => app.commandLine.hasSwitch(s) || process.argv.some((a) => a === `--${s}` || a.startsWith(`--${s}=`)))) {
+  logError('app', 'kurulu sürüm güvenli olmayan bir komut satırı anahtarıyla açılmak istendi; çıkılıyor')
+  app.exit(1)
+}
+
 // Kurulu sürümde yalnızca çevrimdışı --smoke denetimi çalışır; kayıtlı key'lerle ağa çıkan selftest yolları geliştirmeye özeldir.
 const SELFTEST = process.argv.includes('--selftest') && (!app.isPackaged || process.argv.includes('--smoke'))
 // İkinci kopya hiçbir şey başlatmadan hemen çıkar; ilk kopya pencereyi öne getirir (second-instance).
@@ -79,8 +87,10 @@ if (DEV.captureDir) app.commandLine.appendSwitch('force-device-scale-factor', '1
 // Linux'ta saydam pencere (kompozitör varsa) bu anahtarla çalışır.
 if (process.platform === 'linux') app.commandLine.appendSwitch('enable-transparent-visuals')
 
-// Arayüzün açabileceği tek dış bağlantılar sağlayıcıların key sayfalarıdır.
-const EXTERNAL_ORIGINS = new Set(PROVIDERS.map((p) => new URL(PROVIDER_INFO[p].keyUrl).origin))
+// Arayüzün açabileceği tek dış bağlantılar sağlayıcıların key sayfalarıdır (köken ve yol öneki birlikte).
+const EXTERNAL_PAGES = PROVIDERS.map((p) => new URL(PROVIDER_INFO[p].keyUrl))
+const isKeyPage = (url: URL) =>
+  EXTERNAL_PAGES.some((k) => url.origin === k.origin && (k.pathname === '/' || url.pathname === k.pathname || url.pathname.startsWith(`${k.pathname}/`)))
 
 function openExternal(raw: string) {
   let url: URL
@@ -90,7 +100,7 @@ function openExternal(raw: string) {
     logWarn('shell', 'geçersiz dış bağlantı reddedildi')
     return
   }
-  if (url.protocol !== 'https:' || !EXTERNAL_ORIGINS.has(url.origin)) {
+  if (url.protocol !== 'https:' || !isKeyPage(url)) {
     logWarn('shell', `izin verilmeyen dış bağlantı reddedildi: ${url.origin}`)
     return
   }
@@ -309,6 +319,7 @@ async function deleteAllData(): Promise<boolean> {
   if (response !== 1) return false
   for (const controller of running.values()) controller.abort()
   blockWrites()
+  forgetAllKeys()
   const failed: string[] = []
   // Geliştirmede ayrı userData ile çalışılıyorsa gerçek kurulumun açılış kaydına dokunulmaz.
   if (!DEV.userData) {
@@ -504,7 +515,8 @@ function registerIpc() {
 
 function isInsideApp(fileUrl: string): boolean {
   try {
-    const root = resolve(app.getAppPath())
+    // Yalnızca derlenmiş arayüz klasörü: geliştirmede uygulama kökü proje klasörüdür (.env orada).
+    const root = resolve(app.getAppPath(), 'out', 'renderer')
     const path = resolve(fileURLToPath(fileUrl))
     return path === root || path.startsWith(root + sep)
   } catch (e) {

@@ -8,6 +8,8 @@ import { dirname, join } from 'node:path'
 import { HistoryEntrySchema } from '@shared/schemas'
 import type { Analysis, AnalyzeRequest, GenerateRequest, GenerateResult, HistoryEntry, HistoryList, HistoryStorage } from '@shared/types'
 import { getSettings, userFile, writeFileAtomic } from './config'
+import { msg } from '@shared/messages'
+import { UserError } from './errors'
 import { logWarn } from './log'
 import { seal, unseal, vaultRoundTrips, vaultState, wipeFile } from './vault'
 
@@ -49,9 +51,14 @@ function readEncrypted(): HistoryEntry[] | null {
   }
   // Atlanan kayıtlar bir sonraki yazımda kaybolmasın: dosyanın şifreli hâli olduğu gibi yedeklenir.
   if (!parsed.complete) {
-    const backup = `${path}.${Date.now()}.bak`
-    copyFileSync(path, backup)
-    logWarn('history', 'atlanan kayıtlar için şifreli geçmişin yedeği alındı')
+    // Yedek alınamazsa (disk dolu, kilit) dosya yerinde kalır ve bu oturum bellek kipinde sürer; kayıt kaybolmaz.
+    try {
+      copyFileSync(path, `${path}.${Date.now()}.bak`)
+      logWarn('history', 'atlanan kayıtlar için şifreli geçmişin yedeği alındı')
+    } catch (e) {
+      logWarn('history', 'atlanan kayıtlar için yedek alınamadı; bu oturumda geçmiş yalnızca bellekte', e)
+      return null
+    }
   }
   return parsed.entries
 }
@@ -94,7 +101,13 @@ function archiveLegacy(raw: Record<string, string>) {
     } catch (e) {
       // Önceki arşiv açılamıyor (anahtarlık değişmiş olabilir): şifreli hâliyle kenara alınır, yeni arşiv başlar.
       logWarn('history', 'eski geçmiş arşivi açılamadı, yedeklenip yenisi başlatıldı', e)
-      copyFileSync(path, `${path}.${Date.now()}.bak`)
+      try {
+        copyFileSync(path, `${path}.${Date.now()}.bak`)
+      } catch (backupError) {
+        // Yedeksiz üzerine yazılmasın: hata yukarı gider, göç bir sonraki açılışta yeniden denenir.
+        logWarn('history', 'eski geçmiş arşivinin yedeği alınamadı', backupError)
+        throw backupError
+      }
     }
   }
   const stamp = new Date().toISOString()
@@ -219,6 +232,9 @@ export function recordOutput(req: GenerateRequest, result: GenerateResult) {
 }
 
 export function deleteHistory(id: string) {
+  load()
+  // Bellek kipinde diskteki şifreli dosya güncellenemez: silinmiş sanılan kayıt sonraki oturumda geri gelmesin.
+  if (storage === 'memory' && existsSync(userFile('history.enc'))) throw new UserError(msg('err.historyLocked'))
   deleted.add(id)
   entries = load().filter((e) => e.id !== id)
   persist()
@@ -229,6 +245,8 @@ export function clearHistory() {
   for (const e of load()) deleted.add(e.id)
   entries = []
   persist()
+  // Bellek kipinde (anahtarlık kilitli ya da dosya açılamadı) persist diske yazmaz; dosya yine de silinir.
+  wipeFile(userFile('history.enc'))
   const archive = userFile('history.legacy.enc')
   wipeFile(archive)
   const dir = dirname(archive)

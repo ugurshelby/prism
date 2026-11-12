@@ -139,10 +139,25 @@ export function conform(s: Settings, product: ProductInfo, invalid: string[] = [
   return { ...s, families, defaultFamily }
 }
 
+// Okunamayan ayar gizliliği sessizce açmasın: geçmiş kaydı ve ağdaki güncelleme denetimi kapalı, içerik koruması açık
+// başlar. Kullanıcı bunları ayarlardan yeniden açabilir.
+const PRIVACY_CLOSED = { saveHistory: false, updateCheck: false, contentProtection: true } as const
+
+/** Bozuk dosyada ya da geçersiz alanda gizlilik ayarlarını kapalı değerlere çeker. */
+export function failClosed(s: Settings, invalid: readonly string[], corrupt: boolean): Settings {
+  const closed = (key: keyof typeof PRIVACY_CLOSED) => corrupt || invalid.includes(key)
+  return {
+    ...s,
+    saveHistory: closed('saveHistory') ? PRIVACY_CLOSED.saveHistory : s.saveHistory,
+    updateCheck: closed('updateCheck') ? PRIVACY_CLOSED.updateCheck : s.updateCheck,
+    contentProtection: closed('contentProtection') ? PRIVACY_CLOSED.contentProtection : s.contentProtection
+  }
+}
+
 export function loadSettings(raw: unknown, product: ProductInfo): LoadedSettings {
   const invalid: string[] = []
   if (raw === null) return { settings: settingsDefaults(product), from: null, extras: {}, newer: false, invalid, shadow: {} }
-  if (!isRecord(raw)) return { settings: settingsDefaults(product), from: null, extras: {}, newer: false, invalid: ['(dosya)'], shadow: {} }
+  if (!isRecord(raw)) return { settings: failClosed(settingsDefaults(product), [], true), from: null, extras: {}, newer: false, invalid: ['(dosya)'], shadow: {} }
   // Geçersiz sürüm numarası 1 sayılır. Çok büyük numara da "daha yeni" demektir; göç döngüsü SETTINGS_VERSION ile sınırlıdır.
   const ver = raw.version
   const from = typeof ver === 'number' && Number.isInteger(ver) && ver >= 1 && ver <= 1_000_000 ? ver : 1
@@ -153,7 +168,7 @@ export function loadSettings(raw: unknown, product: ProductInfo): LoadedSettings
     if (step) cur = step(cur, product)
   }
   const extras = Object.fromEntries(Object.entries(cur).filter(([k]) => !KNOWN.has(k)))
-  const settings = sanitize({ ...cur, version: newer ? from : SETTINGS_VERSION }, product, invalid)
+  const settings = failClosed(sanitize({ ...cur, version: newer ? from : SETTINGS_VERSION }, product, invalid), invalid, false)
   // Yeni sürümün yazdığı bir alanı bu sürüm okuyamadı ya da ürün kuralıyla değiştirdiyse değer kaybolmasın:
   // yalnızca daha yeni dosyada, ham hâli saklanır.
   const view: Raw = { ...settings }

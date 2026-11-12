@@ -2,6 +2,8 @@
 // Mesajlar sağlayıcıdan geliyorsa key'ler zaten http.ts'te ayıklanmış olur.
 
 function describe(err: unknown): string {
+  // V8'in JSON.parse hatası girdiden bir parça (prompt ya da geçmiş metni) içerir: yalnızca adı yazılır.
+  if (err instanceof SyntaxError) return err.name
   if (err instanceof Error) return `${err.name}: ${err.message}`
   return typeof err === 'string' ? err : 'bilinmeyen hata'
 }

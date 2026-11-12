@@ -131,6 +131,11 @@ function sameSecret(a: string | null, b: string) {
   return x.length === y.length && timingSafeEqual(x, y)
 }
 
+/** "Tüm verilerimi sil": bellekteki çözülmüş key'ler ve model önbelleği atılır; kısmi silmede de kullanılmazlar. */
+export function forgetAllKeys() {
+  for (const p of PROVIDERS) forget(p)
+}
+
 export function clearKey(p: ProviderId) {
   wipeFile(keyFile(p))
   forget(p)

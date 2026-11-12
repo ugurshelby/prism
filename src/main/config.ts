@@ -7,7 +7,7 @@ import type { ProviderId } from '@shared/catalog'
 import { PRODUCT, validFamilies } from '@shared/product'
 import { msg, setMessageLanguage } from '@shared/messages'
 import { SettingsPatchSchema, SettingsSchema } from '@shared/schemas'
-import { SETTINGS_VERSION, conform, loadSettings, serializeSettings } from '@shared/settings'
+import { SETTINGS_VERSION, conform, failClosed, loadSettings, serializeSettings } from '@shared/settings'
 import type { Settings } from '@shared/types'
 import { envValues } from './env'
 import { logWarn } from './log'
@@ -121,6 +121,7 @@ let preserved: { shadow: Record<string, unknown>; base: Settings } | undefined
 
 export function getSettings(): Settings {
   if (settings) return settings
+  const existed = existsSync(userFile('settings.json'))
   const raw = readJsonFile('settings.json')
   // v1, ayarlar hiç değiştirilmediyse settings.json yazmazdı. Geçmiş ya da key dosyası olup v2'nin model listesi
   // yoksa bu kurulum yine v1'den geliyordur; yeni kullanıcı sayılırsa Claude akışı kaybolur.
@@ -130,7 +131,8 @@ export function getSettings(): Settings {
     (['history.json', 'vertex.key'] as const).some((f) => existsSync(userFile(f)))
   const loaded = loadSettings(legacy ? { version: 1 } : raw, PRODUCT)
   if (loaded.invalid.length) logWarn('config', `settings.json içindeki geçersiz alanlar varsayılana döndü: ${loaded.invalid.join(', ')}`)
-  const next = loaded.settings
+  // Dosya vardı ama JSON olarak okunamadı (kenara alındı): yeni kurulum gibi değil, gizlilik kapalı başlar.
+  const next = existed && raw === null ? failClosed(loaded.settings, [], true) : loaded.settings
   extras = loaded.extras
   preserved = Object.keys(loaded.shadow).length ? { shadow: loaded.shadow, base: next } : undefined
   // .env'deki Vertex projesi bir kez ayarlara yazılır; kurulu sürüm geliştirme .env'ini görmez.
