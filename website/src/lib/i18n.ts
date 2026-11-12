@@ -75,7 +75,7 @@ const en = {
       {
         icon: 'tray',
         title: 'One shortcut away',
-        body: 'Ctrl+Shift+Space opens it. It stays on top, shrinks to a small orb and waits in the tray.'
+        body: 'A shortcut opens it (Ctrl+Alt+Space in Ray, Ctrl+Shift+Space in Spectrum). It stays on top, shrinks to a small orb and waits in the tray.'
       },
       {
         icon: 'history',
@@ -264,7 +264,7 @@ const tr: Dict = {
       {
         icon: 'tray',
         title: 'Bir kısayol uzağında',
-        body: 'Ctrl+Shift+Space ile açılır. Hep üstte durur, küçülünce minik bir küreye döner, tray’de bekler.'
+        body: 'Bir kısayolla açılır (Ray’de Ctrl+Alt+Space, Spectrum’da Ctrl+Shift+Space). Hep üstte durur, küçülünce minik bir küreye döner, tray’de bekler.'
       },
       {
         icon: 'history',
