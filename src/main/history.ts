@@ -251,6 +251,6 @@ export function clearHistory() {
   wipeFile(archive)
   const dir = dirname(archive)
   for (const name of readdirSync(dir)) {
-    if (/^history\.(enc|legacy\.enc)\.\d+\.bak$/.test(name)) wipeFile(join(dir, name))
+    if (/^history\.(enc|legacy\.enc)\.\d+\.bak$|^history\.enc\.unreadable-\d+$/.test(name)) wipeFile(join(dir, name))
   }
 }
