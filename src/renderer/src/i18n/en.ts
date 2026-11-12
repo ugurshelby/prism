@@ -257,6 +257,8 @@ export const en = {
   'note.codex.title': 'Codex setting',
   'note.codex.line': 'Pick the model and reasoning effort with /model in a session; the lasting setting is in ~/.codex/config.toml.',
   'note.chatgpt.title': 'ChatGPT setting',
+  'note.chatgpt.pick': 'Select GPT-6 and set Thinking to {thinking}.',
+  'note.chatgpt.notInChat': '{model} is not offered in ChatGPT chat; GPT-6 runs this prompt instead (use Codex or the API for {model}).',
   'note.openaiApi.title': 'Responses API request',
   'note.openaiApi.line': 'The prompt goes into the developer message (or instructions). max_output_tokens covers reasoning and the reply together.',
   'note.openaiApi.sampling': "Don't send temperature or top_p when effort is not none.",

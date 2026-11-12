@@ -355,6 +355,19 @@ type Note = { title: string; lines: string[]; code?: string }
 
 const json = (v: unknown) => JSON.stringify(v, null, 2)
 
+// ChatGPT'de model adına göre seçici yok: GPT-6 seçilir ve Thinking kaydırıcısı ayarlanır. Instant, Medium, High ve
+// Extra High GPT-6 Sol'da, Pro GPT-6 Astra'da çalışır; Terra, Luna ve GPT-6.1 Sol sohbette yok (chatgpt-models-help,
+// 2026-11-10). Bu modeller için en yakın sohbet ayarı gösterilir.
+const CHATGPT_THINKING: Partial<Record<Effort, string>> = { none: 'Instant', low: 'Instant', medium: 'Medium', high: 'High', xhigh: 'Extra High', max: 'Extra High' }
+
+function chatgptNote(m: TargetModel, effort: Effort, t: Translate): Note {
+  const title = t('note.chatgpt.title')
+  if (m.id === 'gpt-6-astra') return { title, lines: [t('note.chatgpt.pick', { thinking: 'Pro' })] }
+  const lines = [t('note.chatgpt.pick', { thinking: CHATGPT_THINKING[effort] ?? 'Medium' })]
+  // Katalogdaki Astra dışı OpenAI hedefleri sohbette seçilemez; prompt yine çalışır, hangi modelin açılacağı söylenir.
+  return { title, lines: [...lines, t('note.chatgpt.notInChat', { model: m.name })] }
+}
+
 /** Kopyalanan promptun yanında gösterilecek "hedef araçta böyle ayarla" notu. */
 export function setupNote(model: ModelId, effort: Effort, surface: Surface, t: Translate): Note {
   const m = MODELS[model]
@@ -367,9 +380,7 @@ export function setupNote(model: ModelId, effort: Effort, surface: Surface, t: T
       if (surface === 'agent') {
         return { title: t('note.codex.title'), lines: [t('note.codex.line')], code: `model = "${m.id}"\nmodel_reasoning_effort = "${effort}"` }
       }
-      if (surface === 'chat') {
-        return { title: t('note.chatgpt.title'), lines: [t('note.pickModel', { model: m.name }), t('note.pickThinking', { level })] }
-      }
+      if (surface === 'chat') return chatgptNote(m, effort, t)
       return {
         title: t('note.openaiApi.title'),
         lines: [t('note.openaiApi.line'), effort === 'none' ? '' : t('note.openaiApi.sampling')].filter(Boolean),

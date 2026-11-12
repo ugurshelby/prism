@@ -257,6 +257,8 @@ export const tr: Record<Key, string> = {
   'note.codex.title': 'Codex ayarı',
   'note.codex.line': 'Oturumda /model ile model ve reasoning effort seçilir; kalıcı ayar ~/.codex/config.toml dosyasındadır.',
   'note.chatgpt.title': 'ChatGPT ayarı',
+  'note.chatgpt.pick': 'GPT-6\'yı seç ve Thinking ayarını {thinking} yap.',
+  'note.chatgpt.notInChat': '{model} ChatGPT sohbetinde yok; bu promptu GPT-6 çalıştırır ({model} için Codex ya da API kullan).',
   'note.openaiApi.title': 'Responses API isteği',
   'note.openaiApi.line': 'Prompt developer mesajına (ya da instructions alanına) girer. max_output_tokens reasoning ve yanıtı birlikte kapsar.',
   'note.openaiApi.sampling': 'Effort none değilken temperature / top_p gönderme.',
