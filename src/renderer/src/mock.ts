@@ -1,6 +1,7 @@
 // Electron dışında, tarayıcıda arayüz geliştirmek için sahte köprü. Üretimde kullanılmaz.
 import type { PrismApi } from '../../preload/api'
-import { PROVIDERS, type Effort, type ModelId } from '@shared/catalog'
+import { FAMILIES, PROVIDERS, defaultEffortFor, modelsOf, type Effort, type Family, type ModelId, type Surface } from '@shared/catalog'
+import { PRODUCT, validFamilies } from '@shared/product'
 import type { Analysis, HistoryEntry, ProviderView, SettingsView, StreamEvent } from '@shared/types'
 
 const SAMPLE = `<prompt>
@@ -63,7 +64,7 @@ const provider = (id: ProviderView['id']): ProviderView =>
 
 let settings: SettingsView = {
   version: 3,
-  families: ['claude', 'openai', 'gemini', 'grok'],
+  families: [...FAMILIES],
   uiLanguage: 'tr',
   setup: { done: true, step: 'shortcut' },
   hotkeyOk: true,
@@ -145,7 +146,28 @@ function seedHistory(): HistoryEntry[] {
   ]
 }
 
+const isFamily = (v: string): v is Family => (FAMILIES as readonly string[]).includes(v)
+
+// Öneri istenen ailelerin modellerinden seçilir: Ray'de seçili aile dışında model önerilmez (gerçek motorun havuzu gibi).
+function analysisFor(families: readonly Family[], surface: Surface): Analysis {
+  if (families.includes('claude')) return ANALYSIS
+  const pool = families.flatMap((f) => modelsOf(f))
+  const [rec, ...rest] = pool
+  if (!rec) return ANALYSIS
+  return {
+    ...ANALYSIS,
+    recommendation: { ...ANALYSIS.recommendation, model: rec, effort: defaultEffortFor(rec, surface) },
+    alternatives: rest.slice(0, 2).map((model, i) => ({ ...ANALYSIS.alternatives[i % ANALYSIS.alternatives.length]!, model, effort: defaultEffortFor(model, surface) }))
+  }
+}
+
 export function installMock() {
+  // Ray tek aileyle çalışır: #family=gemini gibi bir ek seçer (varsayılan claude). Spectrum dört aileyle açılır.
+  if (PRODUCT.familyMode === 'single') {
+    const m = /family=(claude|openai|gemini|grok)/.exec(location.hash)
+    const family = m?.[1] && isFamily(m[1]) ? m[1] : 'claude'
+    settings = { ...settings, families: [family], defaultFamily: family }
+  }
   // #setup: hiç sağlayıcı yokken ilk kurulum ekranı.
   if (location.hash.includes('setup')) {
     settings = {
@@ -159,7 +181,7 @@ export function installMock() {
   let history = location.hash.includes('empty') ? [] : seedHistory()
   const showUpdate = location.hash.includes('update')
   const failDelete = location.hash.includes('deletefail')
-  const mockLatest = { tag: 'v9.9.9', version: '9.9.9' }
+  const mockLatest = { tag: `${PRODUCT.tagPrefix}9.9.9`, version: '9.9.9' }
   const streamListeners = new Set<(ev: StreamEvent) => void>()
   const timers = new Map<string, number>()
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -167,7 +189,11 @@ export function installMock() {
   const api: PrismApi = {
     settings: {
       get: async () => settings,
-      set: async (patch) => (settings = { ...settings, ...patch, vertex: { ...settings.vertex, ...patch.vertex } }),
+      set: async (patch) => {
+        // Ana süreçteki ürün kuralı: Ray'de tam bir aile, Spectrum'da en az bir aile.
+        if (patch.families && !validFamilies(PRODUCT, patch.families)) throw new Error(`Bu aile seçimi ${PRODUCT.name} için geçerli değil.`)
+        return (settings = { ...settings, ...patch, vertex: { ...settings.vertex, ...patch.vertex } })
+      },
       test: async () => (await wait(900), { ok: true, ms: 900, engine: { provider: 'vertex', model: 'gemini-4-argon' } }),
       openKnowledge: async () => '',
       onChanged: () => () => {}
@@ -195,8 +221,9 @@ export function installMock() {
         await wait(location.hash.includes('slow') ? 60000 : 2600)
         const id = crypto.randomUUID()
         const now = Date.now()
-        history.unshift({ id, createdAt: now, updatedAt: now, prompt: req.prompt, surface: req.surface, family: req.family, analysis: ANALYSIS, answers: [], outputs: [] })
-        return { ...ANALYSIS, historyId: id }
+        const analysis = analysisFor(req.family === 'auto' ? settings.families : [req.family], req.surface)
+        history.unshift({ id, createdAt: now, updatedAt: now, prompt: req.prompt, surface: req.surface, family: req.family, analysis, answers: [], outputs: [] })
+        return { ...analysis, historyId: id }
       },
       generate: async (req) => {
         let i = 0
