@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PRODUCTS, PRODUCT_INFO, pickDataDir } from './product'
+import { PRODUCTS, PRODUCT_INFO, legacySource } from './product'
 import { settingsDefaults } from './settings'
 
 const all = PRODUCTS.map((id) => PRODUCT_INFO[id])
@@ -37,21 +37,23 @@ describe('product identity', () => {
   })
 })
 
-describe('pickDataDir', () => {
-  const has = (...dirs: string[]) => (d: string) => dirs.includes(d)
+describe('legacySource', () => {
+  const none = { hasOwnData: false, hasSignature: false, migrated: false }
+  const dirs = (map: Record<string, Partial<typeof none>>) => (d: string) => ({ ...none, ...map[d] })
 
-  it('prefers the product folder when it holds data', () => {
-    expect(pickDataDir(PRODUCT_INFO.spectrum, has('Prism Spectrum', 'Prism', 'Prompter'))).toBe('Prism Spectrum')
+  it('copies from the newest legacy folder that carries a Prism signature', () => {
+    expect(legacySource(PRODUCT_INFO.spectrum, dirs({ Prism: { hasOwnData: true, hasSignature: true }, Prompter: { hasSignature: true } }))).toBe('Prism')
+    expect(legacySource(PRODUCT_INFO.spectrum, dirs({ Prompter: { hasOwnData: true, hasSignature: true } }))).toBe('Prompter')
   })
 
-  it('falls back to the newest legacy folder for Spectrum only', () => {
-    expect(pickDataDir(PRODUCT_INFO.spectrum, has('Prism', 'Prompter'))).toBe('Prism')
-    expect(pickDataDir(PRODUCT_INFO.spectrum, has('Prompter'))).toBe('Prompter')
-    expect(pickDataDir(PRODUCT_INFO.ray, has('Prism', 'Prompter'))).toBe('Prism Ray')
+  it('ignores a legacy folder without the signature (it may belong to another app)', () => {
+    expect(legacySource(PRODUCT_INFO.spectrum, dirs({ Prism: { hasOwnData: true } }))).toBeNull()
   })
 
-  it('uses the product folder on a fresh machine', () => {
-    expect(pickDataDir(PRODUCT_INFO.ray, has())).toBe('Prism Ray')
-    expect(pickDataDir(PRODUCT_INFO.spectrum, has())).toBe('Prism Spectrum')
+  it('never migrates over existing data, twice, or for Ray', () => {
+    const legacy = { Prism: { hasOwnData: true, hasSignature: true } }
+    expect(legacySource(PRODUCT_INFO.spectrum, dirs({ ...legacy, 'Prism Spectrum': { hasOwnData: true } }))).toBeNull()
+    expect(legacySource(PRODUCT_INFO.spectrum, dirs({ ...legacy, 'Prism Spectrum': { migrated: true } }))).toBeNull()
+    expect(legacySource(PRODUCT_INFO.ray, dirs(legacy))).toBeNull()
   })
 })

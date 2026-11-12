@@ -109,6 +109,8 @@
         "src/main/providers.ts",
         "src/main/wipe.ts",
         "src/main/wipe.test.ts",
+        "src/main/migrate.ts",
+        "src/main/migrate.test.ts",
         "src/main/index.ts",
         "src/main/engine/knowledge.ts",
         "src/main/engine/knowledge.test.ts",

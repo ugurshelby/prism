@@ -95,8 +95,22 @@ export function validFamilies(product: ProductInfo, families: readonly Family[])
   return unique && (product.familyMode === 'single' ? families.length === 1 : families.length >= 1)
 }
 
-/** Kullanılacak userData klasörünün adı: ürünün kendi klasöründe veri yoksa veri bulunan ilk eski klasör. */
-export function pickDataDir(product: ProductInfo, hasData: (dirName: string) => boolean): string {
-  if (hasData(product.dataDir)) return product.dataDir
-  return product.legacyDataDirs.find(hasData) ?? product.dataDir
+export interface DirInfo {
+  /** Prism'in kendi dosyalarından biri var. */
+  hasOwnData: boolean
+  /** Prism'e özgü imza (key dosyası, şifreli geçmiş ya da sürümlü settings.json): başka uygulamanın klasörü değil. */
+  hasSignature: boolean
+  /** Bu klasöre daha önce göç yapıldı. */
+  migrated: boolean
+}
+
+/**
+ * Bir kerelik göçün kaynağı: ürünün kendi klasöründe veri ve göç işareti yoksa, Prism imzası taşıyan ilk eski klasör
+ * (en yeni addan en eskiye). Ürün her zaman kendi klasörünü kullanır; eski klasör yalnızca kopyalanır.
+ */
+export function legacySource(product: ProductInfo, inspect: (dirName: string) => DirInfo): string | null {
+  if (!product.legacyDataDirs.length) return null
+  const own = inspect(product.dataDir)
+  if (own.hasOwnData || own.migrated) return null
+  return product.legacyDataDirs.find((d) => inspect(d).hasSignature) ?? null
 }

@@ -16,6 +16,8 @@ const BASES: ReadonlySet<string> = new Set([
   'models.json',
   'window-state.json',
   'update-state.json',
+  // Spectrum'un 2.x'ten bir kerelik göç işareti (main/migrate.ts).
+  'migrated.json',
   ...PROVIDERS.map((p) => `${p}.key`)
 ])
 const SETTINGS_BACKUP = /^settings\.v\d+\.json$/

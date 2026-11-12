@@ -1,10 +1,10 @@
 import { app, clipboard, dialog, globalShortcut, Menu, nativeImage, Notification, session, shell, Tray } from 'electron'
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import { FAMILY_INFO, MODELS, PROVIDERS, PROVIDER_INFO, type FamilyChoice } from '@shared/catalog'
-import { PRODUCT, pickDataDir } from '@shared/product'
+import { PRODUCT } from '@shared/product'
 import { msg } from '@shared/messages'
 import {
   AnalyzeRequestSchema,
@@ -27,6 +27,7 @@ import { LlmError } from './llm'
 import { UserError } from './errors'
 import { logError, logWarn } from './log'
 import { clearKey, engineGenerate, resolveEngine, needsVerify, saveKey, setHotkeyOk, settingsView, verify, verifyPending } from './providers'
+import { inspectDir, migrateLegacyData } from './migrate'
 import { selftest } from './selftest'
 import { checkForUpdate, openReleasePage, startUpdateChecks, updateView } from './update'
 import { wipeOwnData } from './wipe'
@@ -50,18 +51,17 @@ import {
 } from './window'
 
 // Ürün kimliği hiçbir yol okunmadan önce kurulur: ad, userData ve (aşağıda) tek kopya kilidi ürüne özeldir,
-// böylece Ray ve Spectrum yan yana çalışır. Eski adlarla (Prism 2.x, Prompter) kurulmuş verinin bulunduğu
-// klasör yalnızca Spectrum'da kullanılır. Chromium yeni klasörü açılışta kendisi oluşturduğundan klasöre değil
-// içindeki verilere bakılır (yalnızca key kaydedilmiş bir kurulum da veri sayılır).
+// böylece Ray ve Spectrum yan yana çalışır. Her ürün yalnızca kendi klasörünü kullanır. Spectrum ilk açılışta eski
+// adlarla (Prism 2.x, Prompter) kurulmuş veriyi bir kez kendi klasörüne kopyalar (migrate.ts); eski klasöre yazılmaz.
 app.setName(PRODUCT.name)
 const appData = app.getPath('appData')
-const DATA_FILES = ['settings.json', 'history.json', 'history.enc', ...PROVIDERS.map((p) => `${p}.key`)]
-const hasData = (dirName: string) => DATA_FILES.some((f) => existsSync(join(appData, dirName, f)))
-app.setPath('userData', join(appData, pickDataDir(PRODUCT, hasData)))
+app.setPath('userData', join(appData, PRODUCT.dataDir))
 
 // Geliştirme ve testte gerçek ayar/geçmiş klasörüne dokunmamak için ayrı bir userData klasörü kullanılabilir.
-// Kurulu sürümde bu ve diğer PRISM_* değişkenleri yok sayılır (env.ts).
+// Kurulu sürümde bu ve diğer PRISM_* değişkenleri yok sayılır (env.ts). Geliştirmede gerçek klasörlere göç yapılmaz.
 const DEV = devEnv()
+const MIGRATED_FROM = DEV.userData ? null : migrateLegacyData(appData, PRODUCT)
+if (MIGRATED_FROM) logWarn('migrate', `${MIGRATED_FROM} klasöründeki veriler ${PRODUCT.dataDir} klasörüne kopyalandı`)
 if (DEV.userData) {
   const dir = resolve(DEV.userData)
   mkdirSync(dir, { recursive: true })
@@ -280,7 +280,10 @@ function setLaunchAtLogin(enabled: boolean) {
 // userData verildiyse yalnızca o klasör silinir; gerçek kurulumların klasörlerine dokunulmaz.
 function dataDirs(): string[] {
   const dirs = [app.getPath('userData')]
-  if (!DEV.userData) for (const d of [PRODUCT.dataDir, ...PRODUCT.legacyDataDirs]) dirs.push(join(appData, d))
+  if (DEV.userData) return dirs
+  dirs.push(join(appData, PRODUCT.dataDir))
+  // Eski klasörlere yalnızca Prism imzası taşıyorlarsa dokunulur: aynı adlı başka bir uygulamanın klasörü silinmez.
+  for (const d of PRODUCT.legacyDataDirs) if (inspectDir(join(appData, d)).hasSignature) dirs.push(join(appData, d))
   return dirs
 }
 
