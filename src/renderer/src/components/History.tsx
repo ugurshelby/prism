@@ -119,6 +119,7 @@ export function History({
 }) {
   const [items, setItems] = useState<HistoryEntry[] | null>(null)
   const [storage, setStorage] = useState<HistoryStorage>('encrypted')
+  const [reset, setReset] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [confirmClear, setConfirmClear] = useState(false)
@@ -130,6 +131,7 @@ export function History({
       .then((list) => {
         setItems(list.entries)
         setStorage(list.storage)
+        setReset(list.reset === true)
       })
       .catch((e: unknown) => {
         setItems([])
@@ -233,6 +235,11 @@ export function History({
           </ul>
         </div>
 
+        {reset && (
+          <p className="hint" role="status">
+            {t('history.reset')}
+          </p>
+        )}
         {items && items.length > 0 && (
           <div className="h-foot">
             <span className="hint">

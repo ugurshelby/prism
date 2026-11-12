@@ -111,6 +111,8 @@ export type HistoryStorage = 'encrypted' | 'memory' | 'off'
 export interface HistoryList {
   entries: HistoryEntry[]
   storage: HistoryStorage
+  /** Önceki geçmiş bu sistemde açılamadı ve kenara alındı (ör. eski sürümden göçte anahtar değişti); geçmiş yeniden başladı. */
+  reset?: boolean
 }
 
 export type ReplyLanguage = 'tr' | 'en' | 'none'

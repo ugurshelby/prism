@@ -146,6 +146,7 @@ export const en = {
   'history.empty': 'No history yet',
   'history.offEmpty': 'History is off; new prompts are not saved. You can turn it on in Settings → Privacy.',
   'history.emptyHint': 'Prompts you analyze and write collect here.',
+  'history.reset': 'Your earlier history could not be opened on this system (it was saved by an older version), so it was set aside and history starts fresh. Saved keys may need to be entered again.',
   'history.encrypted': 'The last 200 entries are stored encrypted on this computer.',
   'history.off': 'History is off: new prompts are not saved (Settings → Privacy).',
   'history.memory': 'No system keyring, or it is locked: history is not written to disk and is gone when the app closes.',

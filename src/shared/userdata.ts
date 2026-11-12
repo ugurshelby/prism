@@ -20,8 +20,9 @@ const BASES: ReadonlySet<string> = new Set([
 ])
 const SETTINGS_BACKUP = /^settings\.v\d+\.json$/
 // Taban adın ardından gelebilecek ekler: atomik yazımın geçici dosyası (.<hex>.tmp), history.json.tmp, şifreli
-// yedekler (.<n>.bak) ve okunamayınca kenara alınan kopya (.bozuk-<zaman>).
-const SUFFIXES = [/\.[0-9a-f]{12}\.tmp$/, /\.tmp$/, /\.\d+\.bak$/, /\.bozuk-\d+$/]
+// yedekler (.<n>.bak), okunamayınca kenara alınan kopya (.bozuk-<zaman>) ve bu sistemde çözülemeyen şifreli geçmiş
+// (.unreadable-<zaman>).
+const SUFFIXES = [/\.[0-9a-f]{12}\.tmp$/, /\.tmp$/, /\.\d+\.bak$/, /\.bozuk-\d+$/, /\.unreadable-\d+$/]
 
 const isBase = (name: string) => BASES.has(name) || SETTINGS_BACKUP.test(name)
 

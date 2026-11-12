@@ -3,18 +3,20 @@
 // şifreli durur. Anahtarlık yoksa diske hiç yazılmaz, yalnızca bu oturumda bellekte tutulur.
 
 import { randomUUID } from 'node:crypto'
-import { copyFileSync, existsSync, readFileSync, readdirSync } from 'node:fs'
+import { copyFileSync, existsSync, readFileSync, readdirSync, renameSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { HistoryEntrySchema } from '@shared/schemas'
 import type { Analysis, AnalyzeRequest, GenerateRequest, GenerateResult, HistoryEntry, HistoryList, HistoryStorage } from '@shared/types'
 import { getSettings, userFile, writeFileAtomic } from './config'
 import { logWarn } from './log'
-import { seal, unseal, vaultState, wipeFile } from './vault'
+import { seal, unseal, vaultRoundTrips, vaultState, wipeFile } from './vault'
 
 const LIMIT = 200
 
 let entries: HistoryEntry[] | null = null
 let storage: HistoryStorage = 'memory'
+// Önceki geçmiş bu sistemde açılamadığı için kenara alındı (bu oturumda arayüz bir kez bildirir).
+let reset = false
 // Silinen kayıtlar: o sırada süren bir yazım bitince girdiyi yeniden açmasın.
 const deleted = new Set<string>()
 
@@ -108,7 +110,13 @@ function load(): HistoryEntry[] {
     storage = 'memory'
     return (entries = [])
   }
-  const current = existsSync(userFile('history.enc')) ? readEncrypted() : []
+  let current = existsSync(userFile('history.enc')) ? readEncrypted() : []
+  if (current === null && vaultRoundTrips() && setAsideUnreadable()) {
+    // Anahtarlık çalışıyor ama dosya çözülmüyor: başka bir anahtarla yazılmış (ör. 2.x'ten Spectrum'a ad değişimi).
+    // Dosya silinmeden kenara alındı; geçmiş baştan başlar ve arayüz bunu söyler (owner kararı, R3 yedek davranışı).
+    reset = true
+    current = []
+  }
   if (current === null) {
     // Açılamayan dosyanın üzerine yazılmasın diye bu oturum bellek kipinde sürer.
     storage = 'memory'
@@ -131,6 +139,19 @@ function load(): HistoryEntry[] {
   return entries
 }
 
+/** Çözülemeyen şifreli geçmişi `history.enc.unreadable-<zaman>` adıyla kenara alır; başarılıysa true. */
+function setAsideUnreadable(): boolean {
+  const path = userFile('history.enc')
+  try {
+    renameSync(path, `${path}.unreadable-${Date.now()}`)
+    logWarn('history', 'şifreli geçmiş bu sistemde çözülemiyor; dosya kenara alındı, geçmiş yeniden başlıyor')
+    return true
+  } catch (e) {
+    logWarn('history', 'çözülemeyen geçmiş kenara alınamadı; bu oturumda geçmiş yalnızca bellekte', e)
+    return false
+  }
+}
+
 function persist() {
   const list = load()
   list.sort((a, b) => b.updatedAt - a.updatedAt)
@@ -140,7 +161,7 @@ function persist() {
 
 export function listHistory(): HistoryList {
   const list = [...load()].sort((a, b) => b.updatedAt - a.updatedAt)
-  return { entries: list, storage: getSettings().saveHistory ? storage : 'off' }
+  return { entries: list, storage: getSettings().saveHistory ? storage : 'off', ...(reset ? { reset: true } : {}) }
 }
 
 /** Geçmiş kaydı kapalıysa hiçbir şey yazılmaz ve kimlik dönmez. */

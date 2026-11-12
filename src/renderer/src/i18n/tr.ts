@@ -146,6 +146,7 @@ export const tr: Record<Key, string> = {
   'history.empty': 'Henüz geçmiş yok',
   'history.offEmpty': 'Geçmiş kaydı kapalı; yeni promptlar kaydedilmez. Ayarlar → Gizlilik’ten açabilirsin.',
   'history.emptyHint': 'Analiz ettiğin ve yazdırdığın promptlar burada birikir.',
+  'history.reset': 'Önceki geçmişin bu sistemde açılamadı (eski bir sürüm kaydetmiş), bu yüzden kenara alındı ve geçmiş yeniden başlıyor. Kayıtlı key’leri yeniden girmen gerekebilir.',
   'history.encrypted': 'Son 200 kayıt bu bilgisayarda şifreli saklanır.',
   'history.off': 'Geçmiş kaydı kapalı: yeni promptlar kaydedilmez (Ayarlar → Gizlilik).',
   'history.memory': 'Sistem anahtarlığı yok ya da kilitli: geçmiş diske yazılmaz, uygulama kapanınca silinir.',

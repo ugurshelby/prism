@@ -33,6 +33,21 @@ export function unseal(data: Buffer): string {
 }
 
 /**
+ * Anahtarlık şu an şifreleyip çözebiliyor mu. Kayıtlı bir dosya çözülemiyorsa bu ayrımı yapar: anahtarlık çalışıyorsa dosya
+ * bu sistemde artık geçerli olmayan bir anahtarla yazılmıştır (ör. uygulamanın adı değişince macOS Keychain kaydı da
+ * değişir); çalışmıyorsa anahtarlık geçici olarak kilitli ya da yoktur ve dosyaya dokunulmamalıdır.
+ */
+export function vaultRoundTrips(): boolean {
+  if (!vaultState().ok) return false
+  // Hata beklenen bir sonuçtur (kilitli anahtarlık): false döner, çağıran dosyayı yerinde bırakır.
+  try {
+    return safeStorage.decryptString(safeStorage.encryptString('prism-check')) === 'prism-check'
+  } catch {
+    return false
+  }
+}
+
+/**
  * Dosyanın içeriğini silmeden önce sıfırlarla ezer. SSD ve kopyala-yaz dosya sistemlerinde eski bloklar
  * yine kalabilir; bu, düz metin dosyanın olağan yollarla geri okunmasını önlemek içindir.
  */

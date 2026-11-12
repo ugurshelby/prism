@@ -20,7 +20,8 @@ describe('isOwnDataFile', () => {
       'vertex.key',
       '.env',
       'settings.json.a1b2c3d4e5f6.tmp',
-      'models.json.bozuk-1731200000000'
+      'models.json.bozuk-1731200000000',
+      'history.enc.unreadable-1731200000000'
     ]) {
       expect(isOwnDataFile(name), name).toBe(true)
     }
