@@ -8,7 +8,7 @@ extraMetadata:
   version: 3.0.0
 artifactName: Prism-Spectrum-${version}-${os}-${arch}.${ext}
 icon: resources/spectrum/icon.png
-# Diziler birleşmez, değiştirilir: knowledge girdisi aynen tekrarlanır, tray girdisi ürün klasörüne bakar.
+# Diziler tabanla birleşir; bu yüzden extraResources yalnızca burada (tabanda yok). Tray dosyaları ürün klasöründen.
 extraResources:
   - from: knowledge
     to: knowledge

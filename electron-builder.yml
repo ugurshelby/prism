@@ -9,14 +9,7 @@ directories:
 files:
   - out/**
   - package.json
-extraResources:
-  - from: knowledge
-    to: knowledge
-  - from: resources
-    to: .
-    filter:
-      - "tray*.png"
-      - "trayTemplate*.png"
+# extraResources yalnızca build/<ürün>.yml'de: electron-builder dizileri birleştirir, tabanda olursa iki kez kopyalanır.
 icon: resources/icon.png
 # Sürümler GitHub Actions'ta derlenip release'e iş akışı tarafından yüklenir.
 publish: null

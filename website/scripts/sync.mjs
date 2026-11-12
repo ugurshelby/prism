@@ -16,9 +16,17 @@ try {
   // Depo sabittir: bir fork derlemesi başka deponun yayınlarını göstermesin (GITHUB_REPOSITORY okunmaz).
   const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'prism-website' }
   if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
-  const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=50`, { headers, redirect: 'error' })
-  if (!res.ok) throw new Error(`GitHub API ${res.status}`)
-  releases = parseApiResponse(await res.json())
+  // Bütün sayfalar okunur (en fazla 10 × 100 yayın): eski sürümler sessizce düşmesin.
+  const all = []
+  for (let page = 1; page <= 10; page++) {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=100&page=${page}`, { headers, redirect: 'error' })
+    if (!res.ok) throw new Error(`GitHub API ${res.status}`)
+    const batch = await res.json()
+    if (!Array.isArray(batch)) throw new Error('GitHub API yanıtı dizi değil')
+    all.push(...batch)
+    if (batch.length < 100) break
+  }
+  releases = parseApiResponse(all)
 } catch (e) {
   if (process.env.CI) {
     console.error(`✗ Sürümler alınamadı ya da yanıt bozuk (${e.message}); CI'da derleme durduruldu.`)

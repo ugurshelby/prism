@@ -54,7 +54,8 @@ export const releasesOf = (id: ProductId) => releases.filter((r) => r.product ==
 export const statusOf = (id: ProductId): ProductStatus =>
   PRODUCTS.find((p) => p.id === id)?.released ? (releasesOf(id).length ? 'available' : 'soon') : 'planned'
 /** Ana ürünün (Spectrum) en yeni yayını; ana sayfadaki indirme düğmesi bunu verir. */
-export const latest: Release | undefined = releasesOf('spectrum')[0] ?? releases[0]
+// Ana düğme yalnızca Spectrum'u indirir; Spectrum yayını yoksa düğme sürüm sayfasına gider (başka ürüne düşmez).
+export const latest: Release | undefined = releasesOf('spectrum')[0]
 
 export function files(r: Release | undefined): Partial<Record<Platform, Asset>> {
   if (!r) return {}

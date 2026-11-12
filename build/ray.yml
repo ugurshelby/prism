@@ -8,7 +8,7 @@ extraMetadata:
   version: 2.0.0
 artifactName: Prism-Ray-${version}-${os}-${arch}.${ext}
 icon: resources/ray/icon.png
-# Diziler birleşmez, değiştirilir: knowledge girdisi aynen tekrarlanır, tray girdisi ürün klasörüne bakar.
+# Diziler tabanla birleşir; bu yüzden extraResources yalnızca burada (tabanda yok). Tray dosyaları ürün klasöründen.
 extraResources:
   - from: knowledge
     to: knowledge

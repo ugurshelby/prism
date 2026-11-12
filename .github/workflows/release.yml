@@ -87,11 +87,11 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
-          cache: npm
+      # Yayın derlemesi önbellek kullanmaz: kurulum her seferinde kilit dosyasından temiz yapılır.
       - run: npm ci
       - run: npm run setup
-      # Etiket main dışındaki bir commit'e de atılabilir; yayımlanan her sürüm aynı kapılardan geçer.
-      - run: npm audit --omit=dev
+      # Uygulamaya paketlenen kütüphaneler devDependency olarak durur (vite derler); audit bütün ağaca bakar.
+      - run: npm audit --audit-level=high
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
@@ -170,9 +170,15 @@ jobs:
             echo "::error::Taslağa yüklenen dosyalar beklenenle aynı değil; yayın açılmadı."
             exit 1
           fi
-          # README'deki /releases/latest bağlantıları Spectrum'a gider; Ray yayını "latest" olmaz.
+          # README'deki /releases/latest bağlantıları Spectrum'a gider; Ray yayını "latest" olmaz. Eski bir dalın yama
+          # sürümü (3.0.1, 3.1.0'dan sonra) "latest"ı geri almaz: yalnızca mevcut en yeniden büyükse.
           latest=false
-          [ "$PRODUCT" = spectrum ] && latest=true
+          if [ "$PRODUCT" = spectrum ]; then
+            current=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName 2>/dev/null || true)
+            current="${current#spectrum-v}"; current="${current#v}"
+            top=$(printf '%s\n%s\n' "$current" "$VERSION" | sort -V | tail -n 1)
+            if [ -z "$current" ] || { [ "$top" = "$VERSION" ] && [ "$current" != "$VERSION" ]; }; then latest=true; fi
+          fi
           gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false --latest="$latest"
       # Sitedeki indirme bağlantıları yeni sürüme geçsin.
       - name: Update website

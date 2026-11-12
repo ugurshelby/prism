@@ -31,17 +31,20 @@ jobs:
           cache-dependency-path: website/package-lock.json
       - run: npm ci
         working-directory: website
-      - run: npm run build
+      # Token yalnızca GitHub yayın listesini okuyan adıma verilir; site derlemesi ve bağımlılıkları onu görmez.
+      - run: npm run sync
         working-directory: website
         env:
           GITHUB_TOKEN: ${{ github.token }}
+      - run: npx astro build
+        working-directory: website
       - if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: website/dist
 
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     permissions:
