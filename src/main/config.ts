@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import type { z } from 'zod'
 import type { ProviderId } from '@shared/catalog'
 import { PRODUCT, validFamilies } from '@shared/product'
-import { msg, setMessageLanguage } from '@shared/messages'
+import { msg } from '@shared/messages'
 import { SettingsPatchSchema, SettingsSchema } from '@shared/schemas'
 import { SETTINGS_VERSION, conform, failClosed, loadSettings, serializeSettings } from '@shared/settings'
 import type { Settings } from '@shared/types'
@@ -166,7 +166,6 @@ export function getSettings(): Settings {
   }
   if (projectFromEnv && envProject) next.vertex.project = envProject
   settings = next
-  setMessageLanguage(next.uiLanguage)
   try {
     // Bozuk dosya kenara alındıysa kapalı gizlilik ayarları hemen yazılır: ikinci açılış varsayılanlara dönmesin.
     if (legacy || migrated || read.status === 'corrupt' || (raw !== null && projectFromEnv)) writeJson('settings.json', serializeSettings(settings, extras, preserved))
@@ -201,7 +200,6 @@ export function updateSettings(patch: z.infer<typeof SettingsPatchSchema>): Sett
   const parsed = conform(SettingsSchema.parse(next), PRODUCT)
   writeJson('settings.json', serializeSettings(parsed, extras, preserved))
   settings = parsed
-  setMessageLanguage(parsed.uiLanguage)
   return settings
 }
 

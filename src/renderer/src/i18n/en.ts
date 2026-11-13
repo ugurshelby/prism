@@ -177,8 +177,6 @@ export const en = {
   'provider.deleteKey': 'Delete saved key',
 
   'settings.title': 'Settings',
-  'settings.language': 'Interface language',
-  'settings.languageHint': "The language of Prism's own screens. The language the target model answers in is a separate setting below.",
   'settings.families': 'Model families',
   'settings.familiesHintSingle': '{product} works with one family; changing it switches every screen to that family.',
   'settings.familiesHintMulti': 'Only the selected families appear in Prism and in the recommendation pool.',
@@ -240,11 +238,9 @@ export const en = {
 
   'setup.welcome': 'Welcome to {product}',
   'setup.progress': 'Step {n} of {total}',
-  'setup.step.language': 'Language',
   'setup.step.families': 'Families',
   'setup.step.engine': 'Engine',
   'setup.step.shortcut': 'Shortcut',
-  'setup.languageHint': 'Pick the language for these screens. You can change it later in Settings.',
   'setup.familiesSingle': '{product} specializes in one model family. Pick the one you write prompts for.',
   'setup.familiesMulti': 'Pick the model families you write prompts for. Only these appear in the app.',
   'setup.engineHint': 'Prism runs a model of its own to analyze and write. Add an API key for at least one provider; any provider can write for any family.',

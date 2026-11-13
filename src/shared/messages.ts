@@ -1,7 +1,6 @@
-// Ana sürecin kullanıcıya gösterdiği mesajlar (hatalar, tray, bildirim) ve şema mesajları. Dil, ayarlardaki arayüz
-// dilidir; config.ts ayarları okuyunca ve değiştirince setMessageLanguage() çağırır. Saf modül: Electron içe aktarmaz.
-// Mesajlara asla key ya da prompt metni girmez; değişkenler yalnızca sağlayıcı adı, durum kodu gibi bilgilerdir.
-import type { UiLanguage } from './types'
+// Messages the main process shows to the person (errors, tray, notifications) and schema messages. English only
+// (owner, 2026-11-13). Pure module: no Electron import. Messages never contain a key or prompt text; variables are
+// only things like a provider name or a status code.
 
 const en = {
   'err.cancelled': 'Cancelled.',
@@ -99,116 +98,10 @@ const en = {
 
 export type MessageKey = keyof typeof en
 
-const tr: Record<MessageKey, string> = {
-  'err.cancelled': 'İptal edildi.',
-  'err.timeout': 'İstek zaman aşımına uğradı.',
-  'err.network': 'Ağ hatası: {detail}',
-  'err.networkUnknown': 'bağlantı kurulamadı',
-  'err.retriesExhausted': '{label}: tekrar denemeleri tükendi.',
-  'err.responseTimeout': '{label}: yanıt zaman aşımına uğradı ya da iptal edildi.',
-  'err.notJson': '{label}: yanıt JSON değil.',
-  'err.badShape': '{label}: yanıt beklenen biçimde değil.',
-  'err.noBody': 'Yanıt akışının gövdesi yok.',
-  'err.badStreamJson': 'Yanıt akışında geçersiz JSON.',
-  'err.streamStalled': 'Sağlayıcı yanıt akışı durdu (2 dakika veri gelmedi). Tekrar dene.',
-  'err.longLine': 'Yanıt akışında beklenmeyen biçimde uzun satır.',
-  'err.streamBroken': 'Yanıt akışı kesildi: {detail}',
-  'err.unknown': 'bilinmeyen hata',
-  'err.unknownReason': 'bilinmiyor',
-  'err.badProviderUrl': 'Geçersiz sağlayıcı adresi.',
-  'err.hostNotAllowed': 'İzin verilmeyen sağlayıcı adresi: {host}',
-  'err.notFound': 'Model bulunamadı ya da erişim yok (404). Ayarlardaki model ID’sini kontrol et. {detail}',
-  'err.keyRejected': '{label} API key’i reddedildi ({status}). Ayarlardan key’i kontrol et. {detail}',
-  'err.quota': '{label} kotası doldu (429). Biraz sonra tekrar dene.',
-  'err.status': '{label} {status}: {detail}',
-  'err.truncated': 'Yanıt token sınırında kesildi.',
-  'err.refused': 'Model bu isteği yanıtlamayı reddetti.',
-  'err.refusedWith': 'Model yanıtlamayı reddetti: {detail}',
-  'err.empty': 'Boş yanıt ({reason}).',
-  'err.providerError': '{label}: {detail}',
-  'err.streamError': 'akış hatası',
-  'err.requestFailed': 'istek başarısız',
-  'err.vertexProject': 'Vertex AI için proje ID gerekli.',
-  'err.noJson': 'Geçerli JSON bulunamadı.',
-  'err.invalidJson': 'Model yanıtı geçerli JSON değil.',
-  'err.analysisShape': 'Model yanıtı beklenen biçimde değil. Tekrar dene ya da başka bir motor modeli seç.',
-  'err.familiesInvalid': 'Bu aile seçimi {product} için geçerli değil.',
-  'err.historyLocked': 'Geçmiş şu an değiştirilemiyor: kayıtlı geçmiş bu oturumda açılamadı. Bütün geçmişi temizle ya da yeniden başlattıktan sonra dene.',
-  'err.deleteData': 'Bazı veriler silinemedi: {files}. Uygulamanın diğer kopyalarını kapatın, uygulamayı yeniden başlatıp tekrar deneyin.',
-  'err.writesBlocked': 'Verileriniz siliniyor; uygulama yeniden başlayana kadar hiçbir şey kaydedilmez.',
-  'wipe.confirmTitle': 'Tüm verileriniz silinsin mi?',
-  'wipe.confirmBody': 'Kayıtlı API key\'leri, prompt geçmişi, ayarlar ve önbellekler eski sürümlerin klasörlerinden de silinir. Ardından uygulama yeniden başlar. Bu işlem geri alınamaz.',
-  'wipe.confirm': 'Hepsini sil',
-  'wipe.cancel': 'Vazgeç',
-  'err.familyNotSelected': 'Bu aile seçili değil. Ayarlar → Model aileleri bölümünden ekle.',
-  'err.tooMany': 'Aynı anda çok fazla istek var; biri bitince tekrar dene.',
-  'err.hotkey': 'Kısayol kaydedilemedi: {hotkey}. Başka bir uygulama ya da başka bir Prism ürünü kullanıyor olabilir.',
-  'err.connectFailed': 'Bağlantı denemesi başarısız.',
-  'err.running': 'Bu istek zaten çalışıyor.',
-  'err.writeFailed': 'Yazım başarısız.',
-  'err.unauthorized': 'Yetkisiz istek.',
-  'err.invalidRequest': 'Geçersiz istek: {detail}',
-  'err.system': 'İşlem tamamlanamadı (sistem hatası). Ayrıntı uygulama günlüğünde.',
-  'err.keyMissing': '{label} API key bulunamadı. Ayarlar → Sağlayıcılar bölümünden ekle.',
-  'err.keyInvalid': '{label} key’i geçersiz ({source}): {detail}',
-  'err.savedKey': 'kayıtlı key',
-  'err.keyUnreadable': '{label} için kayıtlı key okunamadı. Key’i yeniden kaydet.',
-  'err.keyLeftInEnv': '{label} key’i .env dosyasında; kurulu sürüm .env’i artık okumuyor. Key’i buradan kaydet, sonra .env’i sil.',
-  'err.keyUnsafe': '{reason} Key güvenle saklanamıyor; sistem anahtarlığını kurup tekrar dene.',
-  'err.noTextModels': 'Bağlantı kuruldu ama erişilebilir metin modeli bulunamadı.',
-  'err.verifyFailed': 'Doğrulama başarısız.',
-  'err.noProvider': 'Hiç sağlayıcı yapılandırılmamış. Ayarlar → Sağlayıcılar bölümünden bir API key ekle.',
-  'vault.unavailable': 'Bu sistemde güvenli depolama kullanılamıyor.',
-  'vault.noKeyring': 'Sistem anahtarlığı bulunamadı (GNOME Keyring / KWallet).',
-  'schema.provider': 'Bilinmeyen sağlayıcı.',
-  'schema.id': 'Geçersiz kimlik.',
-  'schema.keyShort': 'Key çok kısa; tamamını yapıştırdığından emin ol.',
-  'schema.keyLong': 'Key çok uzun.',
-  'schema.keyChars': 'Key boşluk ya da görünmeyen karakter içeriyor; yalnızca key’in kendisini yapıştır.',
-  'schema.project': 'Geçersiz Google Cloud proje ID’si.',
-  'schema.location': 'Geçersiz Vertex konumu (ör. global, us-central1).',
-  'schema.model': 'Geçersiz model ID’si.',
-  'schema.hotkey': 'Geçersiz kısayol.',
-  'schema.tooLong': 'Metin çok uzun.',
-  'schema.emptyPrompt': 'Prompt boş.',
-  'note.foreignScript': 'Uyarı: çıktıda beklenmeyen karakterler var ({chars}). Kopyalamadan önce kontrol et.',
-  'tray.working': 'Çalışıyor…',
-  'tray.ready': 'Hazır',
-  'tray.showHide': 'Göster / Gizle',
-  'tray.openPanel': 'Paneli aç',
-  'tray.minimize': 'Küreye küçült',
-  'tray.history': 'Geçmiş…',
-  'tray.settings': 'Ayarlar…',
-  'tray.engine': 'Motor: {engine}',
-  'tray.engineNone': 'Motor: yapılandırılmamış',
-  'tray.alwaysOnTop': 'Her zaman üstte',
-  'tray.quit': 'Çıkış',
-  'tray.tooltipBusy': '{product} — çalışıyor…',
-  'notify.ready': 'Prompt hazır',
-  'err.autostartPath': 'Uygulama yolu açılışta başlatma için uygun değil.',
-  'err.vertexProjectMissing': 'Vertex AI için proje ID’si eksik. Ayarlar → Sağlayıcılar → Vertex AI bölümünden gir.',
-  'err.keyAlsoInEnv': 'Key kayıtlı; .env dosyasındaki eski düz metin kopyasını sil.',
-  'err.cardUnreadable': 'Bilgi kartı okunamadı ({path}).',
-  'err.cardInvalid': 'Bilgi kartı geçersiz ({path}): {detail}',
-  'err.sourcesInvalid': 'Bilgi tabanının kaynak kaydı bozuk (knowledge/sources.json).'
-}
-
-const DICTS: Record<UiLanguage, Record<MessageKey, string>> = { en, tr }
-let lang: UiLanguage = 'en'
-
-export function setMessageLanguage(next: UiLanguage) {
-  lang = next
-}
-
-export const messageLanguage = () => lang
-
-/** Motor promptlarında arayüz dilinin adı (insanın okuyacağı alanlar bu dilde yazılır). */
-export const uiLanguageName = () => (lang === 'tr' ? 'Turkish' : 'English')
-
 export function msg(key: MessageKey, vars?: Record<string, string | number>): string {
-  const s = DICTS[lang][key]
+  const s = en[key]
   return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s
 }
 
-/** zod mesajı: şema bir kez kurulur, mesaj her hata anında o anki dilde üretilir. */
+/** zod message: the schema is built once, the message is produced when the error happens. */
 export const zmsg = (key: MessageKey) => ({ error: () => msg(key) })

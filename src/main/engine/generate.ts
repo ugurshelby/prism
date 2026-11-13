@@ -1,6 +1,6 @@
 import { FAMILY_INFO, MODELS } from '@shared/catalog'
 import { parseGenerated } from '@shared/parse'
-import { msg, uiLanguageName } from '@shared/messages'
+import { msg } from '@shared/messages'
 import type { GenerateRequest, GenerateResult, ReplyLanguage } from '@shared/types'
 import { getSettings } from '../config'
 import { engineStream } from '../providers'
@@ -60,7 +60,7 @@ Output exactly this, nothing before or after:
 (the final prompt)
 </prompt>
 <notes>
-- (2 to 4 very short bullets in ${uiLanguageName()}: the most important things you changed or added and why; mention any placeholder)
+- (2 to 4 very short bullets in English: the most important things you changed or added and why; mention any placeholder)
 </notes>`
 }
 

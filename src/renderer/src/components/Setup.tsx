@@ -13,7 +13,7 @@ import { FamilyPicker, ProviderCard, ToggleRow } from './Fields'
 import { Logo } from './Prism'
 import { viewMotion } from './Views'
 
-const STEPS: SetupStep[] = ['language', 'families', 'engine', 'shortcut']
+const STEPS: SetupStep[] = ['families', 'engine', 'shortcut']
 
 export function Setup({ view, onChanged, onDone }: { view: SettingsView; onChanged: (v: SettingsView) => void; onDone: () => void }) {
   const [step, setStep] = useState<SetupStep>(view.setup.step)
@@ -77,25 +77,6 @@ export function Setup({ view, onChanged, onDone }: { view: SettingsView; onChang
 
       <AnimatePresence mode="wait" initial={false}>
         <motion.div key={step} className="setup-step" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
-          {step === 'language' && (
-            <div className="group">
-              <span className="hint">{t('setup.languageHint')}</span>
-              <div className="choice-row">
-                {(['en', 'tr'] as const).map((l) => (
-                  <button
-                    key={l}
-                    className={`choice ${view.uiLanguage === l ? 'on' : ''}`}
-                    aria-pressed={view.uiLanguage === l}
-                    onClick={() => apply({ uiLanguage: l })}
-                    autoFocus={view.uiLanguage === l}
-                  >
-                    {l === 'en' ? 'English' : 'Türkçe'}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {step === 'families' && (
             <div className="group">
               <span className="hint">{PRODUCT.familyMode === 'single' ? t('setup.familiesSingle', { product: PRODUCT.name }) : t('setup.familiesMulti')}</span>

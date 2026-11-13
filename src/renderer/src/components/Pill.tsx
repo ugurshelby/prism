@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { PRODUCT } from '@shared/product'
 import type { PillState, SettingsView } from '@shared/types'
 import { reportError } from '../errors'
-import { language, setLanguage, t } from '../i18n'
+import { t } from '../i18n'
 import { Logo } from './Prism'
 
 const THRESHOLD = 4
@@ -25,7 +25,6 @@ export function PillApp() {
       window.prism.settings
         .get()
         .then((v) => {
-          if (v.uiLanguage !== language()) setLanguage(v.uiLanguage)
           setView(v)
         })
         .catch(reportError('settings'))

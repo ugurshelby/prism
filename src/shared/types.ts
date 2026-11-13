@@ -118,10 +118,11 @@ export interface HistoryList {
 export type ReplyLanguage = 'tr' | 'en' | 'none'
 
 /** Arayüz dili; üretilen promptun dili (ReplyLanguage) ayrı bir ayardır. */
-export type UiLanguage = 'en' | 'tr'
+/** The UI is English only (owner, 2026-11-13). The field stays in settings so older files still load. */
+export type UiLanguage = 'en'
 
 /** Kurulum sihirbazının adımları; yarıda kapatılırsa kalınan adımdan devam edilir. */
-export type SetupStep = 'language' | 'families' | 'engine' | 'shortcut'
+export type SetupStep = 'families' | 'engine' | 'shortcut'
 
 export interface EngineModels {
   analysis: string

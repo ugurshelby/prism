@@ -5,7 +5,7 @@ import { FAMILIES, FAMILY_INFO, MODELS } from '@shared/catalog'
 import { PRODUCT } from '@shared/product'
 import type { PanelAnchor, SettingsView } from '@shared/types'
 import { useFlow } from './flow'
-import { familyLabel, language, setLanguage, t } from './i18n'
+import { familyLabel, t } from './i18n'
 import { History } from './components/History'
 import { Logo } from './components/Prism'
 import { Settings } from './components/Settings'
@@ -28,9 +28,6 @@ export default function App() {
 
   const flow = useFlow()
   const { s, patch } = flow
-
-  // Dil, çizimden önce sözlüğe işlenir; ayar değişince App yeniden çizilir ve bütün metinler yeni dilde okunur.
-  if (view && view.uiLanguage !== language()) setLanguage(view.uiLanguage)
 
   const applySettings = useCallback((v: SettingsView) => {
     setPinned(v.alwaysOnTop)
@@ -166,7 +163,7 @@ export default function App() {
             onRerunSetup={() => {
               setSettingsOpen(false)
               window.prism.settings
-                .set({ setup: { done: false, step: 'language' } })
+                .set({ setup: { done: false, step: 'families' } })
                 .then((v) => {
                   applySettings(v)
                   setSetup(true)

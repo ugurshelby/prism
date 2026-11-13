@@ -23,8 +23,8 @@ export const EffortSchema = z.enum(EFFORTS)
 export const ModelIdSchema = z.enum(MODEL_IDS)
 export const WindowModeSchema = z.enum(['pill', 'panel'])
 export const ReplyLanguageSchema = z.enum(['tr', 'en', 'none'])
-export const UiLanguageSchema = z.enum(['en', 'tr'])
-export const SetupStepSchema = z.enum(['language', 'families', 'engine', 'shortcut'])
+export const UiLanguageSchema = z.literal('en')
+export const SetupStepSchema = z.enum(['families', 'engine', 'shortcut'])
 
 /** İstek ve geçmiş kimlikleri (UUID ya da selftest gibi düz adlar). Dosya adına ya da yola girmez. */
 export const IdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,100}$/, zmsg('schema.id'))

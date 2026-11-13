@@ -65,7 +65,7 @@ const provider = (id: ProviderView['id']): ProviderView =>
 let settings: SettingsView = {
   version: 3,
   families: [...FAMILIES],
-  uiLanguage: 'tr',
+  uiLanguage: 'en',
   setup: { done: true, step: 'shortcut' },
   hotkeyOk: true,
   engineProvider: 'auto',

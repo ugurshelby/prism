@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { Cpu, FolderOpen, Plug, Power, RefreshCw, RotateCcw, Trash2, X } from 'lucide-react'
 import { FAMILY_SHORT, PROVIDERS, PROVIDER_INFO, SURFACES, type FamilyChoice, type Surface } from '@shared/catalog'
 import { PRODUCT } from '@shared/product'
-import type { EngineRef, ReplyLanguage, SettingsPatch, SettingsView, UiLanguage, UpdateView } from '@shared/types'
+import type { EngineRef, ReplyLanguage, SettingsPatch, SettingsView, UpdateView } from '@shared/types'
 import { cleanError } from '../errors'
 import { fmtNumber, surfaceLabel, t } from '../i18n'
 import { FamilyPicker, ProviderCard, ToggleRow } from './Fields'
@@ -107,20 +107,6 @@ export function Settings({
         </div>
         {v && (
           <div className="content">
-            <div className="group">
-              <span className="label">{t('settings.language')}</span>
-              <Segment<UiLanguage>
-                id="ui-lang"
-                value={v.uiLanguage}
-                options={[
-                  { value: 'en', label: 'English' },
-                  { value: 'tr', label: 'Türkçe' }
-                ]}
-                onChange={(uiLanguage) => apply({ uiLanguage })}
-              />
-              <span className="hint">{t('settings.languageHint')}</span>
-            </div>
-
             <div className="group">
               <span className="label">{t('settings.families')}</span>
               <FamilyPicker product={PRODUCT} value={v.families} onChange={(families) => apply({ families })} />

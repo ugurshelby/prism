@@ -24,9 +24,9 @@ export function settingsDefaults(product: ProductInfo): Settings {
     defaultFamily: product.familyMode === 'single' ? 'claude' : 'auto',
     families: product.familyMode === 'single' ? ['claude'] : [...FAMILIES],
     uiLanguage: 'en',
-    setup: { done: false, step: 'language' },
+    setup: { done: false, step: 'families' },
     appFamilies: [],
-    replyLanguage: 'tr',
+    replyLanguage: 'en',
     defaultSurface: 'agent',
     alwaysOnTop: true,
     hotkey: product.defaultHotkey,
@@ -68,7 +68,6 @@ function v2to3(raw: Raw, product: ProductInfo): Raw {
     version: 3,
     families,
     defaultFamily: product.familyMode === 'single' ? families[0] : raw.defaultFamily,
-    uiLanguage: 'tr',
     setup: { done: true, step: 'shortcut' }
   }
 }
@@ -109,7 +108,8 @@ function sanitize(raw: Raw, product: ProductInfo, invalid: string[]): Settings {
     vertex: field('vertex', s.vertex),
     defaultFamily: field('defaultFamily', s.defaultFamily),
     families: field('families', s.families),
-    uiLanguage: field('uiLanguage', s.uiLanguage),
+    // English only: an older 'tr' value is not an error, it is simply read as English.
+    uiLanguage: 'en',
     setup: field('setup', s.setup),
     appFamilies: field('appFamilies', s.appFamilies),
     replyLanguage: field('replyLanguage', s.replyLanguage),
@@ -168,6 +168,8 @@ export function loadSettings(raw: unknown, product: ProductInfo): LoadedSettings
     if (step) cur = step(cur, product)
   }
   const extras = Object.fromEntries(Object.entries(cur).filter(([k]) => !KNOWN.has(k)))
+  // The removed language step of an unfinished older setup continues at the first remaining step.
+  if (isRecord(cur.setup) && cur.setup.step === 'language') cur = { ...cur, setup: { ...cur.setup, step: 'families' } }
   const settings = failClosed(sanitize({ ...cur, version: newer ? from : SETTINGS_VERSION }, product, invalid), invalid, false)
   // Yeni sürümün yazdığı bir alanı bu sürüm okuyamadı ya da ürün kuralıyla değiştirdiyse değer kaybolmasın:
   // yalnızca daha yeni dosyada, ham hâli saklanır.

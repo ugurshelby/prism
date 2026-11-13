@@ -3,11 +3,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { Check, Copy, RefreshCw, Search, Trash2, X } from 'lucide-react'
 import { FAMILIES, FAMILY_INFO, MODELS, PROVIDER_INFO, effortText, surfaceInfo, type Family } from '@shared/catalog'
 import type { HistoryEntry, HistoryStorage } from '@shared/types'
-import { locale, t } from '../i18n'
+import { t } from '../i18n'
 import { Logo } from './Prism'
 
 // Göreli zaman dile göre biçimlenir; dil değişince yeni biçimleyici kurulur.
-const rtf = () => new Intl.RelativeTimeFormat(locale(), { numeric: 'auto' })
+const rtf = () => new Intl.RelativeTimeFormat('en-US', { numeric: 'auto' })
 
 // Silinmiş ya da eski bir model ID'si kaydı bozmasın.
 const modelOf = (e: HistoryEntry) => MODELS[e.outputs.at(-1)?.model ?? e.analysis.recommendation.model] ?? MODELS['claude-opus-5-5']
@@ -145,13 +145,13 @@ export function History({
   const present = useMemo(() => FAMILIES.filter((f) => items?.some((e) => modelOf(e).family === f)), [items])
 
   const shown = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase(locale())
+    const q = query.trim().toLocaleLowerCase('en-US')
     return (items ?? []).filter(
       (e) =>
         (family === 'all' || modelOf(e).family === family) &&
         (!q ||
           [e.prompt, e.analysis.intent, e.outputs.at(-1)?.prompt ?? '', modelOf(e).name].some((term) =>
-            term.toLocaleLowerCase(locale()).includes(q)
+            term.toLocaleLowerCase('en-US').includes(q)
           ))
     )
   }, [items, query, family])
