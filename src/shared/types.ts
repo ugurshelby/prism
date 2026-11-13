@@ -1,3 +1,15 @@
+import type { z } from 'zod'
+import type {
+  BlockerCodeSchema,
+  ClaimSchema,
+  GainCodeSchema,
+  LensModeSchema,
+  LensPlanRequestSchema,
+  LensPlanSchema,
+  LensStepRequestSchema,
+  LensStepSchema,
+  StepIdSchema
+} from './schemas'
 import type { Effort, Family, FamilyChoice, ModelId, ProviderId, Surface } from './catalog'
 
 export interface Question {
@@ -223,3 +235,57 @@ export type StreamEvent =
   | { id: string; type: 'chunk'; text: string }
   | { id: string; type: 'done'; result: GenerateResult }
   | { id: string; type: 'error'; message: string }
+
+// --- Prism Lens (.work/reports/lens-spec.md §3) ---
+export type LensPlan = z.infer<typeof LensPlanSchema>
+export type LensStep = z.infer<typeof LensStepSchema>
+export type Claim = z.infer<typeof ClaimSchema>
+export type StepId = z.infer<typeof StepIdSchema>
+export type GainCode = z.infer<typeof GainCodeSchema>
+export type BlockerCode = z.infer<typeof BlockerCodeSchema>
+export type LensMode = z.infer<typeof LensModeSchema>
+export type LensPlanRequest = z.infer<typeof LensPlanRequestSchema>
+export type LensStepRequest = z.infer<typeof LensStepRequestSchema>
+
+export type LensQuestion = Question & { affectsPlan: boolean }
+
+export type LensIssueCode =
+  | 'cycle'
+  | 'write_overlap'
+  | 'read_write_overlap'
+  | 'coordination_missing'
+  | 'too_many_parallel'
+  | 'agent_step_without_claims'
+  | 'non_agent_step_writes'
+  | 'review_step_writes'
+  | 'model_clamped'
+export interface LensIssue {
+  code: LensIssueCode
+  severity: 'error' | 'warning'
+  steps: StepId[]
+  detail: string
+}
+/** ok === no 'error' issue. */
+export interface LensCheck {
+  ok: boolean
+  issues: LensIssue[]
+}
+
+/** Why the engine's split was overridden to a single plan; shown in the UI, never dropped silently. */
+export type ForcedSingle = 'mode' | 'surface' | 'codes' | 'steps' | 'unsafe'
+
+export interface LensPlanResult {
+  intent: string
+  taskType: string
+  complexity: Analysis['complexity']
+  questions: LensQuestion[]
+  plan: LensPlan
+  check: LensCheck
+  forcedSingle?: ForcedSingle
+  singleChoice: { model: ModelId; effort: Effort }
+  pool: ModelId[]
+  usage?: Usage
+  elapsedMs?: number
+  engine?: EngineRef
+  historyId?: string
+}

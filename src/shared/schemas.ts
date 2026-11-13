@@ -117,6 +117,115 @@ export const GenerateRequestSchema = z
 
 export const ClipboardTextSchema = text(LIMITS.clipboard)
 
+// --- Prism Lens plans (.work/reports/lens-spec.md §3) ----------------------------------
+
+export const LENS_LIMITS = { steps: 5, parallel: 3, claims: 12, after: 4, title: 120, goal: 1_500, handoff: 300, reasoning: 1_500, path: 200 } as const
+export const LENS_STEP_IDS = ['s1', 's2', 's3', 's4', 's5'] as const
+export const StepIdSchema = z.enum(LENS_STEP_IDS)
+export const GainCodeSchema = z.enum(['tier_mismatch', 'independent_parallel', 'separate_review'])
+export const BlockerCodeSchema = z.enum([
+  'single_mode',
+  'surface_not_agent',
+  'single_deliverable',
+  'shared_files',
+  'tight_coupling',
+  'small_task',
+  'named_single_tool',
+  'no_tier_gain'
+])
+export const LensModeSchema = z.enum(['workflow', 'single'])
+export const ClaimAccessSchema = z.enum(['write', 'read'])
+
+// Single-line text from the model; it is copied into other sessions' prompts, so it carries no newlines or control characters.
+const line = (max: number) =>
+  z
+    .string()
+    .min(1)
+    .max(max, zmsg('schema.tooLong'))
+    .regex(/^[^\p{Cc}]+$/u, zmsg('schema.lensText'))
+
+// Repository-relative POSIX path. No absolute path, drive letter, backslash, '.', '..' or glob.
+const RelPath = z
+  .string()
+  .min(1)
+  .max(LENS_LIMITS.path)
+  .regex(/^[A-Za-z0-9._@+\- /]+$/, zmsg('schema.lensPath'))
+  .refine((p) => !p.startsWith('/') && !p.includes('//') && !p.split('/').some((s) => s === '.' || s === '..'), zmsg('schema.lensPath'))
+
+export const ClaimSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('file'), path: RelPath.refine((p) => !p.endsWith('/'), zmsg('schema.lensPath')), access: ClaimAccessSchema }).strict(),
+  z.object({ kind: z.literal('dir'), path: RelPath.refine((p) => p.endsWith('/'), zmsg('schema.lensPath')), access: ClaimAccessSchema }).strict(),
+  // Shared non-file resources: 'db:schema', 'port:5173', 'git:main', 'deps:npm'.
+  z
+    .object({ kind: z.literal('resource'), name: z.string().regex(/^[a-z0-9][a-z0-9:._-]{0,63}$/, zmsg('schema.lensResource')), access: ClaimAccessSchema })
+    .strict()
+])
+
+export const LensStepSchema = z
+  .object({
+    id: StepIdSchema,
+    title: line(LENS_LIMITS.title),
+    // What this session must achieve; multi-line, goes only into its own writer call.
+    goal: text(LENS_LIMITS.goal).min(1),
+    model: ModelIdSchema,
+    effort: EffortSchema,
+    surface: SurfaceSchema,
+    claims: z.array(ClaimSchema).max(LENS_LIMITS.claims),
+    after: z.array(StepIdSchema).max(LENS_LIMITS.after),
+    // What later steps can rely on.
+    handoff: line(LENS_LIMITS.handoff).optional()
+  })
+  .strict()
+
+export const LensPlanSchema = z
+  .object({
+    decision: z.enum(['single', 'split']),
+    gains: z.array(GainCodeSchema).max(3),
+    blockers: z.array(BlockerCodeSchema).max(8),
+    reasoning: text(LENS_LIMITS.reasoning),
+    steps: z.array(LensStepSchema).min(1).max(LENS_LIMITS.steps)
+  })
+  .strict()
+  .superRefine((p, ctx) => {
+    const ids = p.steps.map((s) => s.id)
+    if (new Set(ids).size !== ids.length) ctx.addIssue({ code: 'custom', message: 'duplicate step id' })
+    // Ids are dense and ordered: s1..sN. The UI and the coordination text depend on this.
+    if (ids.some((id, i) => id !== LENS_STEP_IDS[i])) ctx.addIssue({ code: 'custom', message: 'step ids must be s1..sN in order' })
+    for (const s of p.steps) {
+      for (const a of s.after) {
+        if (a === s.id) ctx.addIssue({ code: 'custom', message: `${s.id} depends on itself` })
+        if (!ids.includes(a)) ctx.addIssue({ code: 'custom', message: `${s.id} depends on unknown ${a}` })
+      }
+    }
+    if (p.decision === 'single' && p.steps.length !== 1) ctx.addIssue({ code: 'custom', message: 'single plan has exactly one step' })
+    if (p.decision === 'split' && p.steps.length < 2) ctx.addIssue({ code: 'custom', message: 'split plan needs two or more steps' })
+  })
+
+export const LensPlanRequestSchema = z
+  .object({
+    id: IdSchema,
+    prompt: text(LIMITS.prompt).min(1, zmsg('schema.emptyPrompt')),
+    surface: SurfaceSchema,
+    family: FamilyChoiceSchema,
+    mode: LensModeSchema,
+    // Present only on a re-plan after plan-affecting answers.
+    answers: z.array(AnswerSchema).max(LIMITS.answers).optional()
+  })
+  .strict()
+
+export const LensStepRequestSchema = z
+  .object({
+    id: IdSchema,
+    prompt: text(LIMITS.prompt).min(1, zmsg('schema.emptyPrompt')),
+    // Comes back from the untrusted renderer: main re-parses it and re-runs checkPlan.
+    plan: LensPlanSchema,
+    stepId: StepIdSchema,
+    answers: z.array(AnswerSchema).max(LIMITS.answers),
+    analysis: GenerateRequestSchema.shape.analysis,
+    historyId: IdSchema.optional()
+  })
+  .strict()
+
 // --- Files on disk ------------------------------------------------------------------
 
 // Old records of a model removed from the catalog must not be deleted: the model ID on disk is checked for format only,
