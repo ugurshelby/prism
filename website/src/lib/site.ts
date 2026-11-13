@@ -1,19 +1,18 @@
 import releasesJson from '../data/releases.json'
 import { parseStored, type Asset, type Release } from '../../scripts/releases.mjs'
 
-export type Lang = 'en' | 'tr'
 export const REPO = 'https://github.com/ugurshelby/prism'
 
-/** Sitedeki bir sayfanın adresi; base (/prism) ve dil önekiyle. */
-export function href(lang: Lang, path = '') {
+/** URL of a page on the site, including the base path (/prism). */
+export function href(path = '') {
   const base = import.meta.env.BASE_URL.replace(/\/$/, '')
   const clean = path.replace(/^\/|\/$/g, '')
-  return `${base}${lang === 'tr' ? '/tr' : ''}/${clean ? `${clean}/` : ''}`
+  return `${base}/${clean ? `${clean}/` : ''}`
 }
 
 export const asset = (path: string) => `${import.meta.env.BASE_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
 
-// --- Ürünler -------------------------------------------------------------------
+// --- Products -------------------------------------------------------------------
 
 export type ProductId = 'ray' | 'spectrum' | 'lens' | 'iris'
 export type ProductStatus = 'available' | 'soon' | 'planned'
@@ -47,14 +46,14 @@ const newer = (a: Release, b: Release) => {
   return 0
 }
 
-// releases.json derleme öncesi sync.mjs ile doğrulanarak yazılır; burada aynı denetim bir kez daha uygulanır.
+// releases.json is written (and validated) by sync.mjs before the build; the same checks run again here.
 export const releases = parseStored(releasesJson).sort(newer)
 export const releasesOf = (id: ProductId) => releases.filter((r) => r.product === id)
-/** Yayınlanmış ürün için indirilebilir yayın var mı; yoksa "yakında" gösterilir. */
+/** Whether a released product has a downloadable release; otherwise "soon" is shown. */
 export const statusOf = (id: ProductId): ProductStatus =>
   PRODUCTS.find((p) => p.id === id)?.released ? (releasesOf(id).length ? 'available' : 'soon') : 'planned'
-/** Ana ürünün (Spectrum) en yeni yayını; ana sayfadaki indirme düğmesi bunu verir. */
-// Ana düğme yalnızca Spectrum'u indirir; Spectrum yayını yoksa düğme sürüm sayfasına gider (başka ürüne düşmez).
+/** Newest release of the main product (Spectrum); the home page download button uses it. */
+// The main button only downloads Spectrum; without a Spectrum release it goes to the download page (never falls back to another product).
 export const latest: Release | undefined = releasesOf('spectrum')[0]
 
 export function files(r: Release | undefined): Partial<Record<Platform, Asset>> {
@@ -69,5 +68,5 @@ export function files(r: Release | undefined): Partial<Record<Platform, Asset>> 
 
 export const sums = (r: Release | undefined) => r?.assets.find((a) => a.name === 'SHA256SUMS.txt')
 export const mb = (bytes: number) => `${Math.round(bytes / 1048576)} MB`
-export const date = (iso: string, lang: Lang) =>
-  new Date(iso).toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+export const date = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })

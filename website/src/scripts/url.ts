@@ -1,5 +1,5 @@
-// Sayfaya gömülü veriden (JSON ya da data-* öznitelikleri) okunan bağlantılar yalnızca iki yere gidebilir:
-// GitHub'daki sürüm sayfaları ve indirmeler, ya da sitenin kendisi. Diğer her şey (javascript:, başka alan adı) bağlantısız kalır.
+// Links read from data embedded in the page (JSON or data-* attributes) may only go to two places:
+// release pages and downloads on GitHub, or the site itself. Anything else (javascript:, other hosts) stays unlinked.
 
 const RELEASES = 'https://github.com/ugurshelby/prism/releases/'
 

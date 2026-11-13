@@ -1,13 +1,8 @@
 ---
 import Base from '../layouts/Base.astro'
-import { REPO, href, type Lang } from '../lib/site'
-import { t } from '../lib/i18n'
+import { REPO, href } from '../lib/site'
+import { s } from '../lib/copy'
 
-interface Props {
-  lang: Lang
-}
-const { lang } = Astro.props
-const s = t(lang)
 const keys = [
   { name: 'Google AI Studio', url: 'https://aistudio.google.com/apikey', fam: 'Gemini' },
   { name: 'Vertex AI', url: 'https://console.cloud.google.com/apis/credentials', fam: 'Gemini' },
@@ -15,35 +10,21 @@ const keys = [
   { name: 'OpenAI', url: 'https://platform.openai.com/api-keys', fam: 'GPT' },
   { name: 'xAI', url: 'https://console.x.ai', fam: 'Grok' }
 ]
-const toc =
-  lang === 'tr'
-    ? [
-        ['start', 'Hızlı başlangıç'],
-        ['install', 'Kurulum ve ilk açılış'],
-        ['keys', 'API key’leri'],
-        ['use', 'Kullanım'],
-        ['update', 'Güncelleme'],
-        ['uninstall', 'Kaldırma'],
-        ['data', 'Verin nerede'],
-        ['security', 'Güvenlik'],
-        ['privacy', 'Gizlilik'],
-        ['help', 'Sorun giderme']
-      ]
-    : [
-        ['start', 'Quick start'],
-        ['install', 'Install and first launch'],
-        ['keys', 'API keys'],
-        ['use', 'Everyday use'],
-        ['update', 'Updates'],
-        ['uninstall', 'Uninstall'],
-        ['data', 'Where your data lives'],
-        ['security', 'Security'],
-        ['privacy', 'Privacy'],
-        ['help', 'Troubleshooting']
-      ]
+const toc = [
+  ['start', 'Quick start'],
+  ['install', 'Install and first launch'],
+  ['keys', 'API keys'],
+  ['use', 'Everyday use'],
+  ['update', 'Updates'],
+  ['uninstall', 'Uninstall'],
+  ['data', 'Where your data lives'],
+  ['security', 'Security'],
+  ['privacy', 'Privacy'],
+  ['help', 'Troubleshooting']
+]
 ---
 
-<Base lang={lang} page="docs" title={s.docs.title} description={s.docs.lead}>
+<Base page="docs" title={s.docs.title} description={s.docs.lead}>
   <section class="hero">
     <div class="container prose">
       <h1>{s.docs.title}</h1>
@@ -52,230 +33,114 @@ const toc =
         {toc.map(([id, label]) => <a class="chip" href={`#${id}`} style="text-decoration:none">{label}</a>)}
       </nav>
 
-      {
-        lang === 'tr' ? (
-          <>
-            <h2 id="start">Hızlı başlangıç</h2>
-            <ol>
-              <li>
-                <a href={href(lang, 'download')}>İndirme sayfasından</a> sistemine uygun dosyayı indirip kur. İlk açılışta sistemin bir kez onay ister.
-              </li>
-              <li>
-                Prism ilk açılışta kurulum ekranını gösterir. Aşağıdaki sağlayıcılardan birinin key’ini yapıştırıp <b>Kaydet</b>’e bas; key anında
-                doğrulanır.
-              </li>
-              <li>Abonelikle kullandığın uygulamaları (ör. Claude Code, ChatGPT) işaretle; aileler arası öneri bunları da hesaba katar.</li>
-              <li>
-                Ham promptunu yaz, <code>Ctrl+Enter</code>’a bas, öneriyi gözden geçir, varsa soruları yanıtla ve promptu kopyala.
-              </li>
-            </ol>
+      <>
+        <h2 id="start">Quick start</h2>
+        <ol>
+          <li>
+            Get the installer for your system from the <a href={href('download')}>download page</a>. Your system asks for confirmation once on
+            first launch.
+          </li>
+          <li>Prism opens a setup screen the first time. Paste a key from any provider below and press <b>Kaydet</b> (Save); it is verified right away.</li>
+          <li>Mark the apps you use through a subscription (for example Claude Code or ChatGPT) so cross-family recommendations include them.</li>
+          <li>Write your rough prompt, press <code>Ctrl+Enter</code>, review the recommendation, answer any questions and copy the prompt.</li>
+        </ol>
 
-            <h2 id="install">Kurulum ve ilk açılış</h2>
-            <p><a href={href(lang, 'download')}>İndirme sayfasından</a> önce ürünü, sonra sistemini seç; dosyayı çalıştır. Prism henüz ücretli bir sertifikayla imzalı değil, bu yüzden sistemin ilk açılışta bir kez sorar:</p>
-            <h3 id="first-launch">İlk açılış uyarısı</h3>
-            <ul>
-              <li><b>Windows:</b> {s.download.steps.win}</li>
-              <li><b>macOS:</b> {s.download.steps.mac}</li>
-              <li><b>Linux:</b> {s.download.steps.linux}</li>
-            </ul>
+        <h2 id="install">Install and first launch</h2>
+        <p>Pick the product, then your system, on the <a href={href('download')}>download page</a> and run the file. Prism isn’t signed with a paid certificate yet, so your system asks once before opening it:</p>
+        <h3 id="first-launch">First-launch warning</h3>
+        <ul>
+          <li><b>Windows:</b> {s.download.steps.win}</li>
+          <li><b>macOS:</b> {s.download.steps.mac}</li>
+          <li><b>Linux:</b> {s.download.steps.linux}</li>
+        </ul>
 
-            <h2 id="keys">API key’leri</h2>
-            <p>
-              Prism bir modeli <b>motor</b> olarak kullanır (analiz eder ve yazar) ve bir <b>hedef</b> model için yazar (promptu yapıştıracağın
-              model). Motor, key’ini eklediğin sağlayıcıda çalışır; tek key yeterli.
-            </p>
-            <table>
-              <thead>
-                <tr><th>Sağlayıcı</th><th>Key</th><th>Açtığı hedef</th></tr>
-              </thead>
-              <tbody>
-                {keys.map((k) => (
-                  <tr><td>{k.name}</td><td><a href={k.url}>{new URL(k.url).host}</a></td><td>{k.fam}</td></tr>
-                ))}
-              </tbody>
-            </table>
-            <ul>
-              <li>Key kaydedilince sağlayıcıya hafif bir istek gider ve o key’in kullanabildiği modeller listelenir. Geçersiz key açık bir mesajla reddedilir.</li>
-              <li>Vertex AI için Google Cloud proje ID’si de gerekir ve projede Vertex AI API’si etkin olmalı. Konum <code>global</code> kalmalı.</li>
-              <li>Ayarlar → <i>Prism motoru</i>: “Otomatik” doğrulanmış sağlayıcıları (önce Vertex AI) tercih eder. Bir sağlayıcı seçtiysen ve key’i yoksa ya da okunamıyorsa Prism başka sağlayıcıya geçmez, hata verir. Analiz ve yazım modelleri ayrı seçilebilir.</li>
-              <li>Kurulu uygulama key’leri yalnızca şifreli depodan okur. Ortam değişkenleri ve <code>.env</code> dosyaları düz metin olduğu için yalnızca geliştirme sürümünde okunur (<a href={`${REPO}/blob/main/.env.example`}>.env.example</a>).</li>
-            </ul>
+        <h2 id="keys">API keys</h2>
+        <p>
+          Prism uses one model as its <b>engine</b> (it analyzes and writes) and writes for a <b>target</b> model (the one you paste the prompt
+          into). The engine runs on whichever provider you add a key for; one key is enough.
+        </p>
+        <table>
+          <thead>
+            <tr><th>Provider</th><th>Get a key</th><th>Unlocks</th></tr>
+          </thead>
+          <tbody>
+            {keys.map((k) => (
+              <tr><td>{k.name}</td><td><a href={k.url}>{new URL(k.url).host}</a></td><td>{k.fam}</td></tr>
+            ))}
+          </tbody>
+        </table>
+        <ul>
+          <li>Saving a key sends a lightweight request to the provider and lists the models that key can use. Invalid keys are rejected with a clear message.</li>
+          <li>Vertex AI also needs your Google Cloud project ID with the Vertex AI API enabled. Keep the location <code>global</code>.</li>
+          <li>Settings → <i>Prism motoru</i> (engine): “Auto” prefers a verified provider (Vertex AI first). If you pick a provider and its key is missing or unreadable, Prism stops with an error instead of switching. Analysis and writing models can be set separately.</li>
+          <li>The installed app reads keys only from encrypted storage. Environment variables and <code>.env</code> files are plain text, so only development builds read them (<a href={`${REPO}/blob/main/.env.example`}>.env.example</a>).</li>
+        </ul>
 
-            <h2 id="use">Kullanım</h2>
-            <ul>
-              <li>Ray’de <code>Ctrl+Alt+Space</code> (macOS’ta <code>Cmd+Alt+Space</code>), Spectrum’da <code>Ctrl+Shift+Space</code> (macOS’ta <code>Cmd+Shift+Space</code>) paneli gösterir ya da gizler. Ayarlardan değiştirebilirsin.</li>
-              <li><b>Ekosistem:</b> tek ailede kalmak için Claude, GPT, Gemini ya da Grok; erişebildiğin bütün modeller arasından seçtirmek için ✦ Çapraz.</li>
-              <li><b>Yüzey:</b> kodlama ajanı, sohbet ya da API; promptun yapısı ve kurulum ipuçları buna göre değişir.</li>
-              <li><b>Önerilsin / Ben seçeyim:</b> öneriyi al ya da modeli ve seviyeyi kendin seç.</li>
-              <li>Pencereyi kapatmak Prism’i tray’e gizler; geçmiş son 200 promptu bu bilgisayarda tutar.</li>
-            </ul>
+        <h2 id="use">Everyday use</h2>
+        <ul>
+          <li><code>Ctrl+Alt+Space</code> in Ray (<code>Cmd+Alt+Space</code> on macOS) and <code>Ctrl+Shift+Space</code> in Spectrum (<code>Cmd+Shift+Space</code> on macOS) show or hide the panel. You can change it in Settings.</li>
+          <li><b>Ecosystem:</b> Claude, GPT, Gemini or Grok to stay within one family, or ✦ Cross to choose among every model you can use.</li>
+          <li><b>Surface:</b> coding agent, chat or API; the prompt’s structure and setup tips follow it.</li>
+          <li><b>Önerilsin / Ben seçeyim</b> (recommend / I’ll choose): take the recommendation or pick the model and level yourself.</li>
+          <li>Closing the window keeps Prism in the tray; history keeps your last 200 prompts on this computer.</li>
+        </ul>
+        <p class="muted">The interface is in Turkish today; generated prompts are written in English.</p>
 
-            <h2 id="update">Güncelleme</h2>
-            <ul>
-              <li>Prism kendini güncellemez. Günde en fazla bir kez GitHub’ın herkese açık yayın listesine bakar; aynı ürünün daha yeni bir sürümü varsa yayın sayfasına bağlantı veren bir bildirim gösterir. İndirmeyi ve kurmayı sen yaparsın.</li>
-              <li>Kontrol, <code>api.github.com</code>’a giden tek bir istektir. Key, prompt metni, hesap ya da çerez taşımaz; yalnızca sabit bir istemci adı gider. GitHub bunu, IP adresin dahil, başka herhangi bir ziyaret gibi görür.</li>
-              <li>Kontrolü Ayarlar’dan kapatabilirsin. Kapalıyken Prism GitHub’a hiç bağlanmaz.</li>
-              <li>Güncellemek için yeni sürümü eskisinin üzerine kur; ayarların, key’lerin ve geçmişin yerinde kalır.</li>
-            </ul>
+        <h2 id="update">Updates</h2>
+        <ul>
+          <li>Prism doesn’t update itself. About once a day it checks GitHub’s public release list for a newer version of the same product and, if there is one, shows a notice with a link to the release page. You download and install it yourself.</li>
+          <li>The check is one request to <code>api.github.com</code>. It carries no key, no prompt text, no account and no cookie, only a fixed client name. GitHub sees it like any other visit, including your IP address.</li>
+          <li>You can turn the check off in Settings. With it off, Prism never contacts GitHub.</li>
+          <li>To update, install the new version over the old one; settings, keys and history stay.</li>
+        </ul>
 
-            <h2 id="uninstall">Kaldırma</h2>
-            <ul>
-              <li><b>Windows:</b> Prism’i Ayarlar → Uygulamalar’dan kaldır. Kaldırıcı veri klasörünü de (kayıtlı key’ler, geçmiş, ayarlar) silmek isteyip istemediğini sorar; varsayılan olarak saklanır. Windows ile başlat kaydını da siler.</li>
-              <li><b>macOS:</b> uygulamayı Uygulamalar’dan Çöp Sepeti’ne sürükle. Aşağıdaki klasörü silmezsen verin kalır.</li>
-              <li><b>Linux:</b> AppImage’i sil ya da .deb paketini paket yöneticinle kaldır. Aşağıdaki klasörü silmezsen verin kalır.</li>
-              <li>Önce her şeyi silmek için Ayarlar’daki <b>Tüm verilerimi sil</b>’i kullan. Key’leri, geçmişi ve ayarları siler; bir kısmı silinemezse bunu söyler.</li>
-            </ul>
+        <h2 id="uninstall">Uninstall</h2>
+        <ul>
+          <li><b>Windows:</b> remove Prism in Settings → Apps. The uninstaller asks whether to delete the data folder too (saved keys, history, settings); the default is to keep it. It also removes the start-with-Windows entry.</li>
+          <li><b>macOS:</b> drag the app from Applications to the Bin. Your data stays until you delete the folder below.</li>
+          <li><b>Linux:</b> delete the AppImage, or remove the .deb package with your package manager. Your data stays until you delete the folder below.</li>
+          <li>To wipe everything first, use <b>Delete all my data</b> in Settings. It removes keys, history and settings, and tells you if any part could not be removed.</li>
+        </ul>
 
-            <h2 id="data">Verin nerede duruyor</h2>
-            <ul>
-              <li>Ray ve Spectrum 3 verilerini ürünün adını taşıyan bir klasörde tutar: <code>%APPDATA%\Prism Ray</code> ya da <code>%APPDATA%\Prism Spectrum</code> (Windows), <code>~/Library/Application Support/Prism Ray</code> ya da <code>…/Prism Spectrum</code> (macOS), <code>~/.config/Prism Ray</code> ya da <code>~/.config/Prism Spectrum</code> (Linux).</li>
-              <li>Şu an indirilebilen Spectrum olan Prism 2.x şunları kullanır: <code>%APPDATA%\Prism</code> (Windows), <code>~/Library/Application Support/Prism</code> (macOS), <code>~/.config/Prism</code> (Linux). Prompter’dan güncellediysen aynı yerdeki <code>Prompter</code> klasörü.</li>
-              <li>İçinde: ayarlar, şifreli key’ler, şifreli geçmiş, önbelleğe alınmış model listesi ve pencere konumu.</li>
-            </ul>
+        <h2 id="data">Where your data lives</h2>
+        <ul>
+          <li>Ray and Spectrum 3 each keep their data in a folder named after the product: <code>%APPDATA%\Prism Ray</code> or <code>%APPDATA%\Prism Spectrum</code> (Windows), <code>~/Library/Application Support/Prism Ray</code> or <code>…/Prism Spectrum</code> (macOS), <code>~/.config/Prism Ray</code> or <code>~/.config/Prism Spectrum</code> (Linux).</li>
+          <li>Prism 2.x, the current Spectrum download, uses <code>%APPDATA%\Prism</code> (Windows), <code>~/Library/Application Support/Prism</code> (macOS) and <code>~/.config/Prism</code> (Linux); if you upgraded from Prompter, the same folder named <code>Prompter</code>.</li>
+          <li>Inside: settings, the encrypted keys, the encrypted history, the cached model list and window position.</li>
+        </ul>
 
-            <h2 id="security">Güvenlik</h2>
-            <ul>
-              <li>Key’ler işletim sisteminin güvenli deposuyla şifrelenir ve yalnızca veri klasöründe durur; loglara yazılmaz. Key’leri ayırt edebilmen için arayüze yalnızca son dört karakter gelir.</li>
-              <li>Geçmiş de şifreli saklanır. Geçmişi kapatabilir, pencereyi ekran görüntüsünden gizleyebilirsin (Ayarlar → Gizlilik).</li>
-              <li>Promptlar ve key’ler yalnızca seçtiğin sağlayıcıya, HTTPS ile gider; başka hiçbir adrese gitmez.</li>
-              <li>Kurulum dosyaları henüz ücretli bir sertifikayla imzalı değil. İndirdiğin dosyayı sürümdeki <code>SHA256SUMS.txt</code> ile doğrula: macOS <code>shasum -a 256 -c SHA256SUMS.txt --ignore-missing</code>, Linux <code>sha256sum -c SHA256SUMS.txt --ignore-missing</code>, Windows <code>Get-FileHash</code>.</li>
-              <li>Ayrıntılar: <a href={`${REPO}/blob/main/SECURITY.md`}>güvenlik politikası</a>.</li>
-            </ul>
+        <h2 id="security">Security</h2>
+        <ul>
+          <li>Keys are encrypted with your operating system’s secure storage and kept only in the data folder; never written to logs. The interface sees only the last four characters so you can tell keys apart.</li>
+          <li>History is encrypted too. You can turn history off and hide the window from screenshots (Settings → Gizlilik).</li>
+          <li>Prompts and keys go only to the provider you chose, over HTTPS, and never to any other address.</li>
+          <li>Installers aren’t signed with a paid certificate yet. Verify downloads against the release’s <code>SHA256SUMS.txt</code>: macOS <code>shasum -a 256 -c SHA256SUMS.txt --ignore-missing</code>, Linux <code>sha256sum -c SHA256SUMS.txt --ignore-missing</code>, Windows <code>Get-FileHash</code>.</li>
+          <li>Details: <a href={`${REPO}/blob/main/SECURITY.md`}>security policy</a>.</li>
+        </ul>
 
-            <h2 id="privacy">Gizlilik</h2>
-            <ul>
-              <li>Telemetri, hata raporu, analitik ve Prism sunucusu yok. Prism’in yapabileceği tek başka istek, yukarıda anlatılan isteğe bağlı güncelleme kontrolüdür.</li>
-              <li>Promptlar yalnızca seçtiğin motor sağlayıcısına gider. Sağlayıcının ne sakladığını onun koşulları belirler. Google AI Studio’nun ücretsiz kullanımında promptlar ürün geliştirmede kullanılabilir ve insanlar tarafından okunabilir; gizli içerik için faturalandırılan bir proje ya da Vertex AI kullan.</li>
-              <li>Bu sitede analitik yok ve başka sitelerden hiçbir şey yüklenmez.</li>
-            </ul>
+        <h2 id="privacy">Privacy</h2>
+        <ul>
+          <li>No telemetry, no crash reports, no analytics and no Prism server. The only other request Prism can make is the optional update check described above.</li>
+          <li>Prompts go only to the engine provider you chose. What that provider keeps is up to its terms. On Google AI Studio’s free tier, prompts may be used to improve Google’s products and read by human reviewers; use a billed project or Vertex AI for confidential work.</li>
+          <li>This website has no analytics and loads nothing from other sites.</li>
+        </ul>
 
-            <h2 id="help">Sorun giderme</h2>
-            <table>
-              <thead>
-                <tr><th>Belirti</th><th>Çözüm</th></tr>
-              </thead>
-              <tbody>
-                <tr><td><code>401</code> / “key reddedildi”</td><td>Key yanlış ya da ilgili API etkin değil. Key’i yeniden gir ve Doğrula’ya bas.</td></tr>
-                <tr><td>Vertex <code>404</code></td><td>Konum <code>global</code> olmalı; proje ID’sini ve Vertex AI API’sinin etkin olduğunu kontrol et.</td></tr>
-                <tr><td><code>429</code></td><td>Hız sınırı ya da kota. Prism iki kez dener, sonra hatayı gösterir.</td></tr>
-                <tr><td>Linux: “Sistem anahtarlığı bulunamadı”</td><td>GNOME Keyring ya da KWallet kurup aç, sonra Prism’i yeniden başlat. Anahtarlık olmadan key kaydedilemez.</td></tr>
-                <tr><td>“key’i .env dosyasında”</td><td>Eski sürüm key’leri <code>.env</code>’den okuyordu. Key’i Ayarlar → Sağlayıcılar’dan kaydet, sonra <code>.env</code> dosyasını sil.</td></tr>
-                <tr><td>macOS: “açılamıyor” uyarısı</td><td>Sistem Ayarları → Gizlilik ve Güvenlik → Yine de Aç.</td></tr>
-              </tbody>
-            </table>
-            <p>Başka bir sorun mu var? <a href={`${REPO}/issues`}>GitHub’da bildir</a>; key’lerini asla paylaşma.</p>
-          </>
-        ) : (
-          <>
-            <h2 id="start">Quick start</h2>
-            <ol>
-              <li>
-                Get the installer for your system from the <a href={href(lang, 'download')}>download page</a>. Your system asks for confirmation once on
-                first launch.
-              </li>
-              <li>Prism opens a setup screen the first time. Paste a key from any provider below and press <b>Kaydet</b> (Save); it is verified right away.</li>
-              <li>Mark the apps you use through a subscription (for example Claude Code or ChatGPT) so cross-family recommendations include them.</li>
-              <li>Write your rough prompt, press <code>Ctrl+Enter</code>, review the recommendation, answer any questions and copy the prompt.</li>
-            </ol>
-
-            <h2 id="install">Install and first launch</h2>
-            <p>Pick the product, then your system, on the <a href={href(lang, 'download')}>download page</a> and run the file. Prism isn’t signed with a paid certificate yet, so your system asks once before opening it:</p>
-            <h3 id="first-launch">First-launch warning</h3>
-            <ul>
-              <li><b>Windows:</b> {s.download.steps.win}</li>
-              <li><b>macOS:</b> {s.download.steps.mac}</li>
-              <li><b>Linux:</b> {s.download.steps.linux}</li>
-            </ul>
-
-            <h2 id="keys">API keys</h2>
-            <p>
-              Prism uses one model as its <b>engine</b> (it analyzes and writes) and writes for a <b>target</b> model (the one you paste the prompt
-              into). The engine runs on whichever provider you add a key for; one key is enough.
-            </p>
-            <table>
-              <thead>
-                <tr><th>Provider</th><th>Get a key</th><th>Unlocks</th></tr>
-              </thead>
-              <tbody>
-                {keys.map((k) => (
-                  <tr><td>{k.name}</td><td><a href={k.url}>{new URL(k.url).host}</a></td><td>{k.fam}</td></tr>
-                ))}
-              </tbody>
-            </table>
-            <ul>
-              <li>Saving a key sends a lightweight request to the provider and lists the models that key can use. Invalid keys are rejected with a clear message.</li>
-              <li>Vertex AI also needs your Google Cloud project ID with the Vertex AI API enabled. Keep the location <code>global</code>.</li>
-              <li>Settings → <i>Prism motoru</i> (engine): “Auto” prefers a verified provider (Vertex AI first). If you pick a provider and its key is missing or unreadable, Prism stops with an error instead of switching. Analysis and writing models can be set separately.</li>
-              <li>The installed app reads keys only from encrypted storage. Environment variables and <code>.env</code> files are plain text, so only development builds read them (<a href={`${REPO}/blob/main/.env.example`}>.env.example</a>).</li>
-            </ul>
-
-            <h2 id="use">Everyday use</h2>
-            <ul>
-              <li><code>Ctrl+Alt+Space</code> in Ray (<code>Cmd+Alt+Space</code> on macOS) and <code>Ctrl+Shift+Space</code> in Spectrum (<code>Cmd+Shift+Space</code> on macOS) show or hide the panel. You can change it in Settings.</li>
-              <li><b>Ecosystem:</b> Claude, GPT, Gemini or Grok to stay within one family, or ✦ Cross to choose among every model you can use.</li>
-              <li><b>Surface:</b> coding agent, chat or API; the prompt’s structure and setup tips follow it.</li>
-              <li><b>Önerilsin / Ben seçeyim</b> (recommend / I’ll choose): take the recommendation or pick the model and level yourself.</li>
-              <li>Closing the window keeps Prism in the tray; history keeps your last 200 prompts on this computer.</li>
-            </ul>
-            <p class="muted">The interface is in Turkish today; generated prompts are written in English.</p>
-
-            <h2 id="update">Updates</h2>
-            <ul>
-              <li>Prism doesn’t update itself. About once a day it checks GitHub’s public release list for a newer version of the same product and, if there is one, shows a notice with a link to the release page. You download and install it yourself.</li>
-              <li>The check is one request to <code>api.github.com</code>. It carries no key, no prompt text, no account and no cookie, only a fixed client name. GitHub sees it like any other visit, including your IP address.</li>
-              <li>You can turn the check off in Settings. With it off, Prism never contacts GitHub.</li>
-              <li>To update, install the new version over the old one; settings, keys and history stay.</li>
-            </ul>
-
-            <h2 id="uninstall">Uninstall</h2>
-            <ul>
-              <li><b>Windows:</b> remove Prism in Settings → Apps. The uninstaller asks whether to delete the data folder too (saved keys, history, settings); the default is to keep it. It also removes the start-with-Windows entry.</li>
-              <li><b>macOS:</b> drag the app from Applications to the Bin. Your data stays until you delete the folder below.</li>
-              <li><b>Linux:</b> delete the AppImage, or remove the .deb package with your package manager. Your data stays until you delete the folder below.</li>
-              <li>To wipe everything first, use <b>Delete all my data</b> in Settings. It removes keys, history and settings, and tells you if any part could not be removed.</li>
-            </ul>
-
-            <h2 id="data">Where your data lives</h2>
-            <ul>
-              <li>Ray and Spectrum 3 each keep their data in a folder named after the product: <code>%APPDATA%\Prism Ray</code> or <code>%APPDATA%\Prism Spectrum</code> (Windows), <code>~/Library/Application Support/Prism Ray</code> or <code>…/Prism Spectrum</code> (macOS), <code>~/.config/Prism Ray</code> or <code>~/.config/Prism Spectrum</code> (Linux).</li>
-              <li>Prism 2.x, the current Spectrum download, uses <code>%APPDATA%\Prism</code> (Windows), <code>~/Library/Application Support/Prism</code> (macOS) and <code>~/.config/Prism</code> (Linux); if you upgraded from Prompter, the same folder named <code>Prompter</code>.</li>
-              <li>Inside: settings, the encrypted keys, the encrypted history, the cached model list and window position.</li>
-            </ul>
-
-            <h2 id="security">Security</h2>
-            <ul>
-              <li>Keys are encrypted with your operating system’s secure storage and kept only in the data folder; never written to logs. The interface sees only the last four characters so you can tell keys apart.</li>
-              <li>History is encrypted too. You can turn history off and hide the window from screenshots (Settings → Gizlilik).</li>
-              <li>Prompts and keys go only to the provider you chose, over HTTPS, and never to any other address.</li>
-              <li>Installers aren’t signed with a paid certificate yet. Verify downloads against the release’s <code>SHA256SUMS.txt</code>: macOS <code>shasum -a 256 -c SHA256SUMS.txt --ignore-missing</code>, Linux <code>sha256sum -c SHA256SUMS.txt --ignore-missing</code>, Windows <code>Get-FileHash</code>.</li>
-              <li>Details: <a href={`${REPO}/blob/main/SECURITY.md`}>security policy</a>.</li>
-            </ul>
-
-            <h2 id="privacy">Privacy</h2>
-            <ul>
-              <li>No telemetry, no crash reports, no analytics and no Prism server. The only other request Prism can make is the optional update check described above.</li>
-              <li>Prompts go only to the engine provider you chose. What that provider keeps is up to its terms. On Google AI Studio’s free tier, prompts may be used to improve Google’s products and read by human reviewers; use a billed project or Vertex AI for confidential work.</li>
-              <li>This website has no analytics and loads nothing from other sites.</li>
-            </ul>
-
-            <h2 id="help">Troubleshooting</h2>
-            <table>
-              <thead>
-                <tr><th>Symptom</th><th>Fix</th></tr>
-              </thead>
-              <tbody>
-                <tr><td><code>401</code> / “key rejected”</td><td>Wrong key or the API isn’t enabled for it. Re-enter the key and press Verify.</td></tr>
-                <tr><td>Vertex <code>404</code></td><td>Location must be <code>global</code>; check the project ID and that the Vertex AI API is enabled.</td></tr>
-                <tr><td><code>429</code></td><td>Rate limit or quota. Prism retries twice, then shows the error.</td></tr>
-                <tr><td>Linux: “Sistem anahtarlığı bulunamadı”</td><td>Install and unlock GNOME Keyring or KWallet, then restart Prism. Without a keyring, keys can’t be saved.</td></tr>
-                <tr><td>“key’i .env dosyasında”</td><td>An older version read keys from <code>.env</code>. Save the key in Settings → Sağlayıcılar, then delete the <code>.env</code> file.</td></tr>
-                <tr><td>macOS: “can’t be opened” warning</td><td>System Settings → Privacy &amp; Security → Open Anyway.</td></tr>
-              </tbody>
-            </table>
-            <p>Something else? <a href={`${REPO}/issues`}>Report it on GitHub</a>, and never share your keys.</p>
-          </>
-        )
-      }
+        <h2 id="help">Troubleshooting</h2>
+        <table>
+          <thead>
+            <tr><th>Symptom</th><th>Fix</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>401</code> / “key rejected”</td><td>Wrong key or the API isn’t enabled for it. Re-enter the key and press Verify.</td></tr>
+            <tr><td>Vertex <code>404</code></td><td>Location must be <code>global</code>; check the project ID and that the Vertex AI API is enabled.</td></tr>
+            <tr><td><code>429</code></td><td>Rate limit or quota. Prism retries twice, then shows the error.</td></tr>
+            <tr><td>Linux: “Sistem anahtarlığı bulunamadı”</td><td>Install and unlock GNOME Keyring or KWallet, then restart Prism. Without a keyring, keys can’t be saved.</td></tr>
+            <tr><td>“key’i .env dosyasında”</td><td>An older version read keys from <code>.env</code>. Save the key in Settings → Sağlayıcılar, then delete the <code>.env</code> file.</td></tr>
+            <tr><td>macOS: “can’t be opened” warning</td><td>System Settings → Privacy &amp; Security → Open Anyway.</td></tr>
+          </tbody>
+        </table>
+        <p>Something else? <a href={`${REPO}/issues`}>Report it on GitHub</a>, and never share your keys.</p>
+      </>
     </div>
   </section>
 </Base>

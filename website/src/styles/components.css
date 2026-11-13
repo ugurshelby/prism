@@ -1,4 +1,4 @@
-/* Izgara, indirme seçicisi, hareket ve "Nasıl çalışır" yazısı. Renk ve yazı tipleri global.css'teki değişkenlerden gelir. */
+/* Grid, download picker, motion and the "How it works" article. Colours and fonts come from the variables in global.css. */
 
 .grid-2 {
   display: grid;
@@ -11,7 +11,7 @@
   }
 }
 
-/* Kartlar: üzerine gelince hafifçe kalkar, kenarı aydınlanır. */
+/* Cards: lift slightly on hover and the edge lights up. */
 .card {
   transition:
     transform 0.35s var(--ease),
@@ -35,7 +35,7 @@
   border-radius: 11px;
 }
 
-/* Kaydırınca beliren öğeler: tarayıcı destekliyorsa betiksiz, kaydırmaya bağlı animasyon. */
+/* Reveal on scroll: script-free scroll-driven animation where the browser supports it. */
 @supports (animation-timeline: view()) {
   [data-reveal] {
     animation: reveal linear both;
@@ -54,7 +54,7 @@
   }
 }
 
-/* Kahraman alanı */
+/* Hero */
 .hero-visual {
   width: 100%;
   display: flex;
@@ -92,7 +92,7 @@
   }
 }
 
-/* Adım kartlarındaki ekran görüntüleri: doğal oranda, ortalı, en fazla 300 px. */
+/* Screenshots in the step cards: natural ratio, centred, at most 300 px. */
 .steps .step {
   height: 100%;
 }
@@ -136,7 +136,7 @@
   color: var(--muted);
 }
 
-/* Sürüm kartları */
+/* Product cards */
 .gen .mark {
   transition: background 0.4s var(--ease);
 }
@@ -160,7 +160,7 @@
   color: var(--muted);
 }
 
-/* --- İndirme seçicisi -------------------------------------------------------- */
+/* --- Download picker -------------------------------------------------------- */
 .picker {
   padding: 22px;
 }
@@ -200,7 +200,7 @@
     height 0.45s var(--ease);
   opacity: 0;
 }
-/* Dört sürüm: geniş ekranda tek sıra, dar ekranda 2×2. */
+/* Four products: one row on wide screens, 2x2 on narrow ones. */
 .tabs.editions {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -427,7 +427,7 @@ select:disabled {
   color: var(--text-2);
 }
 
-/* --- Nasıl çalışır ----------------------------------------------------------- */
+/* --- How it works ----------------------------------------------------------- */
 .post {
   max-width: 720px;
 }

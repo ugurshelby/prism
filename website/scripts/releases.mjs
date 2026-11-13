@@ -1,14 +1,14 @@
-// GitHub yayın listesinin ayrıştırılması ve doğrulanması: saf işlevler, ağ ve dosya yok.
-// sync.mjs (derleme öncesi) ve src/lib/site.ts (derleme sırasında) aynı kuralları kullanır; sitede gösterilen her
-// bağlantı buradan geçmiş olur. Yeni bağımlılık yok (zod değil, elle yazılmış denetim).
+// Parsing and validation of the GitHub release list: pure functions, no network or files.
+// sync.mjs (before the build) and src/lib/site.ts (during the build) share these rules; every link shown on the
+// site has passed through here. No new dependency (hand-written checks, not zod).
 
 export const REPO = 'ugurshelby/prism'
 
-// Yeni ürün etiketleri ve ürün öncesi Spectrum 2.x etiketleri. Eski v1.* ve diğer her şey atılır.
+// New product tags and the pre-product Spectrum 2.x tags. Old v1.* tags and anything else are dropped.
 const PRODUCT_TAG = /^(ray|spectrum)-v(\d+\.\d+\.\d+)$/
 const LEGACY_SPECTRUM_TAG = /^v(2\.\d+\.\d+)$/
 
-/** Etiketten ürün ve sürüm; tanınmayan etiket null döner. */
+/** Product and version from a tag; an unrecognised tag returns null. */
 export function parseTag(tag) {
   if (typeof tag !== 'string') return null
   const m = PRODUCT_TAG.exec(tag)
@@ -17,14 +17,14 @@ export function parseTag(tag) {
   return legacy ? { product: 'spectrum', version: legacy[1] } : null
 }
 
-/** Yalnızca bu deponun yayın sayfaları ve indirmeleri: https, github.com, /ugurshelby/prism/releases/ altında. */
+/** Only this repository's release pages and downloads: https, github.com, under /ugurshelby/prism/releases/. */
 export function isReleaseUrl(raw) {
   if (typeof raw !== 'string') return false
   let url
   try {
     url = new URL(raw)
   } catch {
-    // Geçersiz adres güvenli sayılmaz; çağıran kaydı atar.
+    // An invalid URL is not safe; the caller drops the record.
     return false
   }
   return url.protocol === 'https:' && url.hostname === 'github.com' && !url.port && !url.username && !url.password && url.pathname.startsWith(`/${REPO}/releases/`)
@@ -35,27 +35,27 @@ const isStr = (v) => typeof v === 'string'
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v)
 
 function fail(where, what) {
-  throw new Error(`Yayın verisi bozuk (${where}): ${what}`)
+  throw new Error(`Release data is malformed (${where}): ${what}`)
 }
 
 /**
- * GitHub /releases yanıtını ayrıştırır. Yanıtın biçimi bozuksa hata fırlatır; tek tek yayınlar ise süzülür:
- * taslak ve ön sürümler, tanınmayan etiketler, adresi geçersiz yayınlar ve adresi geçersiz dosyalar atılır.
+ * Parses the GitHub /releases response. Throws if the response shape is malformed; individual releases are filtered:
+ * drafts, prereleases, unrecognised tags, releases with an invalid URL and files with an invalid URL are dropped.
  */
 export function parseApiResponse(json) {
-  if (!Array.isArray(json)) fail('yanıt', 'dizi bekleniyordu')
+  if (!Array.isArray(json)) fail('response', 'expected an array')
   const out = []
   json.forEach((r, i) => {
-    const at = `yayın ${i}`
-    if (!isObj(r)) fail(at, 'nesne bekleniyordu')
-    if (!isStr(r.tag_name)) fail(at, 'tag_name metin olmalı')
-    if (typeof r.draft !== 'boolean' || typeof r.prerelease !== 'boolean') fail(at, 'draft ve prerelease mantıksal olmalı')
-    if (!isStr(r.published_at)) fail(at, 'published_at metin olmalı')
-    if (!isStr(r.html_url)) fail(at, 'html_url metin olmalı')
-    if (!Array.isArray(r.assets)) fail(at, 'assets dizi olmalı')
+    const at = `release ${i}`
+    if (!isObj(r)) fail(at, 'expected an object')
+    if (!isStr(r.tag_name)) fail(at, 'tag_name must be a string')
+    if (typeof r.draft !== 'boolean' || typeof r.prerelease !== 'boolean') fail(at, 'draft and prerelease must be booleans')
+    if (!isStr(r.published_at)) fail(at, 'published_at must be a string')
+    if (!isStr(r.html_url)) fail(at, 'html_url must be a string')
+    if (!Array.isArray(r.assets)) fail(at, 'assets must be an array')
     const assets = r.assets.map((a, j) => {
-      if (!isObj(a) || !isStr(a.name) || !isNum(a.size) || !isStr(a.browser_download_url)) fail(`${at}, dosya ${j}`, 'name, size ve browser_download_url gerekli')
-      if (a.digest != null && !isStr(a.digest)) fail(`${at}, dosya ${j}`, 'digest metin olmalı')
+      if (!isObj(a) || !isStr(a.name) || !isNum(a.size) || !isStr(a.browser_download_url)) fail(`${at}, file ${j}`, 'name, size and browser_download_url are required')
+      if (a.digest != null && !isStr(a.digest)) fail(`${at}, file ${j}`, 'digest must be a string')
       return a
     })
     if (r.draft || r.prerelease) return
@@ -75,20 +75,20 @@ export function parseApiResponse(json) {
   return out
 }
 
-/** releases.json'ı (sync.mjs'in yazdığı biçim) okurken aynı denetim: ürün etiketle tutarlı, adresler geçerli. */
+/** Same checks when reading releases.json (the format sync.mjs writes): product matches the tag, URLs are valid. */
 export function parseStored(json) {
-  if (!Array.isArray(json)) fail('releases.json', 'dizi bekleniyordu')
+  if (!Array.isArray(json)) fail('releases.json', 'expected an array')
   return json.map((r, i) => {
-    const at = `kayıt ${i}`
+    const at = `record ${i}`
     if (!isObj(r) || !isStr(r.tag) || !isStr(r.product) || !isStr(r.version) || !isStr(r.published) || !isStr(r.url) || !Array.isArray(r.assets)) {
-      fail(at, 'tag, product, version, published, url ve assets gerekli')
+      fail(at, 'tag, product, version, published, url and assets are required')
     }
     const parsed = parseTag(r.tag)
-    if (!parsed || parsed.product !== r.product || parsed.version !== r.version) fail(at, 'etiket, ürün ve sürüm uyuşmuyor')
-    if (!isReleaseUrl(r.url)) fail(at, 'yayın adresi izinli değil')
+    if (!parsed || parsed.product !== r.product || parsed.version !== r.version) fail(at, 'tag, product and version do not match')
+    if (!isReleaseUrl(r.url)) fail(at, 'release URL is not allowed')
     const assets = r.assets.map((a, j) => {
-      if (!isObj(a) || !isStr(a.name) || !isNum(a.size) || !isStr(a.url) || !(a.sha256 === null || isStr(a.sha256))) fail(`${at}, dosya ${j}`, 'name, url, size ve sha256 gerekli')
-      if (!isReleaseUrl(a.url)) fail(`${at}, dosya ${j}`, 'indirme adresi izinli değil')
+      if (!isObj(a) || !isStr(a.name) || !isNum(a.size) || !isStr(a.url) || !(a.sha256 === null || isStr(a.sha256))) fail(`${at}, file ${j}`, 'name, url, size and sha256 are required')
+      if (!isReleaseUrl(a.url)) fail(`${at}, file ${j}`, 'download URL is not allowed')
       return { name: a.name, url: a.url, size: a.size, sha256: a.sha256 }
     })
     return { tag: r.tag, product: parsed.product, version: parsed.version, published: r.published, url: r.url, assets }

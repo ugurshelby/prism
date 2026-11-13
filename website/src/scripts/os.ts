@@ -1,4 +1,4 @@
-// Ziyaretçinin işletim sistemini tarayıcıdan tahmin eder. Telefon ve tablette null döner.
+// Guesses the visitor's operating system from the browser. Returns null on phones and tablets.
 export type DetectedOs = { os: 'win' | 'mac' | 'linux'; macArch?: 'arm' | 'intel' }
 
 export async function detectOs(): Promise<DetectedOs | null> {
@@ -8,7 +8,7 @@ export async function detectOs(): Promise<DetectedOs | null> {
   if (/Android|iPhone|iPad|iPod/i.test(ua) || data?.mobile) return null
   if (/Win/i.test(platform) || /Windows/i.test(ua)) return { os: 'win' }
   if (/Mac/i.test(platform) || /Mac OS X/i.test(ua)) {
-    // Safari mimariyi söylemez; 2020'den beri satılan Mac'lerin çoğu Apple Silicon.
+    // Safari does not report the architecture; most Macs sold since 2020 are Apple Silicon.
     try {
       const { architecture } = (await data?.getHighEntropyValues?.(['architecture'])) ?? {}
       if (architecture === 'x86') return { os: 'mac', macArch: 'intel' }

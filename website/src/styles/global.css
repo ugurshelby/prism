@@ -64,7 +64,7 @@ svg {
   max-width: 100%;
   display: block;
 }
-/* width/height öznitelikleri yalnızca oranı bildirir; görüntü kutusuna göre ölçeklenir, ezilmez. */
+/* width/height attributes only declare the ratio; the image scales to its box without being squashed. */
 img {
   height: auto;
 }
@@ -97,7 +97,7 @@ code,
   }
 }
 
-/* Arka plan: hafif gren ve iki yumuşak ışık lekesi (uygulamadaki aura). */
+/* Background: light grain and two soft glows (the app's aura). */
 .backdrop {
   position: fixed;
   inset: 0;
@@ -115,7 +115,7 @@ code,
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* --- Başlık ----------------------------------------------------------------- */
+/* --- Header ----------------------------------------------------------------- */
 .site-header {
   position: sticky;
   top: 0;
@@ -159,9 +159,6 @@ code,
   color: var(--text);
   background: var(--bg-2);
 }
-.nav .lang {
-  border: 1px solid var(--line-2);
-}
 @media (max-width: 640px) {
   .site-header .container {
     gap: 8px;
@@ -175,7 +172,7 @@ code,
   }
 }
 
-/* --- Düğmeler ---------------------------------------------------------------- */
+/* --- Buttons ---------------------------------------------------------------- */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -210,7 +207,7 @@ code,
   opacity: 0.75;
 }
 
-/* --- Bölümler ---------------------------------------------------------------- */
+/* --- Sections ---------------------------------------------------------------- */
 section {
   padding: 88px 0;
 }
@@ -284,7 +281,7 @@ h3 {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
 }
 
-/* --- Kahraman alanı ---------------------------------------------------------- */
+/* --- Hero ---------------------------------------------------------- */
 .hero {
   padding: 72px 0 40px;
 }
@@ -325,8 +322,8 @@ h3 {
   max-width: 400px;
   justify-self: center;
 }
-/* Logodaki ışınların sayfa açılırken prizmadan çıkması. */
-/* Varsayılan hâl görünür; animasyon çalışmazsa ışınlar yine çizili kalır. */
+/* The logo rays emerging from the prism when the page loads. */
+/* Visible by default; if the animation fails the rays are still drawn. */
 .ray {
   stroke-dasharray: 40;
   animation: draw 1s var(--ease) backwards;
@@ -357,7 +354,7 @@ h3 {
   }
 }
 
-/* --- Adımlar, aileler, özellikler ------------------------------------------ */
+/* --- Steps, families, features --- */
 .step {
   display: flex;
   flex-direction: column;
@@ -444,7 +441,7 @@ h3 {
   text-decoration: underline;
 }
 
-/* --- Sürüm kuşakları -------------------------------------------------------- */
+/* --- Products --- */
 .gen {
   display: flex;
   flex-direction: column;
@@ -500,7 +497,7 @@ h3 {
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
-/* --- İndirme ----------------------------------------------------------------- */
+/* --- Download --- */
 .dl-grid {
   display: grid;
   gap: 16px;
@@ -579,7 +576,7 @@ h3 {
   border-radius: 14px;
 }
 
-/* --- Belgeler ---------------------------------------------------------------- */
+/* --- Docs --- */
 .prose {
   max-width: 760px;
 }
@@ -627,7 +624,7 @@ h3 {
   margin-top: 28px;
 }
 
-/* --- Alt bilgi --------------------------------------------------------------- */
+/* --- Footer --- */
 .site-footer {
   border-top: 1px solid var(--line);
   padding: 40px 0 56px;

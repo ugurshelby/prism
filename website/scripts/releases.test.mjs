@@ -1,4 +1,4 @@
-// `npm --prefix website test` (node --test): elle yazılmış örneklerle etiket ayrıştırma ve adres doğrulama.
+// `npm --prefix website test` (node --test): tag parsing and URL validation with hand-written samples.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { isReleaseUrl, parseApiResponse, parseStored, parseTag } from './releases.mjs'
@@ -15,20 +15,20 @@ const release = (tag, extra = {}) => ({
   ...extra
 })
 
-test('etiketler: yeni ürün etiketleri ve eski Spectrum 2.x', () => {
+test('tags: new product tags and legacy Spectrum 2.x', () => {
   assert.deepEqual(parseTag('ray-v2.0.0'), { product: 'ray', version: '2.0.0' })
   assert.deepEqual(parseTag('spectrum-v3.0.0'), { product: 'spectrum', version: '3.0.0' })
   assert.deepEqual(parseTag('v2.2.0'), { product: 'spectrum', version: '2.2.0' })
 })
 
-test('etiketler: v1.*, ön sürüm eki ve diğer her şey atılır', () => {
+test('tags: v1.*, prerelease suffixes and anything else are dropped', () => {
   for (const tag of ['v1.0.0', 'v3.0.0', 'ray-v2.0.0-beta', 'ray-v2.0', 'lens-v1.0.0', 'xray-v2.0.0', 'v2.2.0-rc1', '', 'ray-v2.0.0\n']) {
     assert.equal(parseTag(tag), null, tag)
   }
   assert.equal(parseTag(undefined), null)
 })
 
-test('adresler: yalnızca bu deponun yayın sayfaları ve indirmeleri', () => {
+test('URLs: only this repository release pages and downloads', () => {
   assert.equal(isReleaseUrl(`${BASE}/download/v2.2.0/x.exe`), true)
   for (const u of [
     'javascript:alert(1)',
@@ -47,7 +47,7 @@ test('adresler: yalnızca bu deponun yayın sayfaları ve indirmeleri', () => {
   assert.equal(isReleaseUrl(null), false)
 })
 
-test('yanıt: ürün ayrı alan olarak yazılır, v1.*, taslak ve ön sürüm atılır', () => {
+test('response: product is a separate field; v1.*, drafts and prereleases are dropped', () => {
   const out = parseApiResponse([
     release('ray-v2.0.0'),
     release('spectrum-v3.0.0'),
@@ -69,7 +69,7 @@ test('yanıt: ürün ayrı alan olarak yazılır, v1.*, taslak ve ön sürüm at
   assert.equal(out[0].url, `${BASE}/tag/ray-v2.0.0`)
 })
 
-test('yanıt: adresi geçersiz dosya atılır, yayın kalır; yayın adresi geçersizse yayın atılır', () => {
+test('response: a file with an invalid URL is dropped but the release stays; an invalid release URL drops the release', () => {
   const evil = [
     asset('ray-v2.0.0', 'ok.exe'),
     asset('ray-v2.0.0', 'js.exe', 'javascript:alert(1)'),
@@ -80,20 +80,20 @@ test('yanıt: adresi geçersiz dosya atılır, yayın kalır; yayın adresi geç
   assert.deepEqual(out[0].assets.map((a) => a.name), ['ok.exe'])
 })
 
-test('yanıt: bozuk biçim açık hata verir', () => {
-  assert.throws(() => parseApiResponse({}), /dizi bekleniyordu/)
-  assert.throws(() => parseApiResponse([{ ...release('ray-v2.0.0'), draft: 'false' }]), /mantıksal/)
-  assert.throws(() => parseApiResponse([{ ...release('ray-v2.0.0'), assets: 'x' }]), /assets dizi/)
+test('response: a malformed shape throws a clear error', () => {
+  assert.throws(() => parseApiResponse({}), /expected an array/)
+  assert.throws(() => parseApiResponse([{ ...release('ray-v2.0.0'), draft: 'false' }]), /booleans/)
+  assert.throws(() => parseApiResponse([{ ...release('ray-v2.0.0'), assets: 'x' }]), /assets must be an array/)
   assert.throws(() => parseApiResponse([release('ray-v2.0.0', { assets: [{ name: 'a', size: '1', browser_download_url: BASE }] })]), /browser_download_url/)
-  assert.throws(() => parseApiResponse([null]), /nesne bekleniyordu/)
+  assert.throws(() => parseApiResponse([null]), /expected an object/)
 })
 
-test('kayıtlı veri: geçerli kayıt geçer, ürün-etiket uyumsuzluğu ve kötü adres reddedilir', () => {
+test('stored data: a valid record passes; product/tag mismatch and bad URLs are rejected', () => {
   const stored = parseApiResponse([release('spectrum-v3.0.0')])
   assert.deepEqual(parseStored(stored), stored)
-  assert.throws(() => parseStored([{ ...stored[0], product: 'ray' }]), /uyuşmuyor/)
-  assert.throws(() => parseStored([{ ...stored[0], url: 'javascript:alert(1)' }]), /izinli değil/)
-  assert.throws(() => parseStored([{ ...stored[0], assets: [{ ...stored[0].assets[0], url: 'https://evil.example/x' }] }]), /izinli değil/)
-  assert.throws(() => parseStored({}), /dizi bekleniyordu/)
+  assert.throws(() => parseStored([{ ...stored[0], product: 'ray' }]), /do not match/)
+  assert.throws(() => parseStored([{ ...stored[0], url: 'javascript:alert(1)' }]), /not allowed/)
+  assert.throws(() => parseStored([{ ...stored[0], assets: [{ ...stored[0].assets[0], url: 'https://evil.example/x' }] }]), /not allowed/)
+  assert.throws(() => parseStored({}), /expected an array/)
   assert.deepEqual(parseStored([]), [])
 })

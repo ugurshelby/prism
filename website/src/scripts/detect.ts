@@ -1,5 +1,5 @@
-// Ana sayfadaki indirme düğmesini ziyaretçinin sistemine göre ayarlar.
-// Betik çalışmazsa düğme indirme sayfasına gider; hiçbir şey kaybolmaz.
+// Adjusts the home page download button to the visitor's system.
+// If the script does not run, the button goes to the download page; nothing is lost.
 import { detectOs } from './os'
 import { safeUrl } from './url'
 
