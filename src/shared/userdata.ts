@@ -4,6 +4,7 @@
 // Pure module: file work is in main/wipe.ts. When a new userData file (config.ts UserFileName) is added,
 // it is added here too.
 import { PROVIDERS } from './catalog'
+import { LEGACY_OFFER_MARKER } from './legacy'
 
 const BASES: ReadonlySet<string> = new Set([
     // Older versions could keep keys as plain text in userData/.env (env.ts leftoverEnvNames); that is deleted too.
@@ -18,6 +19,8 @@ const BASES: ReadonlySet<string> = new Set([
   'update-state.json',
     // One-time migration marker for Spectrum from 2.x (main/migrate.ts).
   'migrated.json',
+    // macOS: the one-time offer to move the 2.x app to the Trash was answered (main/legacy-install.ts).
+  LEGACY_OFFER_MARKER,
   ...PROVIDERS.map((p) => `${p}.key`)
 ])
 const SETTINGS_BACKUP = /^settings\.v\d+\.json$/

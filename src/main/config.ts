@@ -25,6 +25,7 @@ export type UserFileName =
   | 'models.json'
   | 'window-state.json'
   | 'update-state.json'
+  | 'legacy-app.json'
   | `${ProviderId}.key`
 
 export const userFile = (name: UserFileName) => join(app.getPath('userData'), name)

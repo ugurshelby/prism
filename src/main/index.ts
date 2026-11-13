@@ -28,6 +28,8 @@ import { UserError } from './errors'
 import { logError, logWarn } from './log'
 import { clearKey, engineGenerate, forgetAllKeys, resolveEngine, needsVerify, saveKey, setHotkeyOk, settingsView, verify, verifyPending } from './providers'
 import { MIGRATION_MARKER, inspectDir, markMigrationDone, migrateLegacyData } from './migrate'
+import { removeLegacyAutostart } from './legacy-files'
+import { offerLegacyAppRemoval } from './legacy-install'
 import { selftest } from './selftest'
 import { checkForUpdate, openReleasePage, startUpdateChecks, updateView } from './update'
 import { wipeOwnData } from './wipe'
@@ -597,11 +599,26 @@ app
       if (!win.isDestroyed()) win.webContents.send('update:changed')
     })
     if (DEV.captureDir) captureStates(win, DEV.captureDir, DEV.capturePrompt)
+    replaceLegacyInstall()
   })
   .catch((e: unknown) => {
     logError('app', 'launch failed', e)
     app.exit(1)
   })
+
+// D6: Spectrum replaces the 2.x install on macOS and Linux (Windows: the installer). Only in a real install of the product
+// that continues 2.x, never in development, so a developer's own 2.x copy is left alone.
+function replaceLegacyInstall() {
+  if (!app.isPackaged || DEV.userData || !PRODUCT.legacyDataDirs.length) return
+  if (process.platform === 'linux' && removeLegacyAutostart(app.getPath('appData'))) logWarn('legacy', 'removed the 2.x autostart entry')
+  if (process.platform === 'darwin') {
+    // A hidden login start has no visible window to put the question next to; it is asked on a launch by hand.
+    if (START_HIDDEN) return
+    offerLegacyAppRemoval(app.getPath('home'), PRODUCT.name).catch((e: unknown) =>
+      logWarn('legacy', 'the offer to remove the 2.x app failed', e)
+    )
+  }
+}
 
 /**
  * Development: takes screenshots of the panel and pill states and exits.

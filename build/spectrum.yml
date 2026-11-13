@@ -19,5 +19,14 @@ extraResources:
       - "trayTemplate*.png"
 nsis:
   artifactName: Prism-Spectrum-Setup-${version}-${arch}.${ext}
+  # D6: the uninstall GUID of Prism 2.x (electron-builder's UUIDv5 of appId com.prompter.app). The installer finds the 2.x
+  # install under this key and upgrades it in place instead of installing next to it. Pinned in src/main/installer.test.ts.
+  guid: b26b5751-cbc6-53be-a571-140ea2dd20be
 linux:
   executableName: prism-spectrum
+deb:
+  # D6: the 2.x package was named prism; installing Spectrum replaces it. Bounded to 2.x so an unrelated package
+  # that happens to be called prism is never removed.
+  fpm:
+    - "--replaces=prism (<< 3.0.0)"
+    - "--conflicts=prism (<< 3.0.0)"
