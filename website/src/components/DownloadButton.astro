@@ -1,15 +1,10 @@
 ---
 import Icon from './Icon.astro'
-import { files, href, latest, type Lang } from '../lib/site'
-import { t } from '../lib/i18n'
+import { files, href, latest } from '../lib/site'
+import { s } from '../lib/copy'
 
-interface Props {
-  lang: Lang
-}
-const { lang } = Astro.props
-const s = t(lang)
 const f = files(latest)
-const page = href(lang, 'download')
+const page = href('download')
 ---
 
 <a

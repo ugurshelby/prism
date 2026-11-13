@@ -1,16 +1,14 @@
 ---
 import Mark from './Mark.astro'
-import { href, releasesOf, statusOf, type Lang, type ProductId } from '../lib/site'
-import { t } from '../lib/i18n'
+import { href, releasesOf, statusOf, type ProductId } from '../lib/site'
+import { s } from '../lib/copy'
 
 interface Props {
-  lang: Lang
   id: ProductId
   name: string
   detail?: boolean
 }
-const { lang, id, name, detail = false } = Astro.props
-const s = t(lang)
+const { id, name, detail = false } = Astro.props
 const status = statusOf(id)
 const count = releasesOf(id).length
 ---
@@ -33,7 +31,7 @@ const count = releasesOf(id).length
     )
   }
   <div class="gen-foot">
-    <a class="btn btn-ghost btn-sm" href={href(lang, id)}>
+    <a class="btn btn-ghost btn-sm" href={href(id)}>
       {s.products.openPage(name)} →
     </a>
     <span class="muted">

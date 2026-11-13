@@ -18,7 +18,7 @@ export interface Release {
 export const REPO: string
 export function parseTag(tag: unknown): { product: ReleaseProduct; version: string } | null
 export function isReleaseUrl(raw: unknown): boolean
-/** GitHub /releases yanıtı; biçim bozuksa hata fırlatır. */
+/** GitHub /releases response; throws if the shape is malformed. */
 export function parseApiResponse(json: unknown): Release[]
-/** releases.json içeriği; biçim ya da adres bozuksa hata fırlatır. */
+/** Contents of releases.json; throws if the shape or a URL is malformed. */
 export function parseStored(json: unknown): Release[]

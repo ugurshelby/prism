@@ -1,5 +1,5 @@
-// İndirme sayfasındaki sürüm → yayın → sistem seçicisi. Veri, sayfaya derleme sırasında JSON olarak gömülür;
-// DOM yalnızca textContent ile kurulur; veri kullanılmadan önce biçimce denetlenir, bağlantılar safeUrl'den geçer.
+// The product -> release -> system picker on the download page. The data is embedded in the page as JSON at build time;
+// the DOM is built with textContent only; the data is shape-checked before use and links go through safeUrl.
 import { detectOs } from './os'
 import { safeUrl } from './url'
 
@@ -33,7 +33,7 @@ interface Data {
   steps: Record<Os, string>
 }
 
-// Gömülü JSON derlemede üretilir, yine de DOM'dan okunan veri güvenilmez sayılır: biçimi tutmazsa seçici kurulmaz.
+// The embedded JSON is produced at build time, but data read from the DOM is still untrusted: if the shape is wrong the picker is not built.
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
 const isStr = (v: unknown): v is string => typeof v === 'string'
 const isStrOrNull = (v: unknown) => v === null || isStr(v)
@@ -41,7 +41,7 @@ const isStrMap = (v: unknown, required: readonly string[] = []) =>
   isObj(v) && Object.values(v).every(isStr) && required.every((k) => k in v)
 const OSES = ['win', 'mac', 'linux'] as const
 const isOs = (v: unknown): v is Os => OSES.some((o) => o === v)
-// Seçicinin kullandığı metinler; biri eksikse seçici kurulmaz, sayfadaki yedek bağlantılar kalır.
+// Texts the picker uses; if one is missing the picker is not built and the fallback links on the page stay.
 const TEXT_KEYS = [
   'changes',
   'changesOnGitHub',
@@ -90,11 +90,11 @@ function readData(json: HTMLElement): Data | null {
   try {
     const raw: unknown = JSON.parse(json.textContent || 'null')
     if (isData(raw)) return raw
-    console.warn('İndirme verisi beklenen biçimde değil')
+    console.warn('Download data is not in the expected shape')
     return null
   } catch (e) {
-    // Bozuk gömülü veri: seçici kurulmaz, sayfadaki betiksiz bağlantılar yerinde kalır.
-    console.warn('İndirme verisi okunamadı', e)
+    // Corrupt embedded data: the picker is not built and the script-free links on the page stay.
+    console.warn('Download data could not be read', e)
     return null
   }
 }
@@ -255,7 +255,7 @@ function init(root: HTMLElement, data: Data) {
     version = product.versions.find((v) => v.version === select.value)!
     renderBody()
   })
-  // Sekmelerde ok tuşlarıyla gezinme.
+  // Arrow-key navigation between tabs.
   for (const group of [tabs, osTabs]) {
     group.addEventListener('keydown', (e) => {
       if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return

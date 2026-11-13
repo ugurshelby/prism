@@ -1,39 +1,25 @@
 ---
 import Base from '../layouts/Base.astro'
-import { REPO, href, type Lang } from '../lib/site'
-import { t } from '../lib/i18n'
+import { REPO, href } from '../lib/site'
+import { s } from '../lib/copy'
 
-interface Props {
-  lang: Lang
-}
-const { lang } = Astro.props
-const s = t(lang)
-const flow =
-  lang === 'tr'
-    ? [
-        ['Sen', 'ham istek'],
-        ['Analiz', 'model, seviye, sorular'],
-        ['Sen', 'cevaplar ya da onay'],
-        ['Yazım', 'akış hâlinde prompt'],
-        ['Hedef model', 'yapıştırdığın yer']
-      ]
-    : [
-        ['You', 'rough request'],
-        ['Analysis', 'model, level, questions'],
-        ['You', 'answers or a nod'],
-        ['Writing', 'streamed prompt'],
-        ['Target model', 'wherever you paste it']
-      ]
+const flow = [
+  ['You', 'rough request'],
+  ['Analysis', 'model, level, questions'],
+  ['You', 'answers or a nod'],
+  ['Writing', 'streamed prompt'],
+  ['Target model', 'wherever you paste it']
+]
 ---
 
-<Base lang={lang} page="how-it-works" title={s.how.title} description={s.how.lead}>
+<Base page="how-it-works" title={s.how.title} description={s.how.lead}>
   <article class="hero">
     <div class="container prose post">
-      <p class="eyebrow">{lang === 'tr' ? 'Mühendislik notu · 8 dk' : 'Engineering notes · 8 min read'}</p>
+      <p class="eyebrow">Engineering notes · 8 min read</p>
       <h1>{s.how.title}</h1>
       <p class="lead">{s.how.lead}</p>
 
-      <ol class="flow" aria-label={lang === 'tr' ? 'Akış' : 'Flow'}>
+      <ol class="flow" aria-label="Flow">
         {
           flow.map(([a, b], i) => (
             <li style={`--i:${i}`}>
@@ -44,249 +30,125 @@ const flow =
         }
       </ol>
 
-      {
-        lang === 'tr' ? (
-          <>
-            <p>
-              Prism tek bir iş yapan küçük bir uygulama: aklındakini, bir modelin duyması gereken hâle getirmek. Bu yazı, kısayola bastığın andan
-              promptu kopyaladığın ana kadar arada neler olduğunu anlatıyor. Kodun tamamı açık; bir yerde merak ettiğin bir şey olursa{' '}
-              <a href={REPO}>depoya</a> bakabilirsin.
-            </p>
+      <>
+        <p>
+          Prism is a small app with one job: turning what you meant into what a model needs to hear. This page walks through what happens between
+          pressing the shortcut and copying the prompt. All of the code is open, so if something here makes you curious, the{' '}
+          <a href={REPO}>repository</a> has the details.
+        </p>
 
-            <h2>İki model, iki ayrı iş</h2>
-            <p>
-              Prism’de iki model var ve karıştırılmaları kolay. <b>Motor</b>, Prism’in kendisinin çağırdığı model: isteğini okuyan, öneri yapan, promptu
-              yazan. <b>Hedef</b> ise promptun yazıldığı model: senin sonra Claude Code’a, ChatGPT’ye ya da bir API çağrısına yapıştıracağın yer.
-            </p>
-            <p>
-              Motor, key’ini eklediğin sağlayıcıda çalışır. Hedef, istediğin herhangi bir model olabilir. Örneğin Gemini key’iyle çalışan bir motor,
-              Claude Opus için prompt yazabilir. Bu ayrım bütün tasarımın temeli: motoru ucuz ve hızlı tutarken hedefi işin gerektirdiği yere koyabilirsin.
-            </p>
+        <h2>Two models, two jobs</h2>
+        <p>
+          There are two models in Prism, and they’re easy to mix up. The <b>engine</b> is the model Prism itself calls: it reads your request, makes
+          the recommendation and writes the prompt. The <b>target</b> is the model the prompt is written for: the one you’ll paste it into later, in
+          Claude Code, ChatGPT or an API call.
+        </p>
+        <p>
+          The engine runs on whichever provider you added a key for. The target can be any model. An engine running on a Gemini key can write a prompt
+          for Claude Opus. That split is the whole design: keep the engine cheap and fast, and point the target wherever the work needs to go.
+        </p>
 
-            <h2>Uygulama iki yarıdan oluşuyor</h2>
-            <p>
-              Prism bir masaüstü uygulaması ve içinde iki ayrı süreç çalışıyor. Gördüğün pencere yalnızca bir arayüz: düğmeler, metin kutuları,
-              animasyonlar. Ağa çıkamaz, diske yazamaz, key görmez. Bütün bu işleri arka plandaki ana süreç yapar.
-            </p>
-            <p>
-              İkisi arasında dar bir köprü var. Arayüz “şu isteği analiz et” ya da “bu key’i kaydet” diyebilir; ana süreç sonucu geri yollar. Key bu
-              köprüden yalnızca bir yönde geçer: kaydederken. Geri dönen tek şey <code>••••ab12</code> gibi maskeli bir ipucu. Arayüzde bir hata olsa bile
-              key’ine ulaşacak bir yol yok.
-            </p>
+        <h2>The app has two halves</h2>
+        <p>
+          Prism is a desktop app with two separate processes inside. The window you see is only an interface: buttons, text boxes, animations. It
+          can’t reach the network, can’t write to disk and never sees a key. A background process, the main process, does all of that.
+        </p>
+        <p>
+          A narrow bridge connects them. The interface can say “analyze this request” or “save this key”, and the main process sends back the result.
+          A key crosses that bridge in one direction only, when you save it. What comes back is a masked hint like <code>••••ab12</code>. Even a bug in
+          the interface has no path to your key.
+        </p>
 
-            <h2>Key’in, yapıştırdığın andan itibaren</h2>
-            <p>
-              Key’i kaydettiğinde ana süreç onu işletim sisteminin şifreleme hizmetine verir: Windows’ta DPAPI, macOS’ta Keychain, Linux’ta Secret Service
-              ya da KWallet. Diske yalnızca şifreli hâli yazılır. Linux’ta bir anahtarlık yoksa Prism key’i zayıf bir korumayla saklamak yerine kaydetmeyi
-              reddeder ve nedenini söyler.
-            </p>
-            <p>
-              Hemen ardından bir doğrulama gelir. Prism sağlayıcıya hafif bir istek atar ve o key’in ulaşabildiği metin modellerini listeler. Liste
-              önbelleğe alınır; motor seçimi ve aileler arası öneri bu listeye bakar. Geçersiz bir key, “bir şeyler ters gitti” yerine hangi sağlayıcının
-              neden reddettiğini söyleyen bir mesajla döner.
-            </p>
+        <h2>Your key, from the moment you paste it</h2>
+        <p>
+          When you save a key, the main process hands it to your operating system’s encryption service: DPAPI on Windows, Keychain on macOS, Secret
+          Service or KWallet on Linux. Only the encrypted form is written to disk. On a Linux machine with no keyring, Prism refuses to save the key
+          rather than store it with weak protection, and tells you why.
+        </p>
+        <p>
+          A check follows right away. Prism sends the provider a lightweight request and lists the text models that key can reach. The list is
+          cached, and both engine selection and cross-family recommendations read from it. A bad key comes back with a message that names the
+          provider and the reason, not “something went wrong”.
+        </p>
 
-            <h2>Birinci adım: isteği okumak</h2>
-            <p>
-              Sen yazıp <code>Ctrl+Enter</code>’a bastığında motor bir analiz yapar. Burada serbest metin istemiyoruz. Motordan sabit bir şemaya uyan bir
-              JSON nesnesi istiyoruz: görevin özeti, türü, zorluğu, önerilen model ve seviye, bir eminlik oranı, alternatifler ve gerekiyorsa netleştirme
-              soruları.
-            </p>
-            <p>
-              Şema, motorun seçebileceği modelleri de sınırlar. Aday listesi senin gerçekten kullanabildiğin modellerden kurulur: doğrulanmış key’lerin
-              açtıkları ve abonelikle kullandığını işaretlediğin uygulamalar. Motor bu listenin dışına çıkamaz. Cevap geldikten sonra bir kez daha
-              kontrol edilir; seviye o modelde yoksa en yakın geçerli seviyeye çekilir.
-            </p>
-            <p>
-              Soru sormak isteğe bağlı değil, bir karar. Görev açıksa motor soru üretmez. Belirsizse en fazla birkaç soru sorar ve her birine
-              tıklanabilir seçenekler ekler; sen yazmak zorunda kalmazsın.
-            </p>
+        <h2>Step one: reading the request</h2>
+        <p>
+          When you type and press <code>Ctrl+Enter</code>, the engine runs an analysis. We don’t ask it for free text here. We ask for a JSON object
+          that fits a fixed schema: a summary of the task, its type and difficulty, the recommended model and level, a confidence score,
+          alternatives, and clarifying questions when they’re needed.
+        </p>
+        <p>
+          The schema also limits which models the engine can pick. The candidate list is built from the models you can actually use: the ones your
+          verified keys open up and the apps you marked as subscriptions. The engine can’t step outside it. The answer is checked once more when it
+          arrives; if the level doesn’t exist on that model, it’s moved to the nearest valid one.
+        </p>
+        <p>
+          Asking questions isn’t decoration, it’s a decision. When the task is clear, the engine asks nothing. When it’s vague, it asks a few short
+          questions and attaches clickable options, so you rarely have to type an answer.
+        </p>
 
-            <h2>Bilgi kartları</h2>
-            <p>
-              Motorun bir modelden ne beklediğini nereden bildiği sorusunun cevabı, <code>knowledge/</code> klasöründeki düz Markdown dosyaları. Her aile
-              için birkaç kart var: genel ilkeler, seviyelerin anlamı, modellerin listesi, her yüzey (kodlama ajanı, sohbet, API) için bir kart ve her
-              hedef model için bir kart.
-            </p>
-            <p>
-              Kartlar kod değil. Prism onları her istekte diskten yeniden okur ve motorun talimatına ekler. Bir kuralı düzeltmek için uygulamayı yeniden
-              derlemen gerekmez; dosyayı düzenle ve bir sonraki istekte farkı gör. Kartları üreticilerin herkese açık yönergelerinden ve kendi
-              denemelerimizden yazdık, kısa tuttuk.
-            </p>
+        <h2>Knowledge cards</h2>
+        <p>
+          How does the engine know what a model expects? The answer lives in plain Markdown files in the <code>knowledge/</code> folder. Each family
+          has a handful of cards: general principles, what the effort levels mean, the list of models, one card per surface (coding agent, chat,
+          API) and one card per target model.
+        </p>
+        <p>
+          Cards aren’t code. Prism reads them from disk on every request and adds them to the engine’s instructions. To fix a rule, you don’t rebuild
+          the app; edit the file and see the difference on the next request. We wrote the cards from the vendors’ public guidance and our own
+          testing, and kept them short.
+        </p>
 
-            <h2>İkinci adım: yazmak</h2>
-            <p>
-              Öneriyi kabul ettiğinde ikinci bir çağrı başlar. Bu sefer motorun talimatında hedef ailenin ilkeleri, hedef modelin kartı ve seçtiğin
-              yüzeyin kartı var. Analizden gelen özet ve senin cevapların da ekleniyor. Motor promptu parça parça yollar; ekranda yazılırken
-              görmen bundan.
-            </p>
-            <p>
-              Sonuçla birlikte iki şey daha gelir: promptta neyi neden değiştirdiğine dair kısa notlar ve hedef araçta modeli ve seviyeyi nasıl
-              ayarlayacağın. Claude Code için bu iki satırlık bir komut, bir API için istek gövdesindeki alanlar.
-            </p>
+        <h2>Step two: writing</h2>
+        <p>
+          When you accept the recommendation, a second call starts. This time the engine’s instructions carry the target family’s principles, the
+          target model’s card and the card for the surface you chose, along with the summary from the analysis and your answers. The engine streams
+          the prompt back in pieces, which is why you see it being typed.
+        </p>
+        <p>
+          Two more things arrive with the result: short notes on what changed and why, and how to set the model and level in the target tool. For
+          Claude Code that’s a two-line command; for an API it’s the fields in the request body.
+        </p>
 
-            <h2>Bir şey ters gittiğinde</h2>
-            <p>
-              Ağ istekleri bazen başarısız olur. Prism hız sınırına (429) ya da sunucu hatasına (5xx) takılan isteği artan aralıklarla iki kez daha dener.
-              Bazı modeller katı JSON şemasını kabul etmez; o zaman şema, talimatın içine düz metin olarak yazılır ve cevap yine aynı kontrolden geçer.
-            </p>
-            <p>
-              Hata mesajları kullanıcıya gösterilmeden önce temizlenir. Key’in bir parçası bir hata metninin içinde geçse bile ekrana ya da bir loga
-              düşmez.
-            </p>
+        <h2>When something goes wrong</h2>
+        <p>
+          Network requests fail sometimes. When a request hits a rate limit (429) or a server error (5xx), Prism retries it twice with growing gaps.
+          Some models won’t accept a strict JSON schema; in that case the schema is written into the instructions as plain text, and the answer goes
+          through the same check.
+        </p>
+        <p>
+          Error messages are cleaned before you see them. If part of your key ever shows up inside an error text, it doesn’t reach the screen or a
+          log.
+        </p>
 
-            <h2>Bilgisayarında kalanlar</h2>
-            <p>
-              Ayarların, keşfedilen model listesi ve son 200 prompt kullanıcı klasöründe durur. Geçmişteki her kayıt hangi motorla, hangi hedef için
-              yazıldığını bilir; aileye göre süzebilir, tekrar kopyalayabilir ya da aynı isteği yeniden yazdırabilirsin. Prism hiçbir yere telemetri
-              göndermez. Bizim bir sunucumuz yok.
-            </p>
+        <h2>What stays on your computer</h2>
+        <p>
+          Your settings, the discovered model list and your last 200 prompts live in your user folder. Every history entry knows which engine wrote
+          it and for which target; you can filter by family, copy again or have the same request rewritten. Prism sends no telemetry anywhere. We
+          don’t run a server.
+        </p>
 
-            <h2>Ürün başına akış</h2>
-            <ul>
-              <li><b>Ray:</b> kurulumda aileni bir kez seçersin. İsteği yazarsın; Prism o ailenin içinden model ve seviye önerir, eksik olanı sorar ve onun için tek bir prompt yazar.</li>
-              <li><b>Spectrum:</b> kullandığın aileleri seçersin. Adımlar aynı, ama öneri seçtiğin ailelerin hepsinden gelebilir; sonuç yine tek model, tek prompt.</li>
-              <li><b>Lens (planda):</b> “tek model” ya da “en uygun akış” dersin. Bir iş, yalnızca bölmek açıkça kazandırıyorsa adımlara ya da paralel oturumlara bölünür; her oturumun promptunda ötekilerin ne yaptığını ve hangi dosyalara dokunmadığını söyleyen kısa bir not olur.</li>
-              <li><b>Iris (planda):</b> ne üreteceğini ve hangi modellerin olduğunu seçersin. Prism eksik olanı sorar, modeli seçer ve promptla birlikte en iyi üretim yolunu yazar: referans görsel, en-boy oranı, süre, seed.</li>
-            </ul>
+        <h2>One flow per product</h2>
+        <ul>
+          <li><b>Ray:</b> pick your family once during setup. Write the request; Prism recommends a model and effort from that family, asks what is missing, then writes one prompt for it.</li>
+          <li><b>Spectrum:</b> pick the families you use. Same steps, but the recommendation can come from any of them; still one model and one prompt out.</li>
+          <li><b>Lens (planned):</b> you choose “one model” or “best flow”. A task is split into steps or parallel sessions only when that clearly pays off, and each session’s prompt carries a short note on what the others do and which files they leave alone.</li>
+          <li><b>Iris (planned):</b> pick what you want to make and which models you have. Prism asks what is missing, picks the model and writes the prompt along with the best way to produce it: reference image, aspect ratio, duration, seed.</li>
+        </ul>
 
-            <h2>Bir sürüm sana nasıl ulaşıyor</h2>
-            <p>
-              Her değişiklik Windows, macOS ve Linux’ta derlenir ve bir duman testinden geçer: uygulama ağ ve key olmadan açılır, bütün bilgi kartlarını
-              yükler ve kapanır. Bir sürüm etiketlendiğinde kurulum dosyaları üretilir, paketlenmiş her uygulama aynı testten bir kez daha geçer ve
-              dosyalar sağlama değerleriyle birlikte yayınlanır. Bu site de o listeden beslenir; indirme sayfasında gördüğün dosyalar, GitHub’daki dosyaların ta kendisi.
-            </p>
-            <p>
-              Ray ve Spectrum aynı koddan derlenir ama ayrı yayınlanır: her birinin kendi kurulum dosyası ve kendi yayın etiketi (ray-v…, spectrum-v…) var. Lens ve Iris planda.
-            </p>
+        <h2>How a release reaches you</h2>
+        <p>
+          Every change is built on Windows, macOS and Linux and goes through a smoke test: the app starts with no network and no keys, loads every
+          knowledge card and quits. When a version is tagged, the installers are built, each packaged app goes through the same test again, and the
+          files are published with checksums. This site reads from that list, so the files on the download page are the exact files on GitHub.
+        </p>
+        <p>Ray and Spectrum are built from the same code but released separately: each has its own installer and its own release tag (ray-v…, spectrum-v…). Lens and Iris are planned.</p>
 
-            <p class="post-end">
-              Bir yerde takıldıysan ya da daha iyisini yapabileceğini düşünüyorsan, kod seni bekliyor. <a href={REPO}>GitHub’da Prism</a> ·{' '}
-              <a href={href(lang, 'download')}>İndir</a>
-            </p>
-          </>
-        ) : (
-          <>
-            <p>
-              Prism is a small app with one job: turning what you meant into what a model needs to hear. This page walks through what happens between
-              pressing the shortcut and copying the prompt. All of the code is open, so if something here makes you curious, the{' '}
-              <a href={REPO}>repository</a> has the details.
-            </p>
-
-            <h2>Two models, two jobs</h2>
-            <p>
-              There are two models in Prism, and they’re easy to mix up. The <b>engine</b> is the model Prism itself calls: it reads your request, makes
-              the recommendation and writes the prompt. The <b>target</b> is the model the prompt is written for: the one you’ll paste it into later, in
-              Claude Code, ChatGPT or an API call.
-            </p>
-            <p>
-              The engine runs on whichever provider you added a key for. The target can be any model. An engine running on a Gemini key can write a prompt
-              for Claude Opus. That split is the whole design: keep the engine cheap and fast, and point the target wherever the work needs to go.
-            </p>
-
-            <h2>The app has two halves</h2>
-            <p>
-              Prism is a desktop app with two separate processes inside. The window you see is only an interface: buttons, text boxes, animations. It
-              can’t reach the network, can’t write to disk and never sees a key. A background process, the main process, does all of that.
-            </p>
-            <p>
-              A narrow bridge connects them. The interface can say “analyze this request” or “save this key”, and the main process sends back the result.
-              A key crosses that bridge in one direction only, when you save it. What comes back is a masked hint like <code>••••ab12</code>. Even a bug in
-              the interface has no path to your key.
-            </p>
-
-            <h2>Your key, from the moment you paste it</h2>
-            <p>
-              When you save a key, the main process hands it to your operating system’s encryption service: DPAPI on Windows, Keychain on macOS, Secret
-              Service or KWallet on Linux. Only the encrypted form is written to disk. On a Linux machine with no keyring, Prism refuses to save the key
-              rather than store it with weak protection, and tells you why.
-            </p>
-            <p>
-              A check follows right away. Prism sends the provider a lightweight request and lists the text models that key can reach. The list is
-              cached, and both engine selection and cross-family recommendations read from it. A bad key comes back with a message that names the
-              provider and the reason, not “something went wrong”.
-            </p>
-
-            <h2>Step one: reading the request</h2>
-            <p>
-              When you type and press <code>Ctrl+Enter</code>, the engine runs an analysis. We don’t ask it for free text here. We ask for a JSON object
-              that fits a fixed schema: a summary of the task, its type and difficulty, the recommended model and level, a confidence score,
-              alternatives, and clarifying questions when they’re needed.
-            </p>
-            <p>
-              The schema also limits which models the engine can pick. The candidate list is built from the models you can actually use: the ones your
-              verified keys open up and the apps you marked as subscriptions. The engine can’t step outside it. The answer is checked once more when it
-              arrives; if the level doesn’t exist on that model, it’s moved to the nearest valid one.
-            </p>
-            <p>
-              Asking questions isn’t decoration, it’s a decision. When the task is clear, the engine asks nothing. When it’s vague, it asks a few short
-              questions and attaches clickable options, so you rarely have to type an answer.
-            </p>
-
-            <h2>Knowledge cards</h2>
-            <p>
-              How does the engine know what a model expects? The answer lives in plain Markdown files in the <code>knowledge/</code> folder. Each family
-              has a handful of cards: general principles, what the effort levels mean, the list of models, one card per surface (coding agent, chat,
-              API) and one card per target model.
-            </p>
-            <p>
-              Cards aren’t code. Prism reads them from disk on every request and adds them to the engine’s instructions. To fix a rule, you don’t rebuild
-              the app; edit the file and see the difference on the next request. We wrote the cards from the vendors’ public guidance and our own
-              testing, and kept them short.
-            </p>
-
-            <h2>Step two: writing</h2>
-            <p>
-              When you accept the recommendation, a second call starts. This time the engine’s instructions carry the target family’s principles, the
-              target model’s card and the card for the surface you chose, along with the summary from the analysis and your answers. The engine streams
-              the prompt back in pieces, which is why you see it being typed.
-            </p>
-            <p>
-              Two more things arrive with the result: short notes on what changed and why, and how to set the model and level in the target tool. For
-              Claude Code that’s a two-line command; for an API it’s the fields in the request body.
-            </p>
-
-            <h2>When something goes wrong</h2>
-            <p>
-              Network requests fail sometimes. When a request hits a rate limit (429) or a server error (5xx), Prism retries it twice with growing gaps.
-              Some models won’t accept a strict JSON schema; in that case the schema is written into the instructions as plain text, and the answer goes
-              through the same check.
-            </p>
-            <p>
-              Error messages are cleaned before you see them. If part of your key ever shows up inside an error text, it doesn’t reach the screen or a
-              log.
-            </p>
-
-            <h2>What stays on your computer</h2>
-            <p>
-              Your settings, the discovered model list and your last 200 prompts live in your user folder. Every history entry knows which engine wrote
-              it and for which target; you can filter by family, copy again or have the same request rewritten. Prism sends no telemetry anywhere. We
-              don’t run a server.
-            </p>
-
-            <h2>One flow per product</h2>
-            <ul>
-              <li><b>Ray:</b> pick your family once during setup. Write the request; Prism recommends a model and effort from that family, asks what is missing, then writes one prompt for it.</li>
-              <li><b>Spectrum:</b> pick the families you use. Same steps, but the recommendation can come from any of them; still one model and one prompt out.</li>
-              <li><b>Lens (planned):</b> you choose “one model” or “best flow”. A task is split into steps or parallel sessions only when that clearly pays off, and each session’s prompt carries a short note on what the others do and which files they leave alone.</li>
-              <li><b>Iris (planned):</b> pick what you want to make and which models you have. Prism asks what is missing, picks the model and writes the prompt along with the best way to produce it: reference image, aspect ratio, duration, seed.</li>
-            </ul>
-
-            <h2>How a release reaches you</h2>
-            <p>
-              Every change is built on Windows, macOS and Linux and goes through a smoke test: the app starts with no network and no keys, loads every
-              knowledge card and quits. When a version is tagged, the installers are built, each packaged app goes through the same test again, and the
-              files are published with checksums. This site reads from that list, so the files on the download page are the exact files on GitHub.
-            </p>
-            <p>Ray and Spectrum are built from the same code but released separately: each has its own installer and its own release tag (ray-v…, spectrum-v…). Lens and Iris are planned.</p>
-
-            <p class="post-end">
-              Stuck somewhere, or think you can do better? The code is right there. <a href={REPO}>Prism on GitHub</a> ·{' '}
-              <a href={href(lang, 'download')}>Download</a>
-            </p>
-          </>
-        )
-      }
+        <p class="post-end">
+          Stuck somewhere, or think you can do better? The code is right there. <a href={REPO}>Prism on GitHub</a> ·{' '}
+          <a href={href('download')}>Download</a>
+        </p>
+      </>
     </div>
   </article>
 </Base>

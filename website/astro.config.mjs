@@ -6,11 +6,6 @@ export default defineConfig({
   base: '/prism',
   trailingSlash: 'always',
   devToolbar: { enabled: false },
-  i18n: {
-    locales: ['en', 'tr'],
-    defaultLocale: 'en',
-    routing: { prefixDefaultLocale: false }
-  },
-  // Betikler ayrı dosya olarak kalsın; sayfadaki CSP satır içi betiğe izin vermiyor.
+  // Keep scripts as separate files; the page CSP does not allow inline scripts.
   vite: { build: { assetsInlineLimit: 0 } }
 })

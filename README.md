@@ -15,7 +15,7 @@ your coding agent, chat app or API call. Bring your own API key; nothing runs on
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-informational)](#i-want-to-install-it)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**[Website and downloads](https://ugurshelby.github.io/prism/)** · **English** · [Türkçe](README.tr.md)
+**[Website and downloads](https://ugurshelby.github.io/prism/)**
 
 <img src="docs/screenshots/compose.png" width="270" alt="Write a rough prompt and pick the ecosystem" />
 <img src="docs/screenshots/review.png" width="270" alt="Model and effort recommendation" />

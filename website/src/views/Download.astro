@@ -3,14 +3,9 @@ import Base from '../layouts/Base.astro'
 import Icon from '../components/Icon.astro'
 import Mark from '../components/Mark.astro'
 import { CHANGES } from '../data/changes'
-import { OS_PLATFORMS, PRODUCTS, REPO, date, files, latest, mb, releasesOf, statusOf, sums, type Lang, type Os } from '../lib/site'
-import { t } from '../lib/i18n'
+import { OS_PLATFORMS, PRODUCTS, REPO, date, files, latest, mb, releasesOf, statusOf, sums, type Os } from '../lib/site'
+import { s } from '../lib/copy'
 
-interface Props {
-  lang: Lang
-}
-const { lang } = Astro.props
-const s = t(lang)
 const OSES: Os[] = ['win', 'mac', 'linux']
 
 const products = PRODUCTS.map((g) => ({
@@ -22,10 +17,10 @@ const products = PRODUCTS.map((g) => ({
     const f = files(r)
     return {
       version: r.version,
-      date: date(r.published, lang),
+      date: date(r.published),
       url: r.url,
       sums: sums(r)?.url ?? null,
-      changes: CHANGES[r.tag]?.[lang] ?? [],
+      changes: CHANGES[r.tag]?.en ?? [],
       files: Object.fromEntries(
         OSES.map((os) => [
           os,
@@ -58,7 +53,7 @@ const data = {
 const fallback = files(latest)
 ---
 
-<Base lang={lang} page="download" title={s.download.title} description={s.download.lead}>
+<Base page="download" title={s.download.title} description={s.download.lead}>
   <section class="hero">
     <div class="container">
       <div class="section-head">
