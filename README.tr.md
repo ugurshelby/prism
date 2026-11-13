@@ -6,13 +6,13 @@
 
 **Ham promptunu yaz, kullanacağın modele göre yeniden yazılmış hâlini al.**
 
-Promptunu **Claude, GPT, Gemini ya da Grok** için yeniden yazan bir masaüstü widget'ı. Doğru modeli ve seviyeyi
-önerir, gerekirse birkaç netleştirme sorusu sorar ve kodlama ajanına, sohbet uygulamasına ya da API çağrına
-yapıştırmaya hazır promptu yazar. Kendi API key'inle çalışır; araya başka bir sunucu girmez.
+Prism, promptunu **Claude, GPT, Gemini ya da Grok** için yeniden yazan küçük bir masaüstü uygulamaları ailesi.
+Doğru modeli ve seviyeyi önerir, gerekirse birkaç netleştirme sorusu sorar ve kodlama ajanına, sohbet uygulamasına
+ya da API çağrına yapıştırmaya hazır promptu yazar. Kendi API key'inle çalışır; araya başka bir sunucu girmez.
 
 [![CI](https://github.com/ugurshelby/prism/actions/workflows/ci.yml/badge.svg)](https://github.com/ugurshelby/prism/actions/workflows/ci.yml)
 [![Son sürüm](https://img.shields.io/github/v/release/ugurshelby/prism?label=indir)](https://github.com/ugurshelby/prism/releases/latest)
-[![Platformlar](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-informational)](#kurulum)
+[![Platformlar](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-informational)](#kurmak-istiyorum)
 [![Lisans: MIT](https://img.shields.io/badge/lisans-MIT-green.svg)](LICENSE)
 
 **[Web sitesi ve indirme](https://ugurshelby.github.io/prism/tr/)** · [English](README.md) · **Türkçe**
@@ -25,7 +25,7 @@ yapıştırmaya hazır promptu yazar. Kendi API key'inle çalışır; araya baş
 
 ## Özellikler
 
-- **Dört model ailesi tek yerde.** Claude (Fable, Opus, Sonnet, Haiku), OpenAI (GPT-6 Astra, GPT-6.1 Sol/Terra,
+- **Dört model ailesi.** Claude (Fable, Opus, Sonnet, Haiku), OpenAI (GPT-6 Astra, GPT-6.1 Sol/Terra,
   GPT-6 Luna), Gemini (4 Argon, 3.8 Flash, 3.5 Flash-Lite) ve Grok (4.7, 4.3, Build). Kurallar her üreticinin resmî
   prompt rehberinden damıtılıp düzenlenebilir [bilgi kartlarına](knowledge/) yazıldı.
 - **Model ve seviye önerisi.** Prism görevi okuyup model ve seviyeyi (Claude `effort`, OpenAI/Grok
@@ -41,53 +41,63 @@ yapıştırmaya hazır promptu yazar. Kendi API key'inle çalışır; araya baş
   sunucusu yok; promptlar yalnızca seçtiğin sağlayıcıya gider (sağlayıcının ne sakladığı için
   [Güvenlik ve gizlilik](#güvenlik-ve-gizlilik)).
 
-> Arayüz şimdilik Türkçe; yazılan promptlar İngilizce. Çeviri katkılarına açığız.
+> Arayüz Türkçe ve İngilizce; yazılan promptlar İngilizce.
 
-## Sürümler
+## Ürünler
 
-Prism'in her büyük sürümünün bir adı var; adlar ışığın prizmadaki yolunu izliyor.
+Prism, aynı motorun birkaç uygulamada kullanılması. Adlarını ışığın bir prizmanın içinde yaptıklarından alıyorlar.
 
-| Sürüm | Ad | Ne yapar | Durum |
-|---|---|---|---|
-| 1.x | **Ray** | Tek ışın: yalnızca Claude için prompt, tek motor (Vertex AI); Spectrum'un yanına kurulur | Eski sürüm: indirilebilir, güvenlik güncellemesi almaz |
-| 2.x | **Spectrum** | Işını ayırır: Claude, GPT, Gemini ve Grok, kendi key'lerin, aileler arası öneri | **Güncel** |
-| 3.x | **Lens** | Birden çok modeli tek işe odaklar: çok modelli iş akışları | Planlandı |
-| 4.x | **Iris** | Metnin ötesi: görsel, video, ses ve 3D üretim modelleri | Planlandı |
+| Ürün | Ne yapar | Durum |
+|---|---|---|
+| **Prism Ray** | Tek ışın. Tek model ailesi seçersin (Claude, GPT, Gemini ya da Grok); Prism bütün promptları onun için yazar. | Yakında. İlk kurulum dosyası hazırlanıyor. |
+| **Prism Spectrum** | Işın renklerine ayrıldı. Kullandığın aileleri seçersin; Prism aralarından en uygun modeli önerir ve onun için tek bir prompt yazar. | **İndirilebilir.** [İndir](https://github.com/ugurshelby/prism/releases/latest) |
+| **Prism Lens** | Büyük bir işi modellere ve paralel oturumlara böler; yalnızca bölmek kazandırıyorsa. Her oturuma ötekilerin ne yaptığını söyler. | Planda |
+| **Prism Iris** | Görsel, video, ses ve 3D modelleri için prompt; her birinden istediğin sonucu almanın yolu da yanında. | Planda |
 
-Prism'in 2.0'a kadarki adı *Prompter*'dı. Prism'i Prompter'ın üzerine kurmak ayarlarını, key'lerini ve geçmişini korur.
+Ray ve Spectrum aynı koddan derlenir ama ayrı yayınlanır: her birinin kendi kurulum dosyası ve kendi yayın etiketi
+(`ray-v…`, `spectrum-v…`) var. Yan yana kurulabilirler; ayarları, key'leri ve geçmişleri ayrıdır.
+2.x yayınları (`v2.0.0` ile `v2.2.0` arası) Prism Spectrum'un geçmişidir. Prism'in 2.0'a kadarki adı *Prompter*'dı;
+Spectrum'u Prompter'ın üzerine kurmak ayarlarını, key'lerini ve geçmişini korur.
 
-## Kurulum
+## Kurmak istiyorum
 
 Sistemine uygun kurulum dosyasını **[web sitesinden](https://ugurshelby.github.io/prism/tr/download/)** ya da
-**[son sürümden](https://github.com/ugurshelby/prism/releases/latest)** indir:
+**[yayınlar sayfasından](https://github.com/ugurshelby/prism/releases)** indir. Dosya adları ürüne göre değişir:
 
 | Sistem | Dosya |
 |---|---|
-| Windows 10/11 (x64) | `Prism-Setup-<sürüm>-x64.exe` |
-| macOS, Apple Silicon (M1 ve sonrası) | `Prism-<sürüm>-mac-arm64.dmg` |
-| macOS, Intel | `Prism-<sürüm>-mac-x64.dmg` |
-| Linux (x64) | `Prism-<sürüm>-linux-x86_64.AppImage` ya da `Prism-<sürüm>-linux-amd64.deb` |
+| Windows 10/11 (x64) | `Prism-Ray-Setup-<sürüm>-x64.exe` |
+| macOS, Apple Silicon (M1 ve sonrası) | `Prism-Ray-<sürüm>-mac-arm64.dmg` |
+| Linux (x64) | `Prism-Ray-<sürüm>-linux-x86_64.AppImage` ya da `.deb` |
+
+Prism Spectrum için `Ray` yerine `Spectrum` yaz. Spectrum'un 2.x yayınları eski adları kullanır
+(`Prism-Setup-<sürüm>-x64.exe`, `Prism-<sürüm>-mac-x64.dmg` gibi); Intel Mac dosyası yalnızca orada var.
 
 Kurulum dosyaları açık kaynak ama ücretli bir geliştirici sertifikasıyla imzalı değil; bu yüzden ilk açılışta bir
 kez onay gerekir:
 
 - **Windows:** SmartScreen "Windows bilgisayarınızı korudu" der → **Ek bilgi → Yine de çalıştır**.
-- **macOS:** `.dmg`'yi aç, Prism'i Uygulamalar'a sürükle, bir kez açmayı dene, sonra
-  **Sistem Ayarları → Gizlilik ve Güvenlik → Yine de Aç**. (Alternatif: `xattr -dr com.apple.quarantine /Applications/Prism.app`.)
+- **macOS:** `.dmg`'yi aç, uygulamayı Uygulamalar'a sürükle, bir kez açmayı dene, sonra
+  **Sistem Ayarları → Gizlilik ve Güvenlik → Yine de Aç**. (Alternatif: `xattr -dr com.apple.quarantine "/Applications/Prism Spectrum.app"`, uygulamanın kendi adıyla.)
 - **Linux AppImage:** `chmod +x Prism-*.AppImage && ./Prism-*.AppImage`.
-  **Debian/Ubuntu:** `sudo apt install ./Prism-*-linux-amd64.deb`.
+  **Debian/Ubuntu:** `sudo apt install ./Prism-*.deb`.
   Key saklamak için bir anahtarlık (GNOME Keyring ya da KWallet) gerekir; çoğu masaüstünde zaten vardır.
 
 Her sürümde `SHA256SUMS.txt` bulunur. Kurulum dosyasının yanına indirip çalıştırmadan önce doğrula:
 
-- **Windows (PowerShell):** `Get-FileHash .\Prism-Setup-<sürüm>-x64.exe -Algorithm SHA256` ve çıkan değeri `SHA256SUMS.txt` içindeki satırla karşılaştır.
+- **Windows (PowerShell):** `Get-FileHash .\<kurulum-dosyası>.exe -Algorithm SHA256` ve çıkan değeri `SHA256SUMS.txt` içindeki satırla karşılaştır.
 - **macOS:** `shasum -a 256 -c SHA256SUMS.txt --ignore-missing`
 - **Linux:** `sha256sum -c SHA256SUMS.txt --ignore-missing`
 
-Prism'de otomatik güncelleme yok; kendi kendine kod indirmez. Güncellemek için yeni kurulum dosyasını indirip eskisinin
-üzerine kur; ayarların, key'lerin ve geçmişin korunur.
+Prism günde bir kez yeni sürüm olup olmadığına bakar ve varsa haber verir. Kendi kendine bir şey indirmez ya da
+kurmaz: bildirim yayın sayfasına bağlanır, yeni sürümü eskisinin üzerine sen kurarsın (ayarların, key'lerin ve
+geçmişin korunur). Denetimi **Ayarlar → Güncellemeler**'den kapatabilirsin; ayrıntı için
+[Güvenlik ve gizlilik](#güvenlik-ve-gizlilik).
 
-### Kaynaktan çalıştırma
+Verilerini silmek için **Ayarlar → Veri → Tüm verilerimi sil**. Windows kaldırıcısı da veri klasörünün silinip
+silinmeyeceğini sorar; varsayılan hayır.
+
+## Geliştirmek istiyorum
 
 Gereksinimler: [Node.js 22+](https://nodejs.org) ve Git.
 
@@ -99,7 +109,10 @@ npm run setup     # Node'u denetler, gerekirse Electron'u indirir, .env.example'
 npm run dev
 ```
 
-Kendi kurulum dosyanı üretmek için: `npm run dist:win`, `npm run dist:mac` ya da `npm run dist:linux` (çıktı `release/`).
+Bir ürünü derlemek için `npm run build:ray` ya da `npm run build:spectrum`. Kurulum dosyası üretmek için
+`npm run dist:ray` ya da `npm run dist:spectrum`; sonuna hedefi ekle, örneğin `npm run dist:ray -- win`
+(`win`, `mac`, `linux` ya da `dir`; çıktı `release/`). Commit öncesi `npm run precommit` lint, tip denetimi ve
+testleri çalıştırır. Gerisi [Geliştirme](#geliştirme) bölümünde.
 
 ## Hızlı başlangıç
 
@@ -149,7 +162,8 @@ ham prompt ──► motor (senin key'in) ──► analiz: görev, en uygun mod
 
 ## Günlük kullanım
 
-- `Ctrl+Shift+Space` (macOS'ta `Cmd+Shift+Space`) paneli gösterir ya da gizler; Ayarlar'dan değişir.
+- Prism Ray'de `Ctrl+Alt+Space`, Prism Spectrum'da `Ctrl+Shift+Space` (macOS'ta `Ctrl` yerine `Cmd`) paneli gösterir
+  ya da gizler; Ayarlar'dan değişir.
 - Pencereyi kapatmak Prism'i tray'e (macOS'ta menü çubuğuna) gizler. Tray menüsü geçmişi ve ayarları açar, aktif
   motoru gösterir.
 - Raptiye paneli her zaman üstte tutar; küçült düğmesi onu sürüklenebilir küçük bir küreye çevirir.
@@ -174,7 +188,10 @@ ham prompt ──► motor (senin key'in) ──► analiz: görev, en uygun mod
     kötüye kullanım denetimi için veri tutabilir (OpenAI: 30 güne kadar,
     [ayrıntı](https://developers.openai.com/api/docs/guides/your-data)).
   - **Anthropic, Vertex AI ve ücretli Gemini API:** her sağlayıcının veri kullanım koşullarına bak.
-- Telemetri, hata raporu, Prism sunucusu ve otomatik güncelleme yok.
+- Telemetri, hata raporu ve Prism sunucusu yok.
+- **Güncelleme denetimi.** Prism günde bir kez GitHub'ın yayın arayüzüne tek bir istek gönderip daha yeni sürüm olup
+  olmadığına bakar. İstekte key, prompt metni ya da hesap yoktur; yalnızca uygulama adı gider. Kendi kendine bir şey
+  indirilmez ya da kurulmaz. Ayarlar → Güncellemeler'den kapatılır.
 - **Sertleştirme:** izole (sandbox) arayüz, sıkı CSP, engellenmiş sayfa geçişi ve izinler, arayüzden gelen her isteğin
   doğrulanması, paketlenmiş sürümde Electron fuse'ları. CI her push'ta lint, tip denetimi, test, bağımlılık denetimi ve
   Semgrep taraması çalıştırır; action'lar sabitlendi, depoda push korumalı gizli bilgi taraması, Dependabot ve CodeQL açık.
@@ -202,12 +219,14 @@ Ayrıntılar ve güvenlik açığını gizlice bildirme yolu: [SECURITY.md](SECU
 |---|---|
 | `npm run dev` | Sıcak yenilemeyle çalıştırır |
 | `npm run mock` | Arayüzü sahte verilerle tarayıcıda açar (`#setup` ilk kurulum ekranı) |
-| `npm run typecheck` / `npm run build` | Tip kontrolü / `out/` klasörüne derleme |
+| `npm run typecheck` | Ana süreç, preload ve arayüz için tip kontrolü |
 | `npm run lint` / `npm test` | oxlint (tip duyarlı, güvenlik kuralları) / birim testleri (Vitest) |
+| `npm run precommit` | Lint, tip denetimi ve testler bir arada |
 | `npm run selftest -- "prompt"` | Arayüzsüz gerçek bir analiz → yazım turu (`--family`, `--surface`, `--engine`) |
 | `npm run selftest -- --discover` | Tanımlı key'leri doğrular, erişilen modelleri listeler |
 | `npx electron . --selftest --smoke` | Ağsız kontrol: uygulama açılıyor ve tüm bilgi kartlarını yüklüyor mu |
-| `npm run dist:win` / `dist:mac` / `dist:linux` | `release/` klasörüne kurulum dosyası üretir |
+| `npm run build:ray` / `npm run build:spectrum` | Bir ürünü derler |
+| `npm run dist:ray` / `npm run dist:spectrum` | `release/` klasörüne kurulum dosyası üretir (sonuna `-- win`, `mac`, `linux` ya da `dir`) |
 
 Gerçek ayar ve geçmişine dokunmadan denemek için: `PRISM_USER_DATA=./tmp-userdata npm run dev`.
 

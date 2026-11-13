@@ -6,13 +6,13 @@
 
 **Write a rough prompt. Get one tuned for the exact model you'll use.**
 
-A desktop widget that rewrites your prompt for **Claude, GPT, Gemini or Grok**: it picks the right model and
-effort level, asks a couple of clarifying questions when needed, and writes a copy-ready prompt for your coding
-agent, chat app or API call. Bring your own API key; nothing runs on someone else's server.
+Prism is a small family of desktop apps that rewrite your prompt for **Claude, GPT, Gemini or Grok**. They pick the
+right model and effort level, ask a couple of clarifying questions when needed, and write a copy-ready prompt for
+your coding agent, chat app or API call. Bring your own API key; nothing runs on someone else's server.
 
 [![CI](https://github.com/ugurshelby/prism/actions/workflows/ci.yml/badge.svg)](https://github.com/ugurshelby/prism/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/ugurshelby/prism?label=download)](https://github.com/ugurshelby/prism/releases/latest)
-[![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-informational)](#install)
+[![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-informational)](#i-want-to-install-it)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 **[Website and downloads](https://ugurshelby.github.io/prism/)** · **English** · [Türkçe](README.tr.md)
@@ -25,7 +25,7 @@ agent, chat app or API call. Bring your own API key; nothing runs on someone els
 
 ## Features
 
-- **Four model families, one place.** Claude (Fable, Opus, Sonnet, Haiku), OpenAI (GPT-6 Astra, GPT-6.1 Sol/Terra,
+- **Four model families.** Claude (Fable, Opus, Sonnet, Haiku), OpenAI (GPT-6 Astra, GPT-6.1 Sol/Terra,
   GPT-6 Luna), Gemini (4 Argon, 3.8 Flash, 3.5 Flash-Lite) and Grok (4.7, 4.3, Build). Rules come from each vendor's
   official prompting guide, distilled into editable [knowledge cards](knowledge/).
 - **Model and effort recommendation.** Prism reads your task and suggests the model and level (Claude `effort`,
@@ -40,52 +40,61 @@ agent, chat app or API call. Bring your own API key; nothing runs on someone els
 - **Private by design.** Keys and history are encrypted with your OS secure storage. No telemetry, no Prism server;
   prompts go only to the provider you chose (see [Security and privacy](#security-and-privacy) for what that provider keeps).
 
-> The interface is in Turkish today; generated prompts are written in English. Translations are welcome.
+> The interface is available in English and Turkish; generated prompts are written in English.
 
-## Versions
+## Products
 
-Each major version of Prism has a name, following the path of light through a prism.
+Prism is one engine in several apps. Each is named after something light does inside a prism.
 
-| Version | Name | What it does | Status |
-|---|---|---|---|
-| 1.x | **Ray** | A single beam: prompts for Claude only, one engine (Vertex AI); installs next to Spectrum | Legacy: still downloadable, no security fixes |
-| 2.x | **Spectrum** | Splits the beam: Claude, GPT, Gemini and Grok, your own keys, cross-family recommendation | **Current** |
-| 3.x | **Lens** | Focuses several models on one task: multi-model workflows | Planned |
-| 4.x | **Iris** | Beyond text: image, video, audio and 3D generation models | Planned |
+| Product | What it does | Status |
+|---|---|---|
+| **Prism Ray** | One beam. You pick one model family (Claude, GPT, Gemini or Grok) and Prism writes every prompt for it. | Coming soon. The first installer is being prepared. |
+| **Prism Spectrum** | The beam, split. You pick the families you use; Prism recommends the best model among them and writes a single prompt for it. | **Available.** [Download](https://github.com/ugurshelby/prism/releases/latest) |
+| **Prism Lens** | Splits a big task across models and parallel sessions, only when splitting pays off, and tells each session what the others are doing. | Planned |
+| **Prism Iris** | Prompts for image, video, audio and 3D models, plus how to get the result you want out of each. | Planned |
 
-Prism was called *Prompter* until 2.0. Installing Prism over Prompter keeps your settings, keys and history.
+Ray and Spectrum are built from the same code and released separately: each has its own installer and its own
+release tag (`ray-v…`, `spectrum-v…`). They install side by side and keep separate settings, keys and history.
+The 2.x releases (`v2.0.0` to `v2.2.0`) are Prism Spectrum's history. Prism was called *Prompter* until 2.0;
+installing Spectrum over Prompter keeps your settings, keys and history.
 
-## Install
+## I want to install it
 
 Download the installer for your system from the **[website](https://ugurshelby.github.io/prism/download/)** or the
-**[latest release](https://github.com/ugurshelby/prism/releases/latest)**:
+**[releases page](https://github.com/ugurshelby/prism/releases)**. File names follow the product:
 
 | System | File |
 |---|---|
-| Windows 10/11 (x64) | `Prism-Setup-<version>-x64.exe` |
-| macOS, Apple Silicon (M1 and later) | `Prism-<version>-mac-arm64.dmg` |
-| macOS, Intel | `Prism-<version>-mac-x64.dmg` |
-| Linux (x64) | `Prism-<version>-linux-x86_64.AppImage` or `Prism-<version>-linux-amd64.deb` |
+| Windows 10/11 (x64) | `Prism-Ray-Setup-<version>-x64.exe` |
+| macOS, Apple Silicon (M1 and later) | `Prism-Ray-<version>-mac-arm64.dmg` |
+| Linux (x64) | `Prism-Ray-<version>-linux-x86_64.AppImage` or `.deb` |
+
+For Prism Spectrum, replace `Ray` with `Spectrum`. The 2.x Spectrum releases use the older names
+(`Prism-Setup-<version>-x64.exe`, `Prism-<version>-mac-x64.dmg` and so on), and the Intel Mac build exists only there.
 
 The builds are open source but not signed with a paid developer certificate, so the first launch needs one extra step:
 
 - **Windows:** SmartScreen shows "Windows protected your PC" → **More info → Run anyway**.
-- **macOS:** open the `.dmg`, drag Prism to Applications, open it once, then go to
-  **System Settings → Privacy & Security → Open Anyway**. (Alternative: `xattr -dr com.apple.quarantine /Applications/Prism.app`.)
+- **macOS:** open the `.dmg`, drag the app to Applications, open it once, then go to
+  **System Settings → Privacy & Security → Open Anyway**. (Alternative: `xattr -dr com.apple.quarantine "/Applications/Prism Spectrum.app"`, with the app's own name.)
 - **Linux AppImage:** `chmod +x Prism-*.AppImage && ./Prism-*.AppImage`.
-  **Debian/Ubuntu:** `sudo apt install ./Prism-*-linux-amd64.deb`.
+  **Debian/Ubuntu:** `sudo apt install ./Prism-*.deb`.
   Key storage needs a keyring (GNOME Keyring or KWallet), which most desktops already have.
 
 Each release includes `SHA256SUMS.txt`. Download it next to the installer and check before running:
 
-- **Windows (PowerShell):** `Get-FileHash .\Prism-Setup-<version>-x64.exe -Algorithm SHA256` and compare with the line in `SHA256SUMS.txt`.
+- **Windows (PowerShell):** `Get-FileHash .\<installer>.exe -Algorithm SHA256` and compare with the line in `SHA256SUMS.txt`.
 - **macOS:** `shasum -a 256 -c SHA256SUMS.txt --ignore-missing`
 - **Linux:** `sha256sum -c SHA256SUMS.txt --ignore-missing`
 
-Prism has no auto-updater and never downloads code by itself. To update, download the new installer and install it
-over the old one; your settings, keys and history are kept.
+Prism checks for new versions once a day and tells you when one exists. It never downloads or installs anything by
+itself: the notice links to the release page, and you install the new version over the old one (settings, keys and
+history are kept). You can turn the check off in **Settings → Updates**; see [Security and privacy](#security-and-privacy).
 
-### Build from source
+To remove your data, use **Settings → Data → Delete all my data**. The Windows uninstaller also asks whether to
+delete the data folder; the default is no.
+
+## I want to develop it
 
 Requirements: [Node.js 22+](https://nodejs.org) and Git.
 
@@ -97,7 +106,10 @@ npm run setup     # checks Node, downloads Electron if needed, creates .env from
 npm run dev
 ```
 
-To build an installer yourself: `npm run dist:win`, `npm run dist:mac` or `npm run dist:linux` (output in `release/`).
+Build one product with `npm run build:ray` or `npm run build:spectrum`. To package an installer, run
+`npm run dist:ray` or `npm run dist:spectrum` with a target appended, for example
+`npm run dist:ray -- win` (`win`, `mac`, `linux` or `dir`; output in `release/`). Before a commit, `npm run precommit`
+runs lint, type check and tests. The [Development](#development) section lists the rest.
 
 ## Quick start
 
@@ -149,7 +161,8 @@ your rough prompt ──► engine (your key) ──► analysis: task, best mod
 
 ## Everyday use
 
-- `Ctrl+Shift+Space` (`Cmd+Shift+Space` on macOS) shows or hides the panel; change it in Settings.
+- `Ctrl+Alt+Space` in Prism Ray and `Ctrl+Shift+Space` in Prism Spectrum (`Cmd` instead of `Ctrl` on macOS) shows or
+  hides the panel; change it in Settings.
 - Closing the window keeps Prism in the tray (menu bar on macOS). The tray menu opens history, settings and shows
   the active engine.
 - The pin keeps the panel on top; the collapse button turns it into a small draggable orb.
@@ -175,7 +188,10 @@ your rough prompt ──► engine (your key) ──► analysis: task, best mod
     Providers may still keep data for abuse monitoring (OpenAI: up to 30 days,
     [details](https://developers.openai.com/api/docs/guides/your-data)).
   - **Anthropic, Vertex AI and paid Gemini API:** see each provider's data usage terms.
-- No telemetry, no crash reports, no Prism server, no auto-updater.
+- No telemetry, no crash reports, no Prism server.
+- **Update check.** Once a day Prism sends one request to GitHub's releases API to see whether a newer version exists.
+  The request carries no key, no prompt text and no account; it identifies only the app name. Nothing is downloaded
+  or installed by itself. Turn it off in Settings → Updates.
 - **Hardening:** sandboxed renderer, strict CSP, blocked navigation and permissions, every request from the interface
   validated, and Electron fuses in packaged builds. CI runs lint, type checks, tests, a dependency audit and a Semgrep
   scan. Actions are pinned, and the repository uses secret scanning with push protection, Dependabot and CodeQL.
@@ -203,12 +219,14 @@ See [SECURITY.md](SECURITY.md) for details and how to report a vulnerability pri
 |---|---|
 | `npm run dev` | Run with hot reload |
 | `npm run mock` | Open the interface in a browser with fake data (`#setup` shows the first-run screen) |
-| `npm run typecheck` / `npm run build` | Type-check / build into `out/` |
+| `npm run typecheck` | Type-check main, preload and renderer |
 | `npm run lint` / `npm test` | oxlint (type-aware, security rules) / unit tests (Vitest) |
+| `npm run precommit` | Lint, type check and tests together |
 | `npm run selftest -- "prompt"` | One real analyze → write round trip without the UI (`--family`, `--surface`, `--engine`) |
 | `npm run selftest -- --discover` | Verify configured keys and list reachable models |
 | `npx electron . --selftest --smoke` | Offline check that the app boots and loads every knowledge card |
-| `npm run dist:win` / `dist:mac` / `dist:linux` | Build installers into `release/` |
+| `npm run build:ray` / `npm run build:spectrum` | Build one product |
+| `npm run dist:ray` / `npm run dist:spectrum` | Package installers into `release/` (append `-- win`, `mac`, `linux` or `dir`) |
 
 Use `PRISM_USER_DATA=./tmp-userdata npm run dev` to keep your real settings and history untouched.
 
