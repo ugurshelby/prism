@@ -136,21 +136,33 @@ export const BlockerCodeSchema = z.enum([
 export const LensModeSchema = z.enum(['workflow', 'single'])
 export const ClaimAccessSchema = z.enum(['write', 'read'])
 
-// Single-line text from the model; it is copied into other sessions' prompts, so it carries no newlines or control characters.
+// Model text that is copied into prompts: visible characters only (letters, marks, numbers, punctuation, symbols, spaces).
+// Control, format (bidi overrides, zero-width, Unicode tags), private-use, unassigned and line/paragraph separators are refused.
+const VISIBLE_LINE = /^[\p{L}\p{M}\p{N}\p{P}\p{S}\p{Zs}]+$/u
+const VISIBLE_TEXT = /^[\p{L}\p{M}\p{N}\p{P}\p{S}\p{Zs}\n]*$/u
+
+// Single-line text from the model; it is copied into other sessions' prompts.
 const line = (max: number) =>
   z
     .string()
     .min(1)
     .max(max, zmsg('schema.tooLong'))
-    .regex(/^[^\p{Cc}]+$/u, zmsg('schema.lensText'))
+    .regex(VISIBLE_LINE, zmsg('schema.lensText'))
+    .regex(/\S/, zmsg('schema.lensText'))
 
-// Repository-relative POSIX path. No absolute path, drive letter, backslash, '.', '..' or glob.
+// Multi-line model text (a step goal): newlines allowed, the same visible-character rule otherwise.
+const visibleText = (max: number) => text(max).regex(VISIBLE_TEXT, zmsg('schema.lensText'))
+
+// Windows ignores trailing dots and spaces and reserves device names; such a segment could alias another claim.
+const badSegment = (s: string) => s === '.' || s === '..' || /^\s|[ .]$/.test(s) || /^(con|prn|aux|nul|com\d|lpt\d)(\.|$)/i.test(s)
+
+// Repository-relative POSIX path. No absolute path, drive letter, backslash, '.', '..', glob or Windows-ambiguous segment.
 const RelPath = z
   .string()
   .min(1)
   .max(LENS_LIMITS.path)
   .regex(/^[A-Za-z0-9._@+\- /]+$/, zmsg('schema.lensPath'))
-  .refine((p) => !p.startsWith('/') && !p.includes('//') && !p.split('/').some((s) => s === '.' || s === '..'), zmsg('schema.lensPath'))
+  .refine((p) => !p.startsWith('/') && !p.includes('//') && !p.replace(/\/$/, '').split('/').some(badSegment), zmsg('schema.lensPath'))
 
 export const ClaimSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('file'), path: RelPath.refine((p) => !p.endsWith('/'), zmsg('schema.lensPath')), access: ClaimAccessSchema }).strict(),
@@ -166,7 +178,7 @@ export const LensStepSchema = z
     id: StepIdSchema,
     title: line(LENS_LIMITS.title),
     // What this session must achieve; multi-line, goes only into its own writer call.
-    goal: text(LENS_LIMITS.goal).min(1),
+    goal: visibleText(LENS_LIMITS.goal).min(1).regex(/\S/, zmsg('schema.lensText')),
     model: ModelIdSchema,
     effort: EffortSchema,
     surface: SurfaceSchema,
@@ -225,6 +237,8 @@ export const LensStepRequestSchema = z
     historyId: IdSchema.optional()
   })
   .strict()
+  // A step outside the plan would get a prompt without its Coordination section.
+  .refine((r) => r.plan.steps.some((s) => s.id === r.stepId), { message: 'step is not in the plan', path: ['stepId'] })
 
 // --- Files on disk ------------------------------------------------------------------
 

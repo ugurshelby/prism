@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CHAIN_PLUS_ONE, IMPLEMENT_THEN_REVIEW, PARALLEL_DOCS, SINGLE, read, split, step, write } from './fixtures/lens/plans'
-import { checkCoordination, checkPlan, claimsOverlap, findCycle, parallelPairs, renderCoordination, waves } from './lens'
-import { LensPlanSchema } from './schemas'
+import { checkCoordination, checkPlan, claimsOverlap, findCycle, largestParallelSet, parallelPairs, renderCoordination, waves } from './lens'
+import { LensPlanSchema, LensStepRequestSchema } from './schemas'
 import type { LensPlan } from './types'
 
 const codes = (plan: LensPlan) => checkPlan(plan).issues.map((i) => i.code)
@@ -146,5 +146,64 @@ describe('15. LensPlanSchema', () => {
 
   it.each(bad)('rejects %s', (_name, plan) => {
     expect(LensPlanSchema.safeParse(plan).success).toBe(false)
+  })
+})
+
+describe('critic round 1 (2026-11-13)', () => {
+  const s1 = PARALLEL_DOCS.steps[0]!
+  const s2 = PARALLEL_DOCS.steps[1]!
+  const withS1 = (patch: object) => ({ ...PARALLEL_DOCS, steps: [{ ...s1, ...patch }, s2] })
+
+  it.each([
+    ['line separator', { title: `a${String.fromCodePoint(0x2028)}b` }],
+    ['bidi override', { title: `safe${String.fromCodePoint(0x202E)}evil` }],
+    ['Unicode tag', { title: 'x\u{E0041}' }],
+    ['zero-width space', { handoff: `a${String.fromCodePoint(0x200B)}b` }],
+    ['blank title', { title: '   ' }],
+    ['bidi in goal', { goal: `do it${String.fromCodePoint(0x2066)}` }],
+    ['trailing dot', { claims: [write('src/app.ts.')] }],
+    ['trailing space', { claims: [write('src /')] }],
+    ['reserved name', { claims: [write('src/nul.txt')] }],
+    ['reserved folder', { claims: [write('com1/')] }]
+  ])('the schema refuses %s', (_name, patch) => {
+    expect(LensPlanSchema.safeParse(withS1(patch)).success).toBe(false)
+  })
+
+  it('a multi-line goal with ordinary text is fine', () => {
+    expect(LensPlanSchema.safeParse(withS1({ goal: 'Line one.\nLine two: “quoted” – ok.' })).success).toBe(true)
+  })
+
+  it('the step request must name a step of its plan', () => {
+    const req = { id: 'r1', prompt: 'p', plan: PARALLEL_DOCS, stepId: 's5', answers: [] }
+    expect(LensStepRequestSchema.safeParse(req).success).toBe(false)
+    expect(LensStepRequestSchema.safeParse({ ...req, stepId: 's2' }).success).toBe(true)
+  })
+
+  it('counts steps that can really run together, not wave sizes', () => {
+    const plan = split([step('s1', [write('a/')]), step('s2', [write('b/')], ['s1']), step('s3', [write('c/')], ['s1']), step('s4', [write('d/')]), step('s5', [write('e/')])])
+    expect(largestParallelSet(plan)).toEqual(['s2', 's3', 's4', 's5'])
+    expect(codes(plan)).toContain('too_many_parallel')
+  })
+
+  it('a path that is only a substring of another Do-not-edit item is missing', () => {
+    const plan = split([step('s1', [write('a/')]), step('s2', [write('src/a/')])])
+    const section = renderCoordination(plan, 's2').replace('Do not edit: a/ (s1)', 'Do not edit: src/a/ (s1)')
+    expect(checkCoordination(plan, 's2', section).map((i) => i.code)).toEqual(['coordination_missing'])
+  })
+
+  it('a title cannot stand in for the relation text', () => {
+    const plan = split([step('s1', [write('a/')], [], { title: 'finishes before you' }), step('s2', [write('b/')], ['s1'])])
+    const section = renderCoordination(plan, 's2').replace(' · finishes before you · "finishes', ' · runs in parallel with you · "finishes')
+    expect(checkCoordination(plan, 's2', section)).not.toEqual([])
+  })
+
+  it('later sessions must be listed as off limits', () => {
+    const section = renderCoordination(CHAIN_PLUS_ONE, 's1').replace(/\. Files owned by later sessions.*$/m, '.')
+    expect(checkCoordination(CHAIN_PLUS_ONE, 's1', section).length).toBeGreaterThan(0)
+  })
+
+  it('curly quotes and backticks cannot close the quote', () => {
+    const plan = split([step('s1', [write('a/')], [], { title: 'x” `y` «z»' }), step('s2', [write('b/')])])
+    expect(renderCoordination(plan, 's2')).toContain(`"x' 'y' 'z'"`)
   })
 })

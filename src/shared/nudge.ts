@@ -4,14 +4,18 @@ import type { Analysis } from './types'
 
 const SPLIT_TASKS: ReadonlySet<string> = new Set(['agentic_coding', 'frontend_design', 'architecture_design'])
 const URL = /\b[a-z][a-z0-9+.-]*:\/\/\S+/gi
-// Repository-relative path tokens with at least one '/': 'src/ui/', 'docs/api'. Same characters as a Lens claim path.
+// Path-like tokens with at least one '/': 'src/ui/', 'docs/api.md'. Filtered below so 'and/or' or a date does not count.
 const PATH = /[A-Za-z0-9_@+-][A-Za-z0-9._@+-]*\/[A-Za-z0-9._@+/-]*/g
 const ENUMERATED = /^\s*(?:[-*]|\d+[.)])\s+\S/
 
 /** Distinct top-level folders the request names (first path segment, case-folded). */
 export function pathRoots(prompt: string): string[] {
-  const roots = (prompt.replace(URL, ' ').match(PATH) ?? []).map((p) => (p.split('/')[0] ?? '').toLowerCase())
-  return [...new Set(roots.filter((r) => r && r !== '.' && r !== '..'))]
+  const roots = (prompt.replace(URL, ' ').match(PATH) ?? [])
+    .map((p) => p.replace(/\.+$/, ''))
+    // A folder ('src/ui/'), a file ('docs/api.md') or a deeper path ('src/a/b'); not 'and/or', 'TCP/IP' or 'client/server'.
+    .filter((p) => p.endsWith('/') || /\.[A-Za-z0-9]{1,8}$/.test(p) || p.split('/').filter(Boolean).length >= 3)
+    .map((p) => (p.split('/')[0] ?? '').toLowerCase())
+  return [...new Set(roots.filter((r) => r && r !== '.' && r !== '..' && !/^\d+$/.test(r)))]
 }
 
 const enumeratedItems = (prompt: string) => prompt.split(/\r?\n/).filter((l) => ENUMERATED.test(l)).length
@@ -34,7 +38,11 @@ export type ChoiceNudge = 'pricier' | 'weaker' | null
 export function choiceNudge(analysis: Pick<Analysis, 'complexity' | 'recommendation'>, manual: ModelId): ChoiceNudge {
   const rec = analysis.recommendation
   if (manual === rec.model || rec.confidence < 0.7) return null
-  const ratio = MODELS[manual].price.output / MODELS[rec.model].price.output
+  const picked = MODELS[manual].price.output
+  const recommended = MODELS[rec.model].price.output
+  // No price to compare (free or unknown): no nudge rather than a misleading one.
+  if (!(picked > 0) || !(recommended > 0)) return null
+  const ratio = picked / recommended
   if (ratio >= 2) return 'pricier'
   if ((analysis.complexity === 'complex' || analysis.complexity === 'frontier') && ratio <= 0.25) return 'weaker'
   return null

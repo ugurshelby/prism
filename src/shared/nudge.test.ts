@@ -49,3 +49,13 @@ describe('choiceNudge', () => {
     expect(choiceNudge(analysis('gemini-3.8-flash'), 'gemini-4-hydrogen')).toBeNull()
   })
 })
+
+describe('pathRoots false positives (critic round 1)', () => {
+  it('ignores and/or, I/O, TCP/IP, client/server, dates and scheme-less hosts', () => {
+    expect(pathRoots('and/or I/O TCP/IP client/server 11/13/2026 www.x.com/a')).toEqual([])
+  })
+
+  it('keeps folders, files and deeper paths', () => {
+    expect(pathRoots('src/ui/ docs/api.md lib/a/b.')).toEqual(['src', 'docs', 'lib'])
+  })
+})
