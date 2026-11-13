@@ -5,18 +5,30 @@ import { SourcesFileSchema, parseCard, type ParsedCard, type SourcesFile } from 
 import { knowledgeDir } from '../config'
 import { LlmError } from '../llm'
 import { logWarn } from '../log'
+import { cardIntact, type KnowledgeManifest } from './integrity'
 import { msg } from '@shared/messages'
 
-// Cards are read from disk on every request: an edit under knowledge/ takes effect on the next request.
+// Build-time card hashes (electron.vite.config.ts define); absent in development and tests.
+// oxlint-disable-next-line no-underscore-dangle
+declare const __KNOWLEDGE_HASHES__: KnowledgeManifest | undefined
+const MANIFEST: KnowledgeManifest | null = typeof __KNOWLEDGE_HASHES__ === 'undefined' ? null : __KNOWLEDGE_HASHES__
+
+// Cards are read from disk on every request: in development an edit under knowledge/ takes effect on the next request.
 // If the source record or card format is broken, the engine stops with an explicit error; an unsourced claim never reaches the model.
 /** If the file cannot be read or the JSON is corrupt, the raw error (install path, file fragment) does not go to the UI; it goes to the log. */
 function readKnowledge(path: string): string {
+  let bytes: Buffer
   try {
-    return readFileSync(join(knowledgeDir(), path), 'utf8')
+    bytes = readFileSync(join(knowledgeDir(), path))
   } catch (e) {
     logWarn('knowledge', `could not read card: ${path}`, e)
     throw new LlmError(msg('err.cardUnreadable', { path }))
   }
+  if (!cardIntact(path, bytes, MANIFEST)) {
+    logWarn('knowledge', `card does not match the build manifest: ${path}`)
+    throw new LlmError(msg('err.cardTampered', { path }))
+  }
+  return bytes.toString('utf8')
 }
 
 function sources(): SourcesFile {

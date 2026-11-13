@@ -1,6 +1,7 @@
 import { resolve } from 'node:path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
+import { knowledgeManifest } from './scripts/knowledge-manifest.mjs'
 
 const shared = { '@shared': resolve('src/shared'), '@products': resolve('src/products') }
 
@@ -11,11 +12,13 @@ export default defineConfig(({ command }) => {
   const product = process.env.PRISM_PRODUCT || (command === 'serve' ? 'spectrum' : '')
   if (!['ray', 'spectrum'].includes(product)) throw new Error(`PRISM_PRODUCT missing or unknown: "${product}" (ray | spectrum)`)
   const define = { __PRISM_PRODUCT__: JSON.stringify(product) }
+  // Builds pin every knowledge card by hash (src/main/engine/integrity.ts); the dev server reads cards as they are.
+  const mainDefine = command === 'build' ? { ...define, __KNOWLEDGE_HASHES__: JSON.stringify(knowledgeManifest(resolve('knowledge'))) } : define
   return {
     main: {
       plugins: [externalizeDepsPlugin()],
       resolve: { alias: shared },
-      define
+      define: mainDefine
     },
     preload: {
       plugins: [externalizeDepsPlugin()],

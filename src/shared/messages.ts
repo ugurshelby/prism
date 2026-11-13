@@ -93,7 +93,8 @@ const en = {
   'err.keyAlsoInEnv': 'The key is saved; delete the old plain-text copy in the .env file.',
   'err.cardUnreadable': 'A knowledge card could not be read ({path}).',
   'err.cardInvalid': 'Invalid knowledge card ({path}): {detail}',
-  'err.sourcesInvalid': 'The knowledge base source registry is broken (knowledge/sources.json).'
+  'err.sourcesInvalid': 'The knowledge base source registry is broken (knowledge/sources.json).',
+  'err.cardTampered': 'A knowledge card does not match this build ({path}). Reinstall the app.'
 } as const
 
 export type MessageKey = keyof typeof en
