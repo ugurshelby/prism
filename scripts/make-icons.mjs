@@ -1,10 +1,10 @@
-// Ürün başına uygulama ve tray ikonlarını bağımlılıksız üretir: `npm run icons` (hepsi) ya da `npm run icons -- ray`.
-// Çıktı resources/<ürün>/ altına yazılır; kökteki resources/icon.png ve tray*.png'ye dokunulmaz (mevcut build onları okur).
-// Ara çizimler: Spectrum ışını gökkuşağına ayırır, Ray tek ışını kırmadan geçirir. Son logolar sahibin seçimidir.
+// Generates per-product app and tray icons without dependencies: `npm run icons` (all) or `npm run icons -- ray`.
+// Output goes to resources/<product>/; the root resources/icon.png and tray*.png are untouched (the current build reads them).
+// Interim artwork: Spectrum splits the beam into a rainbow, Ray passes a single beam through unrefracted. Final logos are the owner's choice.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { deflateSync } from 'node:zlib'
 
-// ---- PNG kodlayıcı ----
+// ---- PNG encoder ----
 const CRC = new Uint32Array(256).map((_, n) => {
   let c = n
   for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
@@ -42,7 +42,7 @@ function png(size, rgba) {
   ])
 }
 
-// ---- Geometri ----
+// ---- Geometry ----
 const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]
 const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t)
 function segDist(px, py, ax, ay, bx, by) {
@@ -59,7 +59,7 @@ function inTri(x, y) {
 const triEdge = (x, y) => Math.min(...TRI.map((a, i) => segDist(x, y, ...a, ...TRI[(i + 1) % 3])))
 const RING = ['#f78fb3', '#ff9a5a', '#ffd36e', '#6cc9ff', '#8be28f', '#f78fb3'].map(hex)
 
-/** Katmanları üst üste bindirir: [r,g,b,a] (0-255, a 0-1). */
+/** Composites layers on top of each other: [r,g,b,a] (0-255, a 0-1). */
 function over(layers) {
   let out = [0, 0, 0, 0]
   for (const [lr, lg, lb, la] of layers) {
@@ -69,9 +69,9 @@ function over(layers) {
   return out
 }
 
-// ---- Ürün çizimleri: (x, y, kind) -> [r,g,b,a]; kind 'app' | 'tray' | 'template' ----
+// ---- Product artwork: (x, y, kind) -> [r,g,b,a]; kind 'app' | 'tray' | 'template' ----
 
-/** Spectrum: koyu küre, gökkuşağı halka, ışını iki renge kıran prizma (vurgu --warm #ff8a4c). */
+/** Spectrum: dark sphere, rainbow ring, prism that splits the beam into two colors (accent --warm #ff8a4c). */
 function drawSpectrum(x, y, kind) {
   const layers = []
   const cx = x - 0.5, cy = y - 0.5, r = Math.hypot(cx, cy)
@@ -84,7 +84,7 @@ function drawSpectrum(x, y, kind) {
   }
   const w = kind === 'app' ? 0.028 : 0.075
   if (kind !== 'template' && inTri(x, y)) layers.push([255, 138, 76, 0.16])
-  // gelen ışın ve çıkan iki ışın
+  // incoming beam and two outgoing beams
   const beams = [
     [[0.06, 0.58, 0.4, 0.5], kind === 'template' ? '#000000' : '#ffffff'],
     [[0.6, 0.5, 0.95, 0.38], '#6cc9ff'],
@@ -95,7 +95,7 @@ function drawSpectrum(x, y, kind) {
   return over(layers)
 }
 
-/** Ray: aynı küre ve prizma, tek renk (vurgu --beam #eef0f4); ışın prizmadan kırılmadan düz geçer. */
+/** Ray: same sphere and prism, single color (accent --beam #eef0f4); the beam passes straight through the prism unrefracted. */
 const BEAM = hex('#eef0f4')
 function drawRay(x, y, kind) {
   const layers = []
@@ -106,15 +106,15 @@ function drawRay(x, y, kind) {
     if (r > 0.425 && r < 0.47) layers.push([...BEAM, 1])
     if (inTri(x, y)) layers.push([...BEAM, 0.1])
   }
-  // tek düz ışın: tray boyutunda kalın, 16 px'te Spectrum'dan ayıran işaret budur
+  // single straight beam: thick at tray size, the mark that tells it apart from Spectrum at 16 px
   const bw = kind === 'app' ? 0.018 : 0.06
   if (segDist(x, y, 0.06, 0.55, 0.94, 0.55) < bw) layers.push([...ink, kind === 'app' ? 0.95 : 1])
   if (triEdge(x, y) < (kind === 'app' ? 0.028 : 0.075)) layers.push([...ink, 1])
   return over(layers)
 }
 
-// Yeni ürün buraya eklenir. Bir ürünün çizimi ileride rasterleştirilmiş SVG ile değiştirilecekse yalnızca
-// `draw` değişir: (x, y, kind) imzası korunur, PNG kodlayıcı ve boyut listesi aynı kalır.
+// Add new products here. If a product's artwork is later replaced by a rasterized SVG, only
+// `draw` changes: the (x, y, kind) signature stays, as do the PNG encoder and size list.
 const PRODUCTS = { ray: { draw: drawRay }, spectrum: { draw: drawSpectrum } }
 
 function render(size, kind, draw) {
@@ -148,7 +148,7 @@ const SIZES = [
 
 const arg = process.argv[2]
 if (arg !== undefined && !Object.hasOwn(PRODUCTS, arg)) {
-  console.error(`kullanım: node scripts/make-icons.mjs [${Object.keys(PRODUCTS).join('|')}]`)
+  console.error(`usage: node scripts/make-icons.mjs [${Object.keys(PRODUCTS).join('|')}]`)
   process.exit(2)
 }
 for (const name of arg === undefined ? Object.keys(PRODUCTS) : [arg]) {

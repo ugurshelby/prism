@@ -1,4 +1,4 @@
-// Motorun tek şemasını sağlayıcıların beklediği biçimlere çevirir.
+// Converts the engine's single schema into the formats the providers expect.
 
 import type { JsonSchema } from './types'
 
@@ -16,7 +16,7 @@ const isSchema = (v: unknown): v is JsonSchema => typeof v === 'object' && v !==
 const propertiesOf = (v: unknown): [string, JsonSchema][] =>
   isSchema(v) ? Object.entries(v).flatMap(([k, p]): [string, JsonSchema][] => (isSchema(p) ? [[k, p]] : [])) : []
 
-/** Gemini (OpenAPI alt kümesi): büyük harfli tipler; propertyOrdering, minimum/maximum korunur. */
+/** Gemini (OpenAPI subset): uppercase types; propertyOrdering, minimum/maximum are kept. */
 export function toGemini(schema: JsonSchema): JsonSchema {
   const out: JsonSchema = { ...schema }
   if (typeof schema.type === 'string') out.type = TYPES[schema.type] ?? schema.type
@@ -26,8 +26,8 @@ export function toGemini(schema: JsonSchema): JsonSchema {
 }
 
 /**
- * Katı JSON Schema (Anthropic, OpenAI, xAI): her nesnede additionalProperties: false, tüm alanlar zorunlu,
- * desteklenmeyen sınırlar açıklamaya taşınır. Alanlar propertyOrdering sırasına dizilir; üretim sırası korunur.
+ * Strict JSON Schema (Anthropic, OpenAI, xAI): additionalProperties: false on every object, all fields required,
+ * unsupported bounds are moved into the description. Fields follow propertyOrdering order; generation order is preserved.
  */
 export function toStrict(schema: JsonSchema): JsonSchema {
   const { propertyOrdering, minimum, maximum, ...rest } = schema
@@ -55,7 +55,7 @@ export function toStrict(schema: JsonSchema): JsonSchema {
   return out
 }
 
-/** Şemayı istek alanı olarak kabul etmeyen modeller için system talimatına eklenen metin. */
+/** Text added to the system instruction for models that do not accept the schema as a request field. */
 export function schemaInstruction(schema: JsonSchema): string {
   return `Respond with only a JSON object (no code fences, no other text) that matches this JSON Schema:\n${JSON.stringify(toStrict(schema))}`
 }

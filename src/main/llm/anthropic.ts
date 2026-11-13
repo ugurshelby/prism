@@ -1,4 +1,4 @@
-// Anthropic Messages API istemcisi (Claude modelleri Prism'in motoru olarak).
+// Anthropic Messages API client (Claude models as Prism's engine).
 
 import { z } from 'zod'
 import { msg } from '@shared/messages'
@@ -34,7 +34,7 @@ const headers = (key: string) => ({
   'anthropic-version': '2023-06-01'
 })
 
-// 5.x ailesi effort ve structured output'u destekler; temperature göndermiyoruz (Opus 5.5 reddediyor).
+// The 5.x family supports effort and structured output; we do not send temperature (Opus 5.5 rejects it).
 const supportsEffort = (model: string) => /^claude-(opus|sonnet|haiku|fable)-5/.test(model)
 
 function body(call: LlmCall, stream: boolean) {

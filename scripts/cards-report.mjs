@@ -1,7 +1,7 @@
-// Bilgi kartı raporu: `npm run cards:report [-- --family=claude|openai|gemini|grok] [--json]`.
-// knowledge/ altını yalnızca okur; kart başına iddia, [unverified] ve yaş sayısını, 90 günü geçen kartları ve
-// hiçbir kartın anmadığı kaynakları listeler. Bir kapı değil rapordur: çıkış kodu her zaman 0.
-// Ayrıştırma kuralları src/shared/knowledge.ts'ten yalnızca gerektiği kadar yansıtılır (TypeScript içe aktarılmaz).
+// Knowledge card report: `npm run cards:report [-- --family=claude|openai|gemini|grok] [--json]`.
+// Reads knowledge/ only; lists per-card claim, [unverified] and age counts, cards older than 90 days and
+// sources no card cites. A report, not a gate: the exit code is always 0.
+// Parsing rules mirror src/shared/knowledge.ts only as far as needed (TypeScript is not imported).
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -15,7 +15,7 @@ const asJson = args.includes('--json')
 const familyArg = args.find((a) => a.startsWith('--family='))?.slice('--family='.length)
 const unknown = args.filter((a) => a !== '--json' && !a.startsWith('--family='))
 if (unknown.length || (familyArg !== undefined && !FAMILIES.includes(familyArg))) {
-  console.error(`Kullanım: node scripts/cards-report.mjs [--family=${FAMILIES.join('|')}] [--json]`)
+  console.error(`Usage: node scripts/cards-report.mjs [--family=${FAMILIES.join('|')}] [--json]`)
   process.exit(0)
 }
 
@@ -24,7 +24,7 @@ const today = Date.now()
 const ageOf = (iso) => Math.floor((today - Date.parse(`${iso}T00:00:00Z`)) / 86_400_000)
 const validDate = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d)) && new Date(`${d}T00:00:00Z`).toISOString().startsWith(d)
 
-// İddia sayılmayan satırlar: başlık, boş, tablo başlığı ve ayracı, kod bloğu, iki noktayla biten kısa giriş satırı.
+// Lines that are not claims: heading, blank, table header and separator, code fence, short intro line ending in a colon.
 function isClaimLine(line, next) {
   const t = line.trim()
   if (!t || t.startsWith('```')) return false
@@ -36,15 +36,15 @@ function isClaimLine(line, next) {
 
 function parseCard(raw) {
   const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(raw)
-  if (!m) return { error: 'ön bilgi bloğu yok' }
+  if (!m) return { error: 'no front matter block' }
   const fields = Object.fromEntries(
     m[1].split(/\r?\n/).flatMap((l) => {
       const i = l.indexOf(':')
       return i > 0 ? [[l.slice(0, i).trim(), l.slice(i + 1).trim()]] : []
     })
   )
-  if (!['model', 'method'].includes(fields.kind)) return { error: `kind geçersiz: ${fields.kind ?? 'yok'}` }
-  if (!validDate(fields.verified)) return { error: `verified geçersiz: ${fields.verified ?? 'yok'}` }
+  if (!['model', 'method'].includes(fields.kind)) return { error: `invalid kind: ${fields.kind ?? 'missing'}` }
+  if (!validDate(fields.verified)) return { error: `invalid verified: ${fields.verified ?? 'missing'}` }
   const sources = (fields.sources ?? '').split(',').map((s) => s.trim()).filter(Boolean)
   const lines = raw.slice(m[0].length).split(/\r?\n/)
   let inCode = false
@@ -77,7 +77,7 @@ const all = files.map((path) => {
 const cards = familyArg ? all.filter((c) => c.path.startsWith(`${familyArg}/`)) : all
 for (const c of cards) if (!c.error) c.age = ageOf(c.verified)
 
-// Kaynak listeleri filtreden bağımsızdır: "hiçbir kart anmıyor" bütün kartlara göre hesaplanır.
+// Source lists ignore the filter: "no card cites it" is computed against all cards.
 let registry = {}
 let registryError
 try {
@@ -108,14 +108,14 @@ const pad = (v, n) => String(v).padEnd(n)
 const w = Math.max(4, ...cards.map((c) => c.path.length))
 console.log(`${pad('path', w)}  ${pad('kind', 6)}  ${pad('verified', 10)}  ${pad('age', 4)}  claims  unverified`)
 for (const c of cards) {
-  console.log(c.error ? `${pad(c.path, w)}  HATA: ${c.error}` : `${pad(c.path, w)}  ${pad(c.kind, 6)}  ${c.verified}  ${pad(c.age, 4)}  ${pad(c.claims, 6)}  ${c.unverified}`)
+  console.log(c.error ? `${pad(c.path, w)}  ERROR: ${c.error}` : `${pad(c.path, w)}  ${pad(c.kind, 6)}  ${c.verified}  ${pad(c.age, 4)}  ${pad(c.claims, 6)}  ${c.unverified}`)
 }
-console.log(`\n${MAX_DAYS} günden eski kartlar (${staleCards.length}):`)
-for (const c of staleCards) console.log(`  ${c.path}  ${c.verified} (${c.age} gün)`)
-console.log(`\nHiçbir kartın anmadığı kaynaklar (${uncitedSources.length}):`)
+console.log(`\nCards older than ${MAX_DAYS} days (${staleCards.length}):`)
+for (const c of staleCards) console.log(`  ${c.path}  ${c.verified} (${c.age} days)`)
+console.log(`\nSources no card cites (${uncitedSources.length}):`)
 for (const id of uncitedSources) console.log(`  ${id}`)
-console.log(`\n${MAX_DAYS} günden eski kaynak kayıtları (${staleSources.length}):`)
-for (const s of staleSources) console.log(`  ${s.id}  ${s.retrieved} (${s.age} gün)`)
-if (registryError) console.log(`\nsources.json okunamadı: ${registryError}`)
-console.log(`\nToplam: ${totals.cards} kart, ${totals.claims} iddia, ${totals.unverified} doğrulanmamış, ${totals.staleCards} eski kart${totals.errors ? `, ${totals.errors} hatalı kart` : ''}`)
+console.log(`\nSource records older than ${MAX_DAYS} days (${staleSources.length}):`)
+for (const s of staleSources) console.log(`  ${s.id}  ${s.retrieved} (${s.age} days)`)
+if (registryError) console.log(`\ncould not read sources.json: ${registryError}`)
+console.log(`\nTotal: ${totals.cards} cards, ${totals.claims} claims, ${totals.unverified} unverified, ${totals.staleCards} stale cards${totals.errors ? `, ${totals.errors} invalid cards` : ''}`)
 process.exit(0)

@@ -1,5 +1,5 @@
-// Ürün başına derleme: `npm run build:ray`, `npm run build:spectrum`. Aynı çekirdek, farklı ürün sabiti
-// (electron.vite.config.ts → __PRISM_PRODUCT__). `--dist <win|mac|linux|dir>` ile build/<ürün>.yml üzerinden paketler.
+// Per-product build: `npm run build:ray`, `npm run build:spectrum`. Same core, different product constant
+// (electron.vite.config.ts → __PRISM_PRODUCT__). `--dist <win|mac|linux|dir>` packages via build/<product>.yml.
 import { spawnSync } from 'node:child_process'
 
 const known = ['ray', 'spectrum']
@@ -7,7 +7,7 @@ const distFlags = { win: '--win', mac: '--mac', linux: '--linux', dir: '--dir' }
 const [product, ...rest] = process.argv.slice(2)
 
 function usage() {
-  console.error(`Kullanım: node scripts/build-product.mjs <${known.join('|')}> [--dist <${Object.keys(distFlags).join('|')}>]`)
+  console.error(`Usage: node scripts/build-product.mjs <${known.join('|')}> [--dist <${Object.keys(distFlags).join('|')}>]`)
   process.exit(2)
 }
 
@@ -18,7 +18,7 @@ if (rest.length > 0) {
   dist = rest[1]
 }
 
-// Argüman dizisi sabit listelerden gelir; kabuk dizesi birleştirmesi yok.
+// The argument array comes from fixed lists; no shell string concatenation.
 function run(args, env) {
   const r = spawnSync('npx', args, { stdio: 'inherit', shell: process.platform === 'win32', env: { ...process.env, ...env } })
   if (r.error) console.error(r.error.message)

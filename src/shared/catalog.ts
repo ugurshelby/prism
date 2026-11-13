@@ -1,26 +1,26 @@
-// Hedef aileler, modeller, effort ölçekleri, yüzeyler ve Prism'in kendi motor sağlayıcıları.
-// Ana süreç ve arayüz aynı listeyi kullanır.
+// Target families, models, effort scales, surfaces and Prism's own engine providers.
+// The main process and the UI use the same list.
 
 export const FAMILIES = ['claude', 'openai', 'gemini', 'grok'] as const
 export type Family = (typeof FAMILIES)[number]
-/** 'auto': aileler arası öneri (çapraz). */
+/** 'auto': cross-family recommendation. */
 export type FamilyChoice = Family | 'auto'
 
-/** Tüm ailelerin effort / reasoning / thinking seviyelerinin birleşimi, düşükten yükseğe. */
+/** Union of the effort / reasoning / thinking levels of all families, low to high. */
 export const EFFORTS = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const
 export type Effort = (typeof EFFORTS)[number]
 
 export const SURFACES = ['agent', 'chat', 'api'] as const
 export type Surface = (typeof SURFACES)[number]
 
-/** Hedef aracın kendi adı (ürün adı, çevrilmez); motor promptunda da bu ad kullanılır. Açıklamalar arayüz sözlüğünde. */
+/** The target tool's own name (a product name, not translated); the engine prompt uses this name too. Descriptions live in the UI dictionary. */
 type SurfaceLabels = Record<Surface, { label: string }>
 
 export interface FamilyInfo {
   id: Family
   name: string
   vendor: string
-  /** Hedef araçta ve dokümanlarda ayarın adı. */
+    /** The setting's name in the target tool and its docs. */
   effortLabel: string
   surfaces: SurfaceLabels
   hue: string
@@ -77,7 +77,7 @@ export const FAMILY_INFO: Record<Family, FamilyInfo> = {
   }
 }
 
-/** Aile seçilmemişken (çapraz öneri) yüzeyin genel adı; motor promptuna girer, arayüz kendi sözlüğünden çevirir. */
+/** Generic surface name when no family is selected (cross recommendation); it goes into the engine prompt, the UI translates it from its own dictionary. */
 export const GENERIC_SURFACE: SurfaceLabels = {
   agent: { label: 'Coding agent' },
   chat: { label: 'Chat' },
@@ -115,7 +115,7 @@ export interface TargetModel {
   short: string
   latency: Latency
   price: { input: number; output: number }
-  /** Desteklenen seviyeler, düşükten yükseğe. Boşsa seviye sabittir (ayarlanamaz). */
+    /** Supported levels, low to high. If empty the level is fixed (not adjustable). */
   efforts: readonly Effort[]
   defaultEffort: { api: Effort; agent: Effort }
   hue: string
@@ -176,7 +176,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
     latency: 'slow',
     price: { input: 10, output: 50 },
     efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
-    // Codex'te başlangıç seviyesi: Astra low, Luna high (codex-best-practices, 2026-11-10).
+        // Codex starting level: Astra low, Luna high (codex-best-practices, 2026-11-10).
     defaultEffort: { api: 'medium', agent: 'low' },
     hue: '#b49cff'
   },
@@ -281,7 +281,7 @@ export const MODELS: Record<ModelId, TargetModel> = {
   }
 }
 
-/** Elle seçimde ailenin ilk önerilen modeli. */
+/** The family's first recommended model for manual selection. */
 export const FAMILY_DEFAULT_MODEL: Record<Family, ModelId> = {
   claude: 'claude-opus-5-5',
   openai: 'gpt-6.1-sol',
@@ -293,8 +293,8 @@ export const modelsOf = (family: FamilyChoice): ModelId[] =>
   MODEL_IDS.filter((id) => family === 'auto' || MODELS[id].family === family)
 
 /**
- * Önerinin seçileceği modeller: daraltılmış ekosistemde o ailenin tamamı; çaprazda seçili ailelerin key ya da
- * uygulama ile erişilebilen modelleri (hiçbiri yoksa seçili ailelerin bütün modelleri).
+  * Models the recommendation is chosen from: in a narrowed ecosystem the whole family; in cross mode the models of the selected families reachable by key or
+  * app (all models of the selected families if none).
  */
 export function candidatePool(
   family: FamilyChoice,
@@ -302,13 +302,13 @@ export function candidatePool(
   families: readonly Family[] = FAMILIES
 ): ModelId[] {
   if (family !== 'auto') return modelsOf(family)
-  // Çapraz öneri yalnızca kişinin seçtiği aileler içinde kalır.
+    // A cross recommendation stays within the families the person selected.
   const inFamilies = MODEL_IDS.filter((id) => families.includes(MODELS[id].family))
   const pool = inFamilies.filter((id) => access[id])
   return pool.length ? pool : inFamilies
 }
 
-/** Segment gibi dar yerlerde kullanılan aile adları ('auto' etiketi arayüz sözlüğünde). */
+/** Family names for narrow spots such as segments (the 'auto' label is in the UI dictionary). */
 export const FAMILY_SHORT: Record<Family, string> = {
   claude: 'Claude',
   openai: 'GPT',
@@ -319,7 +319,7 @@ export const FAMILY_SHORT: Record<Family, string> = {
 export const isModelId = (m: unknown): m is ModelId => (MODEL_IDS as readonly unknown[]).includes(m)
 export const isEffort = (e: unknown): e is Effort => (EFFORTS as readonly unknown[]).includes(e)
 
-/** Seviye adları hedef araçlardaki gibi İngilizce kalır; açıklamaları arayüz sözlüğünde (effort.hint.*). */
+/** Level names stay in English as in the target tools; descriptions are in the UI dictionary (effort.hint.*). */
 export const EFFORT_INFO: Record<Effort, { label: string }> = {
   none: { label: 'None' },
   minimal: { label: 'Minimal' },
@@ -335,7 +335,7 @@ export function defaultEffortFor(model: ModelId, surface: Surface): Effort {
   return surface === 'api' ? d.api : d.agent
 }
 
-/** Seviyeyi modelin desteklediği en yakın seviyeye çeker (aileler arası geçişte gerekir). */
+/** Clamps a level to the nearest level the model supports (needed when switching between families). */
 export function clampEffort(model: ModelId, effort: Effort): Effort {
   const m = MODELS[model]
   if (!m.efforts.length) return m.defaultEffort.api
@@ -345,30 +345,30 @@ export function clampEffort(model: ModelId, effort: Effort): Effort {
   return [...m.efforts].sort((a, b) => dist(a) - dist(b) || EFFORTS.indexOf(b) - EFFORTS.indexOf(a))[0] ?? m.defaultEffort.api
 }
 
-/** Kısa gösterim: seviye sabitse null (arayüz "sabit" yazar). */
+/** Short display: null if the level is fixed (the UI shows "fixed"). */
 export const effortText = (model: ModelId, effort: Effort): Effort | null => (MODELS[model].efforts.length ? effort : null)
 
-/** Çeviri işlevi: arayüz kendi sözlüğünü verir (anahtarlar `note.*`; kapsam testi src/renderer/src/i18n). */
+/** Translation function: the UI passes its own dictionary (keys `note.*`; coverage test in src/renderer/src/i18n). */
 export type Translate = (key: string, vars?: Record<string, string | number>) => string
 
 type Note = { title: string; lines: string[]; code?: string }
 
 const json = (v: unknown) => JSON.stringify(v, null, 2)
 
-// ChatGPT'de model adına göre seçici yok: GPT-6 seçilir ve Thinking kaydırıcısı ayarlanır. Instant, Medium, High ve
-// Extra High GPT-6 Sol'da, Pro GPT-6 Astra'da çalışır; Terra, Luna ve GPT-6.1 Sol sohbette yok (chatgpt-models-help,
-// 2026-11-10). Bu modeller için en yakın sohbet ayarı gösterilir.
+// ChatGPT has no per-model picker: GPT-6 is selected and the Thinking slider is adjusted. Instant, Medium, High and
+// Extra High run on GPT-6 Sol, Pro runs on GPT-6 Astra; Terra, Luna and GPT-6.1 Sol are not in chat (chatgpt-models-help,
+// 2026-11-10). The closest chat setting is shown for these models.
 const CHATGPT_THINKING: Partial<Record<Effort, string>> = { none: 'Instant', low: 'Instant', medium: 'Medium', high: 'High', xhigh: 'Extra High', max: 'Extra High' }
 
 function chatgptNote(m: TargetModel, effort: Effort, t: Translate): Note {
   const title = t('note.chatgpt.title')
   if (m.id === 'gpt-6-astra') return { title, lines: [t('note.chatgpt.pick', { thinking: 'Pro' })] }
   const lines = [t('note.chatgpt.pick', { thinking: CHATGPT_THINKING[effort] ?? 'Medium' })]
-  // Katalogdaki Astra dışı OpenAI hedefleri sohbette seçilemez; prompt yine çalışır, hangi modelin açılacağı söylenir.
+    // OpenAI targets in the catalog other than Astra cannot be selected in chat; the prompt still works, and it says which model to open.
   return { title, lines: [...lines, t('note.chatgpt.notInChat', { model: m.name })] }
 }
 
-/** Kopyalanan promptun yanında gösterilecek "hedef araçta böyle ayarla" notu. */
+/** The "set it up like this in the target tool" note shown next to the copied prompt. */
 export function setupNote(model: ModelId, effort: Effort, surface: Surface, t: Translate): Note {
   const m = MODELS[model]
   const fixed = !m.efforts.length
@@ -455,7 +455,7 @@ function claudeNote(m: TargetModel, effort: Effort, surface: Surface, t: Transla
       lines: [t('note.pickModel', { model: m.name }), t('note.claudeApp.effort', { level: EFFORT_INFO[effort].label, fallback: m.defaultEffort.api })]
     }
   }
-  // Opus 5.5 ajan işinde 128k ile iyi çalışıyor (Anthropic, prompting-claude-opus-5-5).
+    // Opus 5.5 works well at 128k in agent work (Anthropic, prompting-claude-opus-5-5).
   const maxTokens = effort === 'xhigh' || effort === 'max' ? 128000 : effort === 'high' ? 32000 : 16000
   return {
     title: t('note.claudeApi.title'),
@@ -464,7 +464,7 @@ function claudeNote(m: TargetModel, effort: Effort, surface: Surface, t: Transla
   }
 }
 
-// --- Prism'in kendi motoru (analiz + yazım için çağırdığı LLM) ---------------
+// --- Prism's own engine (the LLM it calls for analysis + writing) ---------------
 
 export const PROVIDERS = ['vertex', 'anthropic', 'gemini', 'openai', 'xai'] as const
 export type ProviderId = (typeof PROVIDERS)[number]
@@ -472,11 +472,11 @@ export type ProviderId = (typeof PROVIDERS)[number]
 export interface ProviderInfo {
   id: ProviderId
   label: string
-  /** Bu key'le erişilen hedef aile. */
+    /** The target family reached with this key. */
   family: Family
   env: string
   keyUrl: string
-  /** Analiz / yazım için tercih sırası; keşfedilen modellerle kesiştirilir. */
+    /** Preference order for analysis / writing; intersected with the discovered models. */
   engine: { analysis: string[]; generation: string[] }
 }
 
@@ -500,7 +500,7 @@ export const PROVIDER_INFO: Record<ProviderId, ProviderInfo> = {
   gemini: {
     id: 'gemini',
     label: 'Google AI Studio',
-    // Motor listesi hedef katalogdan bağımsızdır: gemini-3.6-flash hedef olarak sunulmaz ama motor olabilir.
+        // The engine list is independent of the target catalog: gemini-3.6-flash is not offered as a target but can be an engine.
     family: 'gemini',
     env: 'GEMINI_API_KEY',
     keyUrl: 'https://aistudio.google.com/apikey',
@@ -527,10 +527,10 @@ export const PROVIDER_INFO: Record<ProviderId, ProviderInfo> = {
   }
 }
 
-/** Keşfedilen bir model ID'si bu hedef modele mi karşılık geliyor (tarihli sürümler dahil)? */
+/** Does a discovered model ID correspond to this target model (including dated versions)? */
 export const matchesTarget = (discovered: string, target: ModelId) =>
   discovered === target || discovered.startsWith(`${target}-`) || discovered.startsWith(`${target}@`)
 
-/** Havuzdaki ailelerin varsayılan modellerinden ilki; yoksa havuzun ilk modeli. Boş havuzda Claude varsayılanı. */
+/** The first of the default models of the pooled families; otherwise the pool's first model. In an empty pool the Claude default. */
 export const preferredModel = (pool: ModelId[]): ModelId =>
   pool.find((m) => Object.values(FAMILY_DEFAULT_MODEL).includes(m)) ?? pool[0] ?? FAMILY_DEFAULT_MODEL.claude

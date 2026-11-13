@@ -1,5 +1,5 @@
-// Gemini istemcisi: Vertex AI (proje yolu, global konum) ve Google AI Studio (Gemini API).
-// İkisi aynı generateContent gövdesini kullanır; yalnızca uç nokta ve key türü farklı.
+// Gemini client: Vertex AI (project path, global location) and Google AI Studio (Gemini API).
+// Both use the same generateContent body; only the endpoint and key type differ.
 
 import { z } from 'zod'
 import { msg } from '@shared/messages'
@@ -12,7 +12,7 @@ type Kind = 'vertex' | 'gemini'
 
 const LABEL: Record<Kind, string> = { vertex: 'Vertex', gemini: 'Gemini API' }
 
-// Vertex'te model listeleme API key ile çalışmıyor; erişim model başına küçük bir istekle yoklanır.
+// Vertex model listing does not work with an API key; access is probed with one small request per model.
 const VERTEX_PROBE = [
   'gemini-4-argon',
   'gemini-3.8-flash',
@@ -25,7 +25,7 @@ const VERTEX_PROBE = [
   'gemini-2.5-flash-lite'
 ]
 
-// Yalnızca metin üreten Gemini modelleri listelenir.
+// Only text-generating Gemini models are listed.
 const NON_TEXT = /(tts|image|embedding|live|transcribe|robotics|omni|banana|aqa|imagen|veo|learnlm)/
 
 const UsageSchema = z
@@ -49,7 +49,7 @@ const ModelsSchema = z.object({
     .default([])
 })
 
-// Yol parçaları kodlanır; host ayrıca http.ts'teki izin listesinden geçer. Proje ve konum providers.ts'te doğrulanır.
+// Path segments are encoded; the host also passes the allowlist in http.ts. Project and location are validated in providers.ts.
 function endpoint(kind: Kind, cred: Credentials, model: string, method: string) {
   const m = encodeURIComponent(model)
   if (kind === 'gemini') return `https://generativelanguage.googleapis.com/v1beta/models/${m}:${method}`
@@ -59,7 +59,7 @@ function endpoint(kind: Kind, cred: Credentials, model: string, method: string) 
   return `https://${host}/v1/projects/${project}/locations/${encodeURIComponent(location)}/publishers/google/models/${m}:${method}`
 }
 
-// Gemini 4 ve 3.6+ temperature/topP/topK'yı yok sayıp kullanımdan kalkma başlığı döndürüyor; ileride 400 olacak.
+// Gemini 4 and 3.6+ ignore temperature/topP/topK and return a deprecation header; it will become a 400 later.
 const NO_SAMPLING = /^gemini-(4|3\.[6-9])/
 
 function body(call: LlmCall) {
@@ -116,7 +116,7 @@ async function probe(cred: Credentials, model: string): Promise<boolean> {
     return true
   } catch (e) {
     if (!(e instanceof LlmError) || e.kind === 'auth' || e.status === undefined) throw e
-    // 429 kota, 400 parametre sorunudur: model var demektir.
+    // 429 is a quota issue, 400 is a parameter problem: the model exists.
     return e.status === 429 || e.status === 400
   }
 }
@@ -162,7 +162,7 @@ function client(kind: Kind): ProviderClient {
       if (kind === 'vertex') {
         if (!cred.project) throw new LlmError(msg('err.vertexProject'))
         const found: DiscoveredModel[] = []
-        // Aynı anda en fazla 3 yoklama: kota hatası almamak için.
+        // At most 3 concurrent probes, to avoid quota errors.
         for (let i = 0; i < VERTEX_PROBE.length; i += 3) {
           const batch = VERTEX_PROBE.slice(i, i + 3)
           const ok = await Promise.all(batch.map((m) => probe(cred, m)))

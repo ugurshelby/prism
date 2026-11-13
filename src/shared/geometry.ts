@@ -1,4 +1,4 @@
-// Pencere yerleşiminin saf hesapları (window.ts kullanır, testler doğrular). Ekran bilgisi dışarıdan verilir.
+// Pure calculations for window placement (used by window.ts, verified by tests). Screen info is passed in.
 import type { PanelAnchor } from './types'
 
 export interface Rect {
@@ -8,7 +8,7 @@ export interface Rect {
   height: number
 }
 
-/** Dikdörtgen çalışma alanı içinde kalsın (görev çubuğu ve dock dışı); büyükse alana sığacak kadar küçülür. */
+/** Stay inside the rectangular work area (outside taskbar and dock); if larger, shrinks to fit the area. */
 export function clampToArea(b: Rect, area: Rect): Rect {
   const width = Math.min(b.width, area.width)
   const height = Math.min(b.height, area.height)
@@ -21,8 +21,8 @@ export function clampToArea(b: Rect, area: Rect): Rect {
 }
 
 /**
- * Panel, kürenin köşesine yaslanır: küre ekranın sağ yarısındaysa panel sola, alt yarısındaysa yukarı açılır.
- * Böylece panel ekrana sığar ve kapanınca küre aynı köşeye döner.
+  * The panel is anchored to the orb's corner: if the orb is in the right half of the screen the panel opens left, if in the bottom half it opens upward.
+  * That way the panel fits on screen and the orb returns to the same corner when it closes.
  */
 export function panelFromPill(pill: Rect, size: { width: number; height: number }, area: Rect): { bounds: Rect; anchor: PanelAnchor } {
   const width = Math.min(size.width, area.width)
@@ -36,14 +36,14 @@ export function panelFromPill(pill: Rect, size: { width: number; height: number 
   return { bounds: clampToArea({ x, y, width, height }, area), anchor }
 }
 
-/** Küre, panelin yaslandığı köşeye konur. */
+/** The orb is placed at the corner the panel is anchored to. */
 export function pillFromPanel(panel: Rect, anchor: PanelAnchor, size: number, area: Rect): Rect {
   const x = anchor.h === 'right' ? panel.x + panel.width - size : panel.x
   const y = anchor.v === 'bottom' ? panel.y + panel.height - size : panel.y
   return clampToArea({ x, y, width: size, height: size }, area)
 }
 
-/** Bırakılan küre kenara `snap` pikselden yakınsa, kenardan `margin` içeride durur. */
+/** If a dropped orb is closer than `snap` pixels to an edge, it rests `margin` inside the edge. */
 export function snapToEdges(p: Rect, area: Rect, snap: number, margin: number): { x: number; y: number } {
   let { x, y } = clampToArea(p, area)
   if (x - area.x < snap) x = area.x + margin
@@ -53,5 +53,5 @@ export function snapToEdges(p: Rect, area: Rect, snap: number, margin: number): 
   return { x, y }
 }
 
-/** Kritik sönümlü yay: 0'dan 1'e aşmadan yaklaşır; t 0..1 arasında normalize süre. */
+/** Critically damped spring: approaches from 0 to 1 without overshoot; t is normalized time in 0..1. */
 export const springProgress = (t: number) => (t >= 1 ? 1 : 1 - (1 + 6 * t) * Math.exp(-6 * t))

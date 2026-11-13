@@ -1,6 +1,6 @@
 import type { DiscoveredModel, Usage } from '@shared/types'
 
-/** Sağlayıcıdan bağımsız JSON Schema (küçük harfli tipler; isteğe bağlı propertyOrdering). */
+/** Provider-independent JSON Schema (lowercase types; optional propertyOrdering). */
 export type JsonSchema = Record<string, unknown>
 
 export interface LlmCall {
@@ -8,7 +8,7 @@ export interface LlmCall {
   system: string
   user: string
   schema?: JsonSchema
-  /** Yalnızca bunu kabul eden sağlayıcılarda kullanılır. */
+  /** Used only by providers that accept it. */
   temperature?: number
   signal?: AbortSignal
   timeoutMs?: number
@@ -20,7 +20,7 @@ export interface LlmResult {
   usage: Usage
 }
 
-/** auth: key reddedildi; quota: 429; not_found: model yok; other: geri kalanı. */
+/** auth: key rejected; quota: 429; not_found: no such model; other: everything else. */
 export type LlmErrorKind = 'auth' | 'quota' | 'not_found' | 'other'
 
 export class LlmError extends Error {
@@ -42,7 +42,7 @@ export interface Credentials {
 export interface ProviderClient {
   generate(call: LlmCall, cred: Credentials): Promise<LlmResult>
   stream(call: LlmCall, cred: Credentials, onText: (chunk: string) => void): Promise<LlmResult>
-  /** Key'in erişebildiği metin modelleri. */
+  /** Text models the key can access. */
   discover(cred: Credentials): Promise<DiscoveredModel[]>
 }
 

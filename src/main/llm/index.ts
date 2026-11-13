@@ -13,8 +13,8 @@ const CLIENTS: Record<ProviderId, ProviderClient> = { vertex, gemini: aiStudio, 
 export const client = (provider: ProviderId) => CLIENTS[provider]
 
 /**
- * Şemalı istek; sağlayıcı ya da model şema alanını reddederse (400) şemayı talimata yazıp bir kez daha dener.
- * Key reddi de bazı sağlayıcılarda 400'dür; o durumda yeniden denenmez (prompt ikinci kez gönderilmesin).
+ * Structured request; if the provider or model rejects the schema field (400), writes the schema into the instruction and retries once.
+ * A key rejection is also a 400 for some providers; it is not retried then (so the prompt is not sent twice).
  */
 export async function generate(provider: ProviderId, call: LlmCall, cred: Credentials): Promise<LlmResult> {
   try {
@@ -25,7 +25,7 @@ export async function generate(provider: ProviderId, call: LlmCall, cred: Creden
   }
 }
 
-/** JSON yanıtı savunmalı ayrıştırır: kod bloğu işaretlerini temizler, ilk { ile son } arasını alır. Sonuç şemayla doğrulanmalı. */
+/** Parses JSON output defensively: strips code-fence markers and takes the span from the first { to the last }. Result must be validated with the schema. */
 export function parseJson(text: string): unknown {
   const cleaned = text.replace(/```(?:json)?/g, '')
   const start = cleaned.indexOf('{')

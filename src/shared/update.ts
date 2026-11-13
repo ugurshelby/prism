@@ -1,13 +1,13 @@
-// Güncelleme bildirimi: GitHub'daki yayın listesinden bu ürünün daha yeni sürümünü bulur. Saf modül: ağ ve dosya
-// işi main/update.ts'te. Yanıttan yalnızca etiket adı ve taslak/ön sürüm bayrakları okunur; açılacak sayfa adresi
-// yanıttan değil, doğrulanmış etiketten kurulur.
+// Update notification: finds a newer version of this product in the GitHub release list. Pure module: network and file
+// work is in main/update.ts. Only the tag name and the draft/prerelease flags are read from the response; the page URL to open
+// is built from the validated tag, not from the response.
 import { z } from 'zod'
 
 export const UPDATE_REPO = 'ugurshelby/prism'
 export const RELEASES_API_URL = `https://api.github.com/repos/${UPDATE_REPO}/releases?per_page=50`
-/** Günde en fazla bir otomatik denetim. */
+/** At most one automatic check per day. */
 export const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
-/** Yayın listesi için üst sınır; daha büyük yanıt okunmaz. */
+/** Upper bound for the release list; a larger response is not read. */
 export const MAX_RESPONSE_BYTES = 2_000_000
 
 export const ReleaseListSchema = z
@@ -16,7 +16,7 @@ export const ReleaseListSchema = z
 
 export type Version = readonly [number, number, number]
 
-/** Yalnızca düz `x.y.z` kabul edilir; ön ek, ek ya da boşluk olan sürüm yok sayılır. */
+/** Only plain `x.y.z` is accepted; versions with a prefix, suffix or whitespace are ignored. */
 export function parseVersion(text: string): Version | null {
   const m = /^(\d{1,5})\.(\d{1,5})\.(\d{1,5})$/.exec(text)
   return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null
@@ -31,7 +31,7 @@ export interface LatestRelease {
   version: string
 }
 
-/** Ürünün etiket önekini taşıyan, taslak ya da ön sürüm olmayan ve çalışan sürümden yeni olan en yüksek yayın. */
+/** The highest release that carries the product's tag prefix, is not a draft or prerelease and is newer than the running version. */
 export function newerRelease(releases: z.infer<typeof ReleaseListSchema>, tagPrefix: string, current: string): LatestRelease | null {
   const cur = parseVersion(current)
   if (!cur) return null
@@ -45,13 +45,13 @@ export function newerRelease(releases: z.infer<typeof ReleaseListSchema>, tagPre
   return best ? { tag: best.tag, version: best.v.join('.') } : null
 }
 
-/** Bu ürüne ait, biçimi doğrulanmış bir etiketin yayın sayfası; başka bir etiket için null. */
+/** The release page of a tag that belongs to this product and has a validated format; null for any other tag. */
 export function releasePageUrl(tag: string, tagPrefix: string): string | null {
   if (!tag.startsWith(tagPrefix) || !parseVersion(tag.slice(tagPrefix.length))) return null
   return `https://github.com/${UPDATE_REPO}/releases/tag/${tag}`
 }
 
-/** Son denetimden bu yana bir gün geçti mi; saat geri alınmışsa da denetlenir. */
+/** Has a day passed since the last check; it also checks if the clock was set back. */
 export function checkDue(lastCheckedAt: number | null, now: number): boolean {
   return lastCheckedAt === null || now - lastCheckedAt >= CHECK_INTERVAL_MS || lastCheckedAt > now
 }

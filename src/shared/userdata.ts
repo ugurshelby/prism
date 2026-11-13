@@ -1,12 +1,12 @@
-// "Tüm verilerimi sil" yalnızca Prism'in kendi yazdığı dosyaları siler: ayarlar ve yedekleri, geçmiş ve
-// şifreli yedekleri, key'ler, model önbelleği, pencere ve güncelleme durumu, yarım kalmış geçici dosyalar,
-// kenara alınmış bozuk dosyalar. Chromium'un önbellek klasörleri ve kullanıcının koyduğu başka dosyalar listede yoksa
-// dokunulmaz. Saf modül: dosya işi main/wipe.ts'te. Yeni bir userData dosyası (config.ts UserFileName) eklenince
-// buraya da eklenir.
+// "Delete all my data" deletes only files Prism wrote itself: settings and their backups, history and its
+// encrypted backups, keys, the model cache, window and update state, leftover temp files,
+// corrupt files set aside. Chromium cache folders and other files the user put there are left alone unless listed.
+// Pure module: file work is in main/wipe.ts. When a new userData file (config.ts UserFileName) is added,
+// it is added here too.
 import { PROVIDERS } from './catalog'
 
 const BASES: ReadonlySet<string> = new Set([
-  // Eski sürümler key'leri userData/.env'de düz metin tutabiliyordu (env.ts leftoverEnvNames); o da silinir.
+    // Older versions could keep keys as plain text in userData/.env (env.ts leftoverEnvNames); that is deleted too.
   '.env',
   'settings.json',
   'history.json',
@@ -16,14 +16,14 @@ const BASES: ReadonlySet<string> = new Set([
   'models.json',
   'window-state.json',
   'update-state.json',
-  // Spectrum'un 2.x'ten bir kerelik göç işareti (main/migrate.ts).
+    // One-time migration marker for Spectrum from 2.x (main/migrate.ts).
   'migrated.json',
   ...PROVIDERS.map((p) => `${p}.key`)
 ])
 const SETTINGS_BACKUP = /^settings\.v\d+\.json$/
-// Taban adın ardından gelebilecek ekler: atomik yazımın geçici dosyası (.<hex>.tmp), history.json.tmp, şifreli
-// yedekler (.<n>.bak), okunamayınca kenara alınan kopya (.bozuk-<zaman>) ve bu sistemde çözülemeyen şifreli geçmiş
-// (.unreadable-<zaman>).
+// Suffixes that can follow the base name: the temp file of an atomic write (.<hex>.tmp), history.json.tmp, encrypted
+// backups (.<n>.bak), the copy set aside when unreadable (.bozuk-<time>) and the encrypted history that cannot be decrypted on this system
+// (.unreadable-<time>).
 const SUFFIXES = [/\.[0-9a-f]{12}\.tmp$/, /\.tmp$/, /\.\d+\.bak$/, /\.bozuk-\d+$/, /\.unreadable-\d+$/]
 
 const isBase = (name: string) => BASES.has(name) || SETTINGS_BACKUP.test(name)

@@ -1,5 +1,5 @@
 {
-  "_source": "https://ai.google.dev/gemini-api/docs/troubleshooting — belgelenmiş yanıt biçiminden elle yazıldı (2026-11-10); sayfa bu oturumda canlı okunmadı, içerik uydurmadır",
+  "_source": "https://ai.google.dev/gemini-api/docs/troubleshooting — hand-written from the documented response shape (2026-11-10); the page was not read live in this session, the content is fabricated",
   "error": {
     "code": 404,
     "message": "Publisher Model was not found.",

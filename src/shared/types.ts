@@ -14,7 +14,7 @@ export interface Alternative {
   tradeoff: string
 }
 
-/** Prism'in analiz/yazım için çağırdığı motor. */
+/** The engine Prism calls for analysis/writing. */
 export interface EngineRef {
   provider: ProviderId
   model: string
@@ -33,12 +33,12 @@ export interface Analysis {
   }
   alternatives: Alternative[]
   questions: Question[]
-  /** Önerinin seçildiği aday havuzu. */
+    /** The candidate pool the recommendation was chosen from. */
   pool?: ModelId[]
   usage?: Usage
   elapsedMs?: number
   engine?: EngineRef
-  /** Analizin kaydedildiği geçmiş girdisi; yazımlar bu girdiye eklenir. */
+    /** The history entry where the analysis was saved; generations are added to this entry. */
   historyId?: string
 }
 
@@ -49,13 +49,13 @@ export interface Usage {
 }
 
 export interface AnalyzeRequest {
-  /** İptal için istek kimliği (engine.cancel). */
+    /** Request ID for cancellation (engine.cancel). */
   id: string
   prompt: string
   surface: Surface
-  /** Hedef ekosistem; 'auto' ise doğrulanmış key'lerden ve uygulamalardan oluşan havuzdan seçilir. */
+    /** Target ecosystem; if 'auto', chosen from the pool made of verified keys and apps. */
   family: FamilyChoice
-  /** Elle seçim yapıldıysa analiz yalnızca soruları üretir, öneri bilgi amaçlı kalır. */
+    /** If chosen manually the analysis only produces questions, the recommendation stays informational. */
   manual?: { model: ModelId; effort: Effort }
 }
 
@@ -97,31 +97,31 @@ export interface HistoryEntry {
   updatedAt: number
   prompt: string
   surface: Surface
-  /** Analiz sırasında seçili ekosistem (eski kayıtlarda yok). */
+    /** The ecosystem selected during the analysis (absent in old records). */
   family?: FamilyChoice
   analysis: Analysis
   answers: Answer[]
-  /** Eskiden yeniye; sonuncusu en güncel yazım. */
+    /** Oldest to newest; the last is the most current generation. */
   outputs: HistoryOutput[]
 }
 
-/** encrypted: diskte şifreli; memory: yalnızca bu oturumda (anahtarlık yok ya da kilitli); off: kayıt kapalı. */
+/** encrypted: encrypted on disk; memory: this session only (no keyring or it is locked); off: recording disabled. */
 export type HistoryStorage = 'encrypted' | 'memory' | 'off'
 
 export interface HistoryList {
   entries: HistoryEntry[]
   storage: HistoryStorage
-  /** Önceki geçmiş bu sistemde açılamadı ve kenara alındı (ör. eski sürümden göçte anahtar değişti); geçmiş yeniden başladı. */
+    /** The previous history could not be opened on this system and was set aside (e.g. the key changed in a migration from an older version); history started over. */
   reset?: boolean
 }
 
 export type ReplyLanguage = 'tr' | 'en' | 'none'
 
-/** Arayüz dili; üretilen promptun dili (ReplyLanguage) ayrı bir ayardır. */
+/** UI language; the language of the generated prompt (ReplyLanguage) is a separate setting. */
 /** The UI is English only (owner, 2026-11-13). The field stays in settings so older files still load. */
 export type UiLanguage = 'en'
 
-/** Kurulum sihirbazının adımları; yarıda kapatılırsa kalınan adımdan devam edilir. */
+/** Steps of the setup wizard; if closed midway, it resumes from the step where it stopped. */
 export type SetupStep = 'families' | 'engine' | 'shortcut'
 
 export interface EngineModels {
@@ -131,40 +131,40 @@ export interface EngineModels {
 
 export interface Settings {
   version: number
-  /** 'auto': Vertex tanımlıysa Vertex, değilse ilk tanımlı sağlayıcı. */
+    /** 'auto': Vertex if defined, otherwise the first defined provider. */
   engineProvider: ProviderId | 'auto'
   engineModels: Partial<Record<ProviderId, EngineModels>>
   vertex: { project: string; location: string }
   defaultFamily: FamilyChoice
-  /** Kurulumda seçilen hedef aileler; arayüz ve öneri havuzu yalnızca bunları kullanır (Ray'de tam bir aile). */
+    /** Target families chosen at setup; the UI and the recommendation pool use only these (exactly one family in Ray). */
   families: Family[]
   uiLanguage: UiLanguage
   setup: { done: boolean; step: SetupStep }
-  /** Key olmadan (abonelik / uygulama ile) kullanılan hedef aileler; çapraz öneri havuzuna girer. */
+    /** Target families used without a key (via subscription / app); they enter the cross-recommendation pool. */
   appFamilies: Family[]
   replyLanguage: ReplyLanguage
   defaultSurface: Surface
   alwaysOnTop: boolean
   hotkey: string
   launchAtLogin: boolean
-  /** Pencere gizliyken biten yazım için sistem bildirimi. */
+    /** System notification for a generation that finishes while the window is hidden. */
   notifyWhenHidden: boolean
-  /** Kapalıysa yeni analiz ve yazımlar geçmişe hiç yazılmaz (bellekte de tutulmaz). */
+    /** If off, new analyses and generations are never written to history (and not kept in memory either). */
   saveHistory: boolean
-  /** Pencerenin ekran görüntüsü ve ekran paylaşımında görünmesini engeller (Windows, macOS). */
+    /** Prevents the window from appearing in screenshots and screen sharing (Windows, macOS). */
   contentProtection: boolean
-  /** Günde bir kez GitHub'da bu ürünün yeni sürümüne bakılır (key'siz, yalnızca yayın listesi). */
+    /** Once a day GitHub is checked for a new version of this product (no key, release list only). */
   updateCheck: boolean
 }
 
-/** Arayüzün gönderdiği ayar yaması (SettingsPatchSchema ile aynı biçim): Vertex proje ve konumu ayrı ayrı değişebilir. */
+/** Settings patch the UI sends (same shape as SettingsPatchSchema): the Vertex project and location can change separately. */
 export type SettingsPatch = Partial<Omit<Settings, 'version' | 'vertex'>> & { vertex?: Partial<Settings['vertex']> }
 
-/** Güncelleme bildiriminin arayüze giden durumu. */
+/** Update notification state sent to the UI. */
 export interface UpdateView {
   current: string
   enabled: boolean
-  /** Son başarılı denetimin zamanı (ms); hiç denetlenmediyse null. */
+    /** Time of the last successful check (ms); null if never checked. */
   checkedAt: number | null
   latest: { tag: string; version: string } | null
 }
@@ -183,9 +183,9 @@ export interface ProviderStatus {
 
 export interface ProviderView {
   id: ProviderId
-  /** hint: maskeli gösterim (son 4 karakter); key'in kendisi arayüze inmez. */
+    /** hint: masked display (last 4 characters); the key itself never reaches the UI. */
   key: { present: boolean; source: 'saved' | 'env' | 'none'; hint: string; problem?: string }
-  /** Vertex için proje ve konum tanımlı mı. */
+    /** Whether the Vertex project and location are defined. */
   ready: boolean
   status: ProviderStatus | null
 }
@@ -194,29 +194,29 @@ export type TargetAccess = 'key' | 'app'
 
 export interface SettingsView extends Settings {
   providers: ProviderView[]
-  /** Çözümlenmiş motor; hiç sağlayıcı yoksa null. */
+    /** Resolved engine; null if there is no provider. */
   engine: { provider: ProviderId; analysis: string; generation: string } | null
-  /** Hangi hedef modeller key ya da uygulama ile kullanılabilir. */
+    /** Which target models are usable by key or app. */
   targets: Partial<Record<ModelId, TargetAccess>>
-  /** Global kısayol işletim sistemine kaydedilebildi mi (Wayland ya da başka bir uygulama engelleyebilir). */
+    /** Whether the global shortcut could be registered with the OS (Wayland or another app may block it). */
   hotkeyOk: boolean
 }
 
 export type WindowMode = 'pill' | 'panel'
 
-/** Panel küreden açıldığında hangi köşeye yaslandığı; içerik animasyonu bu köşeden başlar. */
+/** Which corner the panel anchored to when opened from the orb; the content animation starts from this corner. */
 export interface PanelAnchor {
   h: 'left' | 'right'
   v: 'top' | 'bottom'
 }
 
-/** Küre penceresinin gösterdiği durum: ana süreç iş sayısından ve bitmiş yazımlardan hesaplar. */
+/** State the orb window shows: the main process computes it from the job count and finished generations. */
 export interface PillState {
   busy: boolean
   badge: boolean
 }
 
-/** Panelin işletim sistemine özgü görünümü (CSS bunu body[data-look] ile alır). */
+/** OS-specific look of the panel (CSS receives it via body[data-look]). */
 export type WindowLook = 'mica' | 'vibrancy' | 'solid'
 
 export type StreamEvent =

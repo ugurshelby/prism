@@ -1,5 +1,5 @@
-// Süreçler arası ve diskteki her verinin çalışma anı şemaları. Ana süreç arayüzden gelen her argümanı
-// ve userData'dan okunan her dosyayı bunlarla ayrıştırır; tip bildirimi doğrulama sayılmaz.
+// Runtime schemas for all data crossing processes and on disk. The main process parses every argument from the UI
+// and every file read from userData with these; a type annotation is not validation.
 
 import { z } from 'zod'
 import { zmsg } from './messages'
@@ -26,12 +26,12 @@ export const ReplyLanguageSchema = z.enum(['tr', 'en', 'none'])
 export const UiLanguageSchema = z.literal('en')
 export const SetupStepSchema = z.enum(['families', 'engine', 'shortcut'])
 
-/** İstek ve geçmiş kimlikleri (UUID ya da selftest gibi düz adlar). Dosya adına ya da yola girmez. */
+/** Request and history IDs (UUID or plain names like selftest). They never enter a file name or path. */
 export const IdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,100}$/, zmsg('schema.id'))
 
 /**
- * API key: yalnızca görünür ASCII, boşluksuz. Key hiçbir koşulda kırpılmaz ya da değiştirilmez;
- * kopyalanırken araya karışan boşluk ya da satır sonu, key'i bozmak yerine açık bir hatayla reddedilir.
+  * API key: visible ASCII only, no whitespace. A key is never trimmed or altered under any condition;
+  * whitespace or a line break that slips in while copying is rejected with an explicit error instead of corrupting the key.
  */
 export const ApiKeySchema = z
   .string()
@@ -39,13 +39,13 @@ export const ApiKeySchema = z
   .max(LIMITS.keyMax, zmsg('schema.keyLong'))
   .regex(/^[\x21-\x7E]+$/, zmsg('schema.keyChars'))
 
-// Vertex proje ve konumu istek adresine girer. Serbest metin olursa key Google dışındaki bir sunucuya gidebilir.
+// Vertex project and location go into the request URL. If they were free text, the key could go to a server outside Google.
 export const VertexProjectSchema = z
   .string()
   .regex(/^(|[a-z][a-z0-9-]{4,28}[a-z0-9]|\d{1,20})$/, zmsg('schema.project'))
 export const VertexLocationSchema = z.string().regex(/^[a-z][a-z0-9-]{0,38}[a-z0-9]$/, zmsg('schema.location'))
 
-/** Sağlayıcının döndürdüğü ya da ayarlarda seçilen motor model ID'si; istek adresine girer. */
+/** Engine model ID returned by the provider or chosen in settings; it goes into the request URL. */
 export const EngineModelIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:@-]{0,127}$/, zmsg('schema.model'))
 
 export const HotkeySchema = z.string().regex(/^[\x21-\x7E]{1,64}$/, zmsg('schema.hotkey'))
@@ -74,8 +74,8 @@ export const SettingsSchema = z.object({
 })
 
 /**
- * Arayüzün değiştirebildiği alanlar; bilinmeyen alan ya da sürüm alanı reddedilir.
- * Vertex proje ve konumu ayrı ayrı gönderilebilir: art arda gelen iki yama birbirinin değerini ezmesin.
+  * Fields the UI may change; an unknown field or the version field is rejected.
+  * Vertex project and location can be sent separately: two consecutive patches must not overwrite each other's value.
  */
 export const SettingsPatchSchema = SettingsSchema.omit({ version: true })
   .extend({ vertex: SettingsSchema.shape.vertex.partial().strict() })
@@ -119,8 +119,8 @@ export const ClipboardTextSchema = text(LIMITS.clipboard)
 
 // --- Diskteki dosyalar --------------------------------------------------------------
 
-// Katalogdan kaldırılmış bir modelin eski kayıtları silinmesin: diskteki model ID'si yalnızca biçimce denetlenir,
-// arayüz tanımadığı ID'yi varsayılan modelle gösterir (History.tsx → modelOf).
+// Old records of a model removed from the catalog must not be deleted: the model ID on disk is checked for format only,
+// the UI shows an ID it does not recognize with the default model (History.tsx → modelOf).
 const StoredModelIdSchema = z.custom<ModelId>((v) => typeof v === 'string' && /^[A-Za-z0-9._:@-]{1,128}$/.test(v))
 const StoredEffortSchema = z.custom<Effort>((v) => typeof v === 'string' && /^[a-z]{1,20}$/.test(v))
 
@@ -163,7 +163,7 @@ export const HistoryEntrySchema = z.object({
   createdAt: z.number(),
   updatedAt: z.number(),
   prompt: z.string(),
-  // v1 kayıtlarında kodlama ajanı yüzeyi 'claude-code' idi.
+    // In v1 records the coding agent surface was 'claude-code'.
   surface: z.preprocess((s) => (s === 'claude-code' ? 'agent' : s), SurfaceSchema),
   family: FamilyChoiceSchema.optional(),
   analysis: AnalysisSchema,
@@ -183,13 +183,13 @@ export const HistoryEntrySchema = z.object({
   )
 })
 
-// Bozuk bir konum dosyası pencereyi açılmaz hâle getirmesin: tam sayı ve makul aralık; tutmazsa varsayılan konum.
+// A corrupt position file must not make the window unopenable: integers in a sensible range; otherwise the default position.
 const coord = z.number().int().min(-100_000).max(100_000)
 const size = z.number().int().min(1).max(20_000)
 const PanelRect = z.object({ x: coord, y: coord, width: size, height: size })
 const PillPoint = z.object({ x: coord, y: coord })
 export const WindowStateSchema = z.object({
-  // Ekran başına konum (anahtar: ekran kimliği). Eski sürümün tek panel/pill alanı da okunur.
+    // Per-screen position (key: screen ID). The old version's single panel/pill field is read too.
   displays: z
     .record(z.string().regex(/^\d{1,20}$/), z.object({ panel: PanelRect.optional(), pill: PillPoint.optional() }))
     .refine((o) => Object.keys(o).length <= 16, 'en fazla 16 ekran')
@@ -198,7 +198,7 @@ export const WindowStateSchema = z.object({
   pill: PillPoint.optional()
 })
 
-/** Şema hatasını alan yollarıyla anlatır; kullanıcının girdiği değer mesaja girmez. */
+/** Describes a schema error with field paths; the value the user entered does not go into the message. */
 export function describeIssues(error: z.ZodError): string {
   return error.issues
     .slice(0, 3)

@@ -1,4 +1,4 @@
-// OpenAI ve xAI istemcisi: ikisi de Responses API (POST /v1/responses) kullanır.
+// OpenAI and xAI client: both use the Responses API (POST /v1/responses).
 
 import { z } from 'zod'
 import { msg } from '@shared/messages'
@@ -25,7 +25,7 @@ const CONF: Record<
     base: 'https://api.x.ai/v1',
     label: 'xAI',
     systemRole: 'system',
-    // Effort'u ayarlanabilen Grok modelleri; Grok Build ve 4.20 varyantları parametreyi almaz.
+    // Grok models with adjustable effort; Grok Build and the 4.20 variants do not take the parameter.
     reasoning: /^grok-4\.[3-7](?!\d)/,
     models: /^grok/,
     nonText: /(imagine|image|video|voice)/
@@ -75,10 +75,10 @@ function body(kind: Kind, call: LlmCall, stream: boolean) {
       { role: 'user', content: call.user }
     ],
     max_output_tokens: call.maxTokens ?? 32000,
-    // Prompt ve yanıt sağlayıcının tarafında saklanmasın.
+    // Do not store the prompt and response on the provider side.
     store: false,
     ...(c.reasoning.test(call.model) ? { reasoning: { effort: 'medium' } } : {}),
-    // xAI örnekleme değerlerini her istekte açıkça göndermeyi öneriyor; OpenAI reasoning'de kabul etmiyor.
+    // xAI recommends sending sampling values explicitly on every request; OpenAI reasoning does not accept them.
     ...(kind === 'xai' ? { temperature: 0.7, top_p: 0.95 } : {}),
     ...(call.schema
       ? { text: { format: { type: 'json_schema', name: 'prism_output', schema: toStrict(call.schema), strict: true } } }
@@ -97,7 +97,7 @@ function usageOf(u: z.infer<typeof UsageSchema>): Usage {
 
 function incomplete(response: Partial<ResponseBody> | undefined): LlmError {
   const reason = response?.incomplete_details?.reason
-  return new LlmError(reason === 'max_output_tokens' ? 'Yanıt token sınırında kesildi.' : `Yanıt yarım kaldı (${reason ?? 'bilinmiyor'}).`)
+  return new LlmError(reason === 'max_output_tokens' ? 'Response was cut off at the token limit.' : `Response was incomplete (${reason ?? 'unknown'}).`)
 }
 
 function textOf(response: ResponseBody): { text: string; refusal: string } {
@@ -121,7 +121,7 @@ function client(kind: Kind): ProviderClient {
     send(
       `${c.base}/responses`,
       { headers: headers(cred.key), body: body(kind, call, stream) },
-      // xAI reasoning modelleri uzun sürebilir; zaman aşımı daha geniş.
+      // xAI reasoning models can take long; the timeout is wider.
       { label: c.label, key: cred.key, signal: call.signal, timeoutMs: call.timeoutMs ?? (kind === 'xai' ? 600_000 : undefined), stream }
     )
 
@@ -155,7 +155,7 @@ function client(kind: Kind): ProviderClient {
         },
         call.signal
       )
-      if (!text.trim()) throw new LlmError(refusal ? `Model yanıtlamayı reddetti: ${refusal}` : 'Boş yanıt.')
+      if (!text.trim()) throw new LlmError(refusal ? `Model refused to answer: ${refusal}` : 'Empty response.')
       return { text, usage }
     },
 

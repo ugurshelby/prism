@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { clampToArea, panelFromPill, pillFromPanel, snapToEdges, springProgress } from './geometry'
 
-// 1920x1080 ekran, altta 40 px görev çubuğu.
+// 1920x1080 screen, 40 px taskbar at the bottom.
 const area = { x: 0, y: 0, width: 1920, height: 1040 }
 const size = { width: 440, height: 640 }
 

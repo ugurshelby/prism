@@ -8,7 +8,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-// OpenAI ve xAI aynı Responses API biçimini kullanır; yalnızca sunucu, sistem rolü ve hata gövdeleri farklıdır.
+// OpenAI and xAI use the same Responses API shape; only the host, system role and error bodies differ.
 const CASES = [
   { name: 'openai', client: openai, model: 'gpt-6.1-sol', url: 'https://api.openai.com/v1/responses', role: 'developer', auth: 'openai-error-auth.json', authStatus: 401 },
   { name: 'xai', client: xai, model: 'grok-4.7', url: 'https://api.x.ai/v1/responses', role: 'system', auth: 'grok-error-auth.json', authStatus: 400 }
@@ -17,11 +17,11 @@ const CASES = [
 describe.each(CASES)('$name', ({ client, model, url, role, auth, authStatus }) => {
   const call = { ...CALL, model }
 
-  it('istek biçimi: izinli sunucu, key yalnızca Authorization başlığında', async () => {
+  it('request shape: allowlisted host, key only in the Authorization header', async () => {
     const s = serve(() => json(fixture('openai-response.json')))
     await client.generate(call, cred)
     const req = s.seen[0]
-    if (!req) throw new Error('istek yok')
+    if (!req) throw new Error('no request')
     expect(req.url).toBe(url)
     expectSafeRequest(req)
     expect(req.headers['authorization']).toBe(`Bearer ${KEY}`)
@@ -30,21 +30,21 @@ describe.each(CASES)('$name', ({ client, model, url, role, auth, authStatus }) =
     expect(s.unexpected).toEqual([])
   })
 
-  it('normal yanıt metne ve kullanım sayılarına çevrilir', async () => {
+  it('a normal response is converted to text and usage counts', async () => {
     serve(() => json(fixture('openai-response.json')))
     const r = await client.generate(call, cred)
     expect(r.text).toBe('Merhaba, bu bir deneme yanıtıdır.')
     expect(r.usage).toEqual({ promptTokens: 90, outputTokens: 60, thoughtsTokens: 25 })
   })
 
-  it('şemalı yanıt: istek text.format.json_schema taşır', async () => {
+  it('structured response: request carries text.format.json_schema', async () => {
     const s = serve(() => json(fixture('openai-response-structured.json')))
     const r = await client.generate({ ...call, schema: SCHEMA }, cred)
     expect(JSON.parse(r.text)).toEqual({ answer: 'evet' })
     expect(sentBody(s.seen[0])).toMatchObject({ text: { format: { type: 'json_schema', strict: true } } })
   })
 
-  it('key reddi auth olarak işaretlenir ve yeniden denenmez', async () => {
+  it('key rejection is marked auth and not retried', async () => {
     const s = serve(() => json(fixture(auth), authStatus))
     const err = await failure(client.generate(call, cred))
     expect(err.kind).toBe('auth')
@@ -52,12 +52,12 @@ describe.each(CASES)('$name', ({ client, model, url, role, auth, authStatus }) =
     expectNoKey(err)
   })
 
-  it('hata gövdesi key yankılasa da mesaja sızmaz', async () => {
+  it('an error body echoing the key does not leak into the message', async () => {
     serve(() => json({ error: { message: `Incorrect API key provided: ${KEY}` } }, 401))
     expectNoKey(await failure(client.generate(call, cred)))
   })
 
-  it('429 en fazla 3 denemeyle yeniden denenir, sonunda quota hatası verir', async () => {
+  it('429 is retried up to 3 attempts, then throws a quota error', async () => {
     const s = serve(() => json(fixture('openai-error-rate-limit.json'), 429, quick))
     const err = await failure(client.generate(call, cred))
     expect(err.kind).toBe('quota')
@@ -65,21 +65,21 @@ describe.each(CASES)('$name', ({ client, model, url, role, auth, authStatus }) =
     expectNoKey(err)
   })
 
-  it('bozuk gövde çökmez, tipli hata verir', async () => {
+  it('a malformed body does not crash, it throws a typed error', async () => {
     serve(() => json(fixture('openai-malformed.json')))
     await failure(client.generate(call, cred))
-    serve(() => new Response('<html>vekil sayfası</html>'))
+    serve(() => new Response('<html>proxy page</html>'))
     await failure(client.generate(call, cred))
   })
 
-  it('yarım kalan ve başarısız yanıtlar hata olur', async () => {
+  it('incomplete and failed responses are errors', async () => {
     serve(() => json({ ...fixture('openai-response.json'), status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' } }))
     await failure(client.generate(call, cred))
-    serve(() => json({ ...fixture('openai-response.json'), status: 'failed', error: { message: `kırıldı ${KEY}` } }))
+    serve(() => json({ ...fixture('openai-response.json'), status: 'failed', error: { message: `broke ${KEY}` } }))
     expectNoKey(await failure(client.generate(call, cred)))
   })
 
-  it('akış: parçalar sırayla gelir, son metin ve kullanım doğrudur', async () => {
+  it('stream: chunks arrive in order, final text and usage are correct', async () => {
     const s = serve(() => sse(eventsOf('openai-stream.json')))
     const chunks: string[] = []
     const r = await client.stream(call, cred, (c) => chunks.push(c))
@@ -89,37 +89,37 @@ describe.each(CASES)('$name', ({ client, model, url, role, auth, authStatus }) =
     expect(sentBody(s.seen[0])).toMatchObject({ stream: true })
   })
 
-  it('akış içindeki hata olayı key içermeyen tipli hataya dönüşür', async () => {
-    serve(() => sse([{ event: 'error', data: { type: 'error', message: `meşgul ${KEY}` } }]))
+  it('an error event in the stream becomes a typed error without the key', async () => {
+    serve(() => sse([{ event: 'error', data: { type: 'error', message: `busy ${KEY}` } }]))
     expectNoKey(await failure(client.stream(call, cred, () => undefined)))
   })
 })
 
 describe('discover', () => {
-  it('openai: yalnızca metin modelleri, yeniden eskiye sıralı', async () => {
+  it('openai: text models only, sorted newest to oldest', async () => {
     const s = serve(() => json(fixture('openai-models.json')))
     expect(await openai.discover(cred)).toEqual([{ id: 'gpt-6.1-sol' }, { id: 'gpt-6-luna' }])
     const req = s.seen[0]
-    if (!req) throw new Error('istek yok')
+    if (!req) throw new Error('no request')
     expect(req.url).toBe('https://api.openai.com/v1/models')
     expect(req.method).toBe('GET')
     expectSafeRequest(req)
   })
 
-  it('xai: grok modelleri, görüntü ve yabancı modeller elenir', async () => {
+  it('xai: grok models, image and foreign models are dropped', async () => {
     const s = serve(() => json(fixture('grok-models.json')))
     expect(await xai.discover(cred)).toEqual([{ id: 'grok-4.7' }, { id: 'grok-4.3' }])
     expect(s.seen[0]?.url).toBe('https://api.x.ai/v1/models')
   })
 
-  it('geçersiz key auth hatası verir', async () => {
+  it('an invalid key throws an auth error', async () => {
     serve(() => json(fixture('openai-error-auth.json'), 401))
     expect((await failure(openai.discover(cred))).kind).toBe('auth')
   })
 })
 
-describe('fetch taklidi', () => {
-  it('bilinmeyen adrese giden istek kayda geçer ve reddedilir', async () => {
+describe('fetch mock', () => {
+  it('a request to an unknown URL is recorded and rejected', async () => {
     const s = serve(() => undefined)
     const err = await failure(openai.generate({ ...CALL, model: 'gpt-6.1-sol' }, cred))
     expect(s.unexpected).toEqual(['https://api.openai.com/v1/responses'])

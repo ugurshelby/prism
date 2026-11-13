@@ -1,9 +1,9 @@
-// Ayar dosyasının sürümleri ve göçü. Saf modül: dosya okuma/yazma, yedek ve .env config.ts'te.
+// Settings file versions and migration. Pure module: file read/write, backups and .env are in config.ts.
 //
-// Kurallar (ROADMAP "Kurulum, güncelleme"):
-// - Her sürüm bir öncekinden adım adım taşınır; göçten önce config.ts `settings.vN.json` yedeğini alır.
-// - Tanınmayan alanlar atılmaz, yazımda geri konur: daha yeni bir sürümün eklediği alanlar eski sürümde kaybolmaz.
-// - Daha yeni bir sürümün dosyası eski sürüme indirilmez: sürüm numarası korunur, bilinen alanlar okunur.
+// Rules (ROADMAP "Kurulum, güncelleme"):
+// - Each version is migrated from the previous one step by step; before a migration config.ts takes a `settings.vN.json` backup.
+// - Unrecognized fields are not dropped but put back on write: fields added by a newer version are not lost in an older version.
+// - A file from a newer version is not downgraded: the version number is kept, known fields are read.
 import type { z } from 'zod'
 import { FAMILIES, type Family } from './catalog'
 import type { ProductInfo } from './product'
@@ -40,7 +40,7 @@ export function settingsDefaults(product: ProductInfo): Settings {
 
 type Raw = Record<string, unknown>
 
-/** v1 (yalnızca Claude hedefi + Vertex motoru) → v2. Mevcut kullanıcının akışı Claude'da kalır. */
+/** v1 (Claude target only + Vertex engine) → v2. The existing user's flow stays on Claude. */
 function v1to2(raw: Raw): Raw {
   const { analysisModel, generationModel, defaultSurface, ...rest } = raw
   const model = (v: unknown) => (typeof v === 'string' && v ? v : 'gemini-4-argon')
@@ -56,9 +56,9 @@ function v1to2(raw: Raw): Raw {
 }
 
 /**
- * v2 → v3: aile seçimi, arayüz dili ve kurulum durumu eklenir. 2.x kullanıcısı Türkçe arayüzle çalışıyordu ve
- * kurulumu geçmişti; arayüzü aynı kalır. Çok aileli üründe bütün aileler seçili gelir (2.x davranışı);
- * tek aileli üründe varsayılan aile, o da yoksa Claude seçilir.
+  * v2 → v3: adds family selection, UI language and setup state. The 2.x user worked with the Turkish UI and
+  * had completed setup; their UI stays the same. In a multi-family product all families come selected (2.x behavior);
+  * in a single-family product the default family, and Claude if there is none.
  */
 function v2to3(raw: Raw, product: ProductInfo): Raw {
   const def = isFamily(raw.defaultFamily) ? raw.defaultFamily : null
@@ -78,19 +78,19 @@ const KNOWN = new Set(Object.keys(SettingsSchema.shape))
 
 export interface LoadedSettings {
   settings: Settings
-  /** Dosyadaki sürüm (dosya yoksa null). */
+    /** The version in the file (null if there is no file). */
   from: number | null
-  /** Bu sürümün tanımadığı alanlar; yazımda geri konur. */
+    /** Fields this version does not recognize; put back on write. */
   extras: Raw
-  /** Dosya bu uygulamadan daha yeni bir sürümle yazılmış. */
+    /** The file was written by a version newer than this app. */
   newer: boolean
-  /** Varsayılana dönen geçersiz alanların adları (değerleri değil). */
+    /** Names (not values) of invalid fields that fell back to the default. */
   invalid: string[]
-  /** Daha yeni sürümün yazdığı ama bu sürümün okuyamadığı bilinen alanların ham değerleri; değişmedikçe diske aynen geri yazılır. */
+    /** Raw values of known fields that a newer version wrote but this version cannot read; written back to disk unchanged until modified. */
   shadow: Raw
 }
 
-/** Alan alan doğrulama: tek bir bozuk alan bütün ayarları sıfırlamasın. */
+/** Field-by-field validation: one corrupt field must not reset all settings. */
 function sanitize(raw: Raw, product: ProductInfo, invalid: string[]): Settings {
   const d = settingsDefaults(product)
   const s = SettingsSchema.shape
@@ -125,7 +125,7 @@ function sanitize(raw: Raw, product: ProductInfo, invalid: string[]): Settings {
   return conform(out, product, invalid)
 }
 
-/** Ürün kuralları: aile sayısı ürüne uymalı, varsayılan aile seçili ailelerden biri (ya da çok aileli üründe 'auto'). */
+/** Product rules: the number of families must fit the product, the default family is one of the selected families (or 'auto' in a multi-family product). */
 export function conform(s: Settings, product: ProductInfo, invalid: string[] = []): Settings {
   const d = settingsDefaults(product)
   let families = [...new Set(s.families)]
@@ -139,11 +139,11 @@ export function conform(s: Settings, product: ProductInfo, invalid: string[] = [
   return { ...s, families, defaultFamily }
 }
 
-// Okunamayan ayar gizliliği sessizce açmasın: geçmiş kaydı ve ağdaki güncelleme denetimi kapalı, içerik koruması açık
-// başlar. Kullanıcı bunları ayarlardan yeniden açabilir.
+// An unreadable setting must not silently turn privacy off: history saving and the network update check start off, content protection
+// starts on. The user can turn them back on in settings.
 const PRIVACY_CLOSED = { saveHistory: false, updateCheck: false, contentProtection: true } as const
 
-/** Bozuk dosyada ya da geçersiz alanda gizlilik ayarlarını kapalı değerlere çeker. */
+/** On a corrupt file or invalid field, privacy settings are pulled to the closed values. */
 export function failClosed(s: Settings, invalid: readonly string[], corrupt: boolean): Settings {
   const closed = (key: keyof typeof PRIVACY_CLOSED) => corrupt || invalid.includes(key)
   return {
@@ -157,8 +157,8 @@ export function failClosed(s: Settings, invalid: readonly string[], corrupt: boo
 export function loadSettings(raw: unknown, product: ProductInfo): LoadedSettings {
   const invalid: string[] = []
   if (raw === null) return { settings: settingsDefaults(product), from: null, extras: {}, newer: false, invalid, shadow: {} }
-  if (!isRecord(raw)) return { settings: failClosed(settingsDefaults(product), [], true), from: null, extras: {}, newer: false, invalid: ['(dosya)'], shadow: {} }
-  // Geçersiz sürüm numarası 1 sayılır. Çok büyük numara da "daha yeni" demektir; göç döngüsü SETTINGS_VERSION ile sınırlıdır.
+  if (!isRecord(raw)) return { settings: failClosed(settingsDefaults(product), [], true), from: null, extras: {}, newer: false, invalid: ['(file)'], shadow: {} }
+    // An invalid version number counts as 1. A very large number also means "newer"; the migration loop is bounded by SETTINGS_VERSION.
   const ver = raw.version
   const from = typeof ver === 'number' && Number.isInteger(ver) && ver >= 1 && ver <= 1_000_000 ? ver : 1
   const newer = from > SETTINGS_VERSION
@@ -171,8 +171,8 @@ export function loadSettings(raw: unknown, product: ProductInfo): LoadedSettings
   // The removed language step of an unfinished older setup continues at the first remaining step.
   if (isRecord(cur.setup) && cur.setup.step === 'language') cur = { ...cur, setup: { ...cur.setup, step: 'families' } }
   const settings = failClosed(sanitize({ ...cur, version: newer ? from : SETTINGS_VERSION }, product, invalid), invalid, false)
-  // Yeni sürümün yazdığı bir alanı bu sürüm okuyamadı ya da ürün kuralıyla değiştirdiyse değer kaybolmasın:
-  // yalnızca daha yeni dosyada, ham hâli saklanır.
+    // So a field written by a newer version is not lost when this version cannot read it or changed it by a product rule:
+    // its raw form is kept, only for a newer file.
   const view: Raw = { ...settings }
   const shadow: Raw = newer
     ? Object.fromEntries([...KNOWN].filter((k) => k !== 'version' && cur[k] !== undefined && stable(cur[k]) !== stable(view[k])).map((k) => [k, cur[k]]))
@@ -181,8 +181,8 @@ export function loadSettings(raw: unknown, product: ProductInfo): LoadedSettings
 }
 
 /**
- * Diske yazılacak nesne: tanınmayan alanlar geri konur, bilinen alanlar bu sürümün değeridir. `preserved` verilirse,
- * daha yeni dosyadan okunamayan bir alan kullanıcı değiştirmediği sürece (yükleme anındaki değerle aynıysa) ham hâliyle yazılır.
+  * The object to write to disk: unrecognized fields are put back, known fields hold this version's value. If `preserved` is given,
+  * a field unreadable from the newer file is written in its raw form unless the user changed it (it equals the value at load time).
  */
 export function serializeSettings(settings: Settings, extras: Raw, preserved?: { shadow: Raw; base: Settings }): Raw {
   const out: Raw = { ...extras, ...settings }
@@ -192,7 +192,7 @@ export function serializeSettings(settings: Settings, extras: Raw, preserved?: {
   return out
 }
 
-/** Anahtar sırasından bağımsız JSON: eşitlik karşılaştırması nesne sırasına takılmasın. */
+/** JSON independent of key order: the equality comparison must not trip on object order. */
 function stable(v: unknown): string {
   if (Array.isArray(v)) return `[${v.map(stable).join(',')}]`
   if (isRecord(v)) return `{${Object.keys(v).toSorted().map((k) => `${JSON.stringify(k)}:${stable(v[k])}`).join(',')}}`

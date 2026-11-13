@@ -8,7 +8,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-// AI Studio ve Vertex aynı generateContent gövdesini kullanır; uç nokta farklıdır.
+// AI Studio and Vertex use the same generateContent body; the endpoint differs.
 const CASES = [
   { name: 'gemini (AI Studio)', client: aiStudio, base: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash' },
   { name: 'vertex', client: vertex, base: 'https://aiplatform.googleapis.com/v1/projects/fake-project/locations/global/publishers/google/models/gemini-3.8-flash' }
@@ -17,11 +17,11 @@ const CASES = [
 describe.each(CASES)('$name', ({ client, base }) => {
   const call = { ...CALL, model: 'gemini-3.8-flash' }
 
-  it('istek biçimi: izinli sunucu, key yalnızca x-goog-api-key başlığında', async () => {
+  it('request shape: allowlisted host, key only in the x-goog-api-key header', async () => {
     const s = serve(() => json(fixture('google-generate.json')))
     await client.generate(call, cred)
     const req = s.seen[0]
-    if (!req) throw new Error('istek yok')
+    if (!req) throw new Error('no request')
     expect(req.url).toBe(`${base}:generateContent`)
     expectSafeRequest(req)
     expect(req.headers['x-goog-api-key']).toBe(KEY)
@@ -29,21 +29,21 @@ describe.each(CASES)('$name', ({ client, base }) => {
     expect(s.unexpected).toEqual([])
   })
 
-  it('normal yanıt: düşünce parçası atılır, metin ve kullanım doğrudur', async () => {
+  it('a normal response: the thought part is dropped, text and usage are correct', async () => {
     serve(() => json(fixture('google-generate.json')))
     const r = await client.generate(call, cred)
     expect(r.text).toBe('Merhaba, bu bir deneme yanıtıdır.')
     expect(r.usage).toEqual({ promptTokens: 64, outputTokens: 21, thoughtsTokens: 8 })
   })
 
-  it('şemalı yanıt: istek responseSchema ve JSON mime türü taşır', async () => {
+  it('structured response: request carries responseSchema and the JSON mime type', async () => {
     const s = serve(() => json(fixture('google-generate-structured.json')))
     const r = await client.generate({ ...call, schema: SCHEMA }, cred)
     expect(JSON.parse(r.text)).toEqual({ answer: 'evet' })
     expect(sentBody(s.seen[0])).toMatchObject({ generationConfig: { responseMimeType: 'application/json', responseSchema: { type: 'OBJECT' } } })
   })
 
-  it('400 API_KEY_INVALID auth olarak işaretlenir ve yeniden denenmez', async () => {
+  it('400 API_KEY_INVALID is marked auth and not retried', async () => {
     const s = serve(() => json(fixture('google-error-auth.json'), 400))
     const err = await failure(client.generate(call, cred))
     expect(err.kind).toBe('auth')
@@ -51,12 +51,12 @@ describe.each(CASES)('$name', ({ client, base }) => {
     expectNoKey(err)
   })
 
-  it('hata gövdesi key yankılasa da mesaja sızmaz', async () => {
+  it('an error body echoing the key does not leak into the message', async () => {
     serve(() => json({ error: { code: 403, message: `denied ${KEY}`, status: 'PERMISSION_DENIED' } }, 403))
     expectNoKey(await failure(client.generate(call, cred)))
   })
 
-  it('429 en fazla 3 denemeyle yeniden denenir, sonunda quota hatası verir', async () => {
+  it('429 is retried up to 3 attempts, then throws a quota error', async () => {
     const s = serve(() => json(fixture('google-error-rate-limit.json'), 429, quick))
     const err = await failure(client.generate(call, cred))
     expect(err.kind).toBe('quota')
@@ -64,24 +64,24 @@ describe.each(CASES)('$name', ({ client, base }) => {
     expectNoKey(err)
   })
 
-  it('404 not_found olarak işaretlenir', async () => {
+  it('404 is marked not_found', async () => {
     serve(() => json(fixture('google-error-not-found.json'), 404))
     expect((await failure(client.generate(call, cred))).kind).toBe('not_found')
   })
 
-  it('bozuk gövde çökmez, tipli hata verir', async () => {
+  it('a malformed body does not crash, it throws a typed error', async () => {
     serve(() => json(fixture('google-malformed.json')))
     await failure(client.generate(call, cred))
-    serve(() => new Response('<html>vekil sayfası</html>'))
+    serve(() => new Response('<html>proxy page</html>'))
     await failure(client.generate(call, cred))
   })
 
-  it('token sınırında kesilen yanıt hata olur', async () => {
-    serve(() => json({ candidates: [{ content: { parts: [{ text: 'yarım' }] }, finishReason: 'MAX_TOKENS' }] }))
+  it('a response cut off at the token limit is an error', async () => {
+    serve(() => json({ candidates: [{ content: { parts: [{ text: 'partial' }] }, finishReason: 'MAX_TOKENS' }] }))
     await failure(client.generate(call, cred))
   })
 
-  it('akış: parçalar sırayla gelir, son metin ve kullanım doğrudur', async () => {
+  it('stream: chunks arrive in order, final text and usage are correct', async () => {
     const s = serve(() => sse(eventsOf('google-stream.json')))
     const chunks: string[] = []
     const r = await client.stream(call, cred, (c) => chunks.push(c))
@@ -93,33 +93,33 @@ describe.each(CASES)('$name', ({ client, base }) => {
 })
 
 describe('gemini (AI Studio): discover', () => {
-  it('yalnızca generateContent destekleyen metin modelleri listelenir', async () => {
+  it('only text models that support generateContent are listed', async () => {
     const s = serve(() => json(fixture('google-models.json')))
     expect(await aiStudio.discover(cred)).toEqual([{ id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' }])
     const req = s.seen[0]
-    if (!req) throw new Error('istek yok')
+    if (!req) throw new Error('no request')
     expect(req.url.startsWith('https://generativelanguage.googleapis.com/v1beta/models')).toBe(true)
     expect(req.method).toBe('GET')
     expectSafeRequest(req)
   })
 
-  it('geçersiz key auth hatası verir', async () => {
+  it('an invalid key throws an auth error', async () => {
     serve(() => json(fixture('google-error-auth.json'), 400))
     expect((await failure(aiStudio.discover(cred))).kind).toBe('auth')
   })
 })
 
-describe('vertex: uç noktalar ve keşif', () => {
-  it('bölgesel konum izinli bölgesel sunucuya gider', async () => {
+describe('vertex: endpoints and discovery', () => {
+  it('a regional location goes to the allowlisted regional host', async () => {
     const s = serve(() => json(fixture('google-generate.json')))
     await vertex.generate({ ...CALL, model: 'gemini-3.8-flash' }, { ...cred, location: 'us-central1' })
     const req = s.seen[0]
-    if (!req) throw new Error('istek yok')
+    if (!req) throw new Error('no request')
     expect(req.url.startsWith('https://us-central1-aiplatform.googleapis.com/v1/projects/fake-project/locations/us-central1/')).toBe(true)
     expectSafeRequest(req)
   })
 
-  it('model başına yoklar: var olan modeller bulunur, 404 elenir, 429 var sayılır', async () => {
+  it('per-model probes: existing models are found, 404 is dropped, 429 counts as present', async () => {
     const s = serve((url) => {
       if (url.includes('/models/gemini-4-argon:')) return json(fixture('google-generate.json'))
       if (url.includes('/models/gemini-3.8-flash:')) return json(fixture('google-error-rate-limit.json'), 429)
@@ -133,14 +133,14 @@ describe('vertex: uç noktalar ve keşif', () => {
     expect(s.unexpected).toEqual([])
   })
 
-  it('key reddi keşfi durdurur ve key sızdırmaz', async () => {
+  it('key rejection stops discovery and does not leak the key', async () => {
     serve(() => json({ error: { code: 400, message: `API key not valid ${KEY}`, status: 'INVALID_ARGUMENT', details: [{ reason: 'API_KEY_INVALID' }] } }, 400))
     const err = await failure(vertex.discover(cred))
     expect(err.kind).toBe('auth')
     expectNoKey(err)
   })
 
-  it('proje yoksa hiç istek göndermeden hata verir', async () => {
+  it('with no project it throws without sending any request', async () => {
     const s = serve(() => undefined)
     await failure(vertex.discover({ key: KEY }))
     expect(s.seen).toHaveLength(0)

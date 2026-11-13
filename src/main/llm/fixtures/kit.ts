@@ -1,5 +1,5 @@
-// Sağlayıcı istemci testleri için ortak yardımcılar: fixture okuma, ağsız fetch taklidi, hata yakalama.
-// Yalnızca testler içe aktarır; üretim koduna girmez.
+// Shared helpers for provider client tests: fixture loading, network-free fetch mock, error capture.
+// Imported by tests only; never enters production code.
 import { expect, vi } from 'vitest'
 import { z } from 'zod'
 import { assertProviderUrl } from '../http'
@@ -58,10 +58,10 @@ const FIXTURES: Record<string, unknown> = {
 
 const EventsSchema = z.array(z.object({ event: z.string().optional(), data: z.unknown() }))
 
-/** Gerçek bir key biçiminde değil; testlerin sızıntı denetimi için ayırt edilebilir sahte değer. */
+/** Not a real key format; a distinguishable fake value so tests can check for leaks. */
 export const KEY = 'Fake_Test_Value_For_Provider_0123456789'
 
-/** Dosya adından fixture gövdesi; adlar statik içe aktarılır, çalışma zamanında dosya yolu kurulmaz. */
+/** Fixture body by file name; names are statically imported, no file path is built at runtime. */
 export const fixture = (name: string): Record<string, unknown> => z.record(z.string(), z.unknown()).parse(FIXTURES[name])
 
 export const eventsOf = (name: string) => EventsSchema.parse(fixture(name).events)
@@ -75,8 +75,8 @@ export interface Seen {
 }
 
 /**
- * Genel fetch'i taklit eder. İşleyici bir yanıt döndürmezse (bilinmeyen adres) istek `unexpected` listesine yazılır
- * ve fetch hata fırlatır: hiçbir istek gerçek ağa çıkamaz.
+ * Mocks the global fetch. If the handler returns no response (unknown URL), the request is recorded in the `unexpected` list
+ * and fetch throws: no request can reach the real network.
  */
 export function serve(handler: (url: string, req: Seen) => Response | undefined) {
   const seen: Seen[] = []
@@ -88,7 +88,7 @@ export function serve(handler: (url: string, req: Seen) => Response | undefined)
       const req: Seen = {
         url: u,
         method: init.method ?? 'GET',
-        // Başlık adları küçük harfe indirilir.
+        // Header names are lowercased.
         headers: Object.fromEntries(new Headers(init.headers)),
         body: typeof init.body === 'string' ? init.body : '',
         redirect: init.redirect ?? ''
@@ -97,7 +97,7 @@ export function serve(handler: (url: string, req: Seen) => Response | undefined)
       const res = handler(u, req)
       if (!res) {
         unexpected.push(u)
-        return Promise.reject(new Error(`beklenmeyen istek: ${u}`))
+        return Promise.reject(new Error(`unexpected request: ${u}`))
       }
       return Promise.resolve(res)
     })
@@ -105,15 +105,15 @@ export function serve(handler: (url: string, req: Seen) => Response | undefined)
   return { seen, unexpected }
 }
 
-/** Gönderilen JSON gövdesi; biçim `toMatchObject` ile denetlenir. */
+/** The JSON body that was sent; its shape is checked with `toMatchObject`. */
 export const sentBody = (req: Seen | undefined): unknown => JSON.parse(req?.body ?? 'null')
 
 export const json = (body: unknown, status = 200, headers: Record<string, string> = {}) => Response.json(body, { status, headers })
 
-/** 429 yeniden denemesi testi hızlı bitsin diye 1 ms bekletir (Retry-After pozitif ve küçük). */
+/** Waits 1 ms so the 429 retry test finishes fast (Retry-After is positive and small). */
 export const quick = { 'retry-after': '0.001' }
 
-/** `{ event?, data }` listesinden SSE akışı üretir. */
+/** Builds an SSE stream from a list of `{ event?, data }`. */
 export function sse(events: { event?: string; data: unknown }[]): Response {
   const text = events.map((e) => `${e.event ? `event: ${e.event}\n` : ''}data: ${JSON.stringify(e.data)}\n\n`).join('')
   return new Response(text, { headers: { 'content-type': 'text/event-stream' } })
@@ -128,12 +128,12 @@ export async function failure(p: Promise<unknown>): Promise<LlmError> {
   return err
 }
 
-/** Hata mesajı, yığın ve alanların hiçbir yerinde key geçmemeli. */
+/** The key must not appear anywhere in the error message, stack or fields. */
 export const expectNoKey = (err: LlmError) => {
   expect(JSON.stringify([err.message, err.stack, err.status, err.kind])).not.toContain(KEY)
 }
 
-/** İstek izinli bir https sunucusuna gider; key adreste ve gövdede yoktur; yönlendirme kapalıdır. */
+/** The request goes to an allowlisted https host; the key is absent from URL and body; redirects are off. */
 export function expectSafeRequest(req: Seen) {
   expect(() => assertProviderUrl(req.url)).not.toThrow()
   expect(req.url).not.toContain(KEY)
@@ -141,8 +141,8 @@ export function expectSafeRequest(req: Seen) {
   expect(req.redirect).toBe('error')
 }
 
-/** Anahtarı taşıyan başlıklar: key yalnızca belgelenen tek başlıkta olmalı. */
+/** Headers carrying the key: the key must appear only in the single documented header. */
 export const keyHeaders = (req: Seen): string[] => Object.entries(req.headers).flatMap(([k, v]) => (v.includes(KEY) ? [k] : []))
 
 export const SCHEMA = { type: 'object', properties: { answer: { type: 'string' } }, required: ['answer'] }
-export const CALL = { system: 'Sistem talimatı', user: 'Kullanıcı metni' }
+export const CALL = { system: 'System instruction', user: 'User text' }

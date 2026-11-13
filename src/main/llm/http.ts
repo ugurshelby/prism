@@ -1,5 +1,5 @@
-// Tüm sağlayıcılar için ortak HTTPS + SSE yardımcıları. Key yalnızca başlıkta ve yalnızca izinli sağlayıcı
-// sunucularına gider; hata metinlerinden ayıklanır. Yanıt gövdeleri çağıran tarafta şemayla ayrıştırılır.
+// Shared HTTPS + SSE helpers for all providers. The key goes only in a header and only to allowlisted provider
+// hosts; it is scrubbed from error text. Response bodies are parsed with a schema by the caller.
 
 import { z } from 'zod'
 import { msg } from '@shared/messages'
@@ -11,17 +11,17 @@ export interface SendOptions {
   key: string
   signal?: AbortSignal
   timeoutMs?: number
-  /** Toplam deneme sayısı (429 / 5xx için). */
+  /** Total number of attempts (for 429 / 5xx). */
   attempts?: number
-  /** Akış yanıtı: zaman aşımı yalnızca başlıklara uygulanır, gövdeyi readSse'nin boşta kalma süresi denetler. */
+  /** Streaming response: the timeout applies to the headers only; readSse's idle timeout guards the body. */
   stream?: boolean
 }
 
-// Key taşıyan istekler yalnızca bu sunuculara gidebilir. Vertex bölgesel uç noktaları <bölge>-aiplatform.googleapis.com biçimindedir.
+// Requests carrying a key may only go to these hosts. Vertex regional endpoints look like <region>-aiplatform.googleapis.com.
 const HOSTS = new Set(['api.anthropic.com', 'api.openai.com', 'api.x.ai', 'generativelanguage.googleapis.com', 'aiplatform.googleapis.com'])
 const VERTEX_REGIONAL = /^[a-z0-9-]{2,40}-aiplatform\.googleapis\.com$/
 
-/** Adres https değilse ya da izinli bir sağlayıcı sunucusu değilse istek hiç gönderilmez. */
+/** If the URL is not https or not an allowlisted provider host, the request is never sent. */
 export function assertProviderUrl(raw: string): URL {
   let url: URL
   try {
@@ -50,7 +50,7 @@ const ErrorBodySchema = z.object({
   detail: z.string().optional()
 })
 
-/** Google hata gövdesindeki yapısal nedenler (ör. API_KEY_INVALID); metin değişse de key reddi tanınsın. */
+/** Structured reasons in Google error bodies (e.g. API_KEY_INVALID); key rejection is recognized even if the text changes. */
 function errorReasons(data: unknown): string[] {
   const parsed = ErrorBodySchema.safeParse(data)
   const err = parsed.success ? parsed.data.error : undefined
@@ -66,7 +66,7 @@ function errorMessage(data: unknown): string | undefined {
 
 function errorKind(status: number, message: string, reasons: string[] = []): LlmErrorKind {
   if (status === 404) return 'not_found'
-  // Google AI Studio, Vertex ve xAI geçersiz key'e 401 yerine 400 döndürür.
+  // Google AI Studio, Vertex and xAI return 400 instead of 401 for an invalid key.
   if (reasons.some((r) => r.startsWith('API_KEY_'))) return 'auth'
   if (status === 401 || status === 403 || (status === 400 && /api[ _-]?key/i.test(message))) return 'auth'
   if (status === 429) return 'quota'
@@ -81,12 +81,12 @@ function friendly(label: string, status: number, message: string, kind: LlmError
 }
 
 const MAX_ERROR_MESSAGE = 500
-/** Akış sırasında bu kadar süre hiç veri gelmezse bağlantı kopmuş sayılır. */
+/** If no data arrives for this long during a stream, the connection is considered dropped. */
 const STREAM_IDLE_MS = 120_000
-/** Satır sonu gelmeden biriken akış verisinin üst sınırı; aşılırsa yanıt bozuk sayılır. */
+/** Upper bound on buffered stream data without a line break; the response is treated as corrupt if exceeded. */
 const MAX_SSE_LINE = 1 << 20
 
-/** İptal edilebilir bekleme: kullanıcı iptal ederse tekrar denemeyi beklemeden durur. */
+/** Abortable wait: if the user cancels, it stops without waiting out the retry. */
 function sleep(ms: number, signal?: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     if (signal?.aborted) return reject(new LlmError(msg('err.cancelled')))
@@ -102,7 +102,7 @@ function sleep(ms: number, signal?: AbortSignal) {
   })
 }
 
-/** Retry-After saniye ya da tarih olabilir; makul olmayan değer yok sayılır (en fazla 30 sn beklenir). */
+/** Retry-After may be seconds or a date; unreasonable values are ignored (waits at most 30 s). */
 function retryDelay(res: Response, attempt: number): number {
   const header = res.headers.get('retry-after')
   const seconds = header === null ? NaN : Number(header)
@@ -119,8 +119,8 @@ export async function send(
   const target = assertProviderUrl(url)
   const attempts = o.attempts ?? 3
   for (let attempt = 0; attempt < attempts; attempt++) {
-    // Akışta zaman aşımı yalnızca başlıklar gelene kadar geçerlidir; uzun ama akmaya devam eden yazım kesilmez.
-    // Akışsız yanıtta gövde de aynı süreye tabidir: başlığı gönderip gövdede takılan sunucu isteği sonsuza asmasın.
+    // For streams the timeout applies only until the headers arrive; a long but still flowing write is not cut off.
+    // For non-streaming responses the body is subject to the same limit: a server that sends headers and stalls on the body must not hang the request forever.
     const timeout = new AbortController()
     const timer = setTimeout(() => timeout.abort(), o.timeoutMs ?? 240_000)
     const signals = [timeout.signal]
@@ -131,7 +131,7 @@ export async function send(
         method: init.method ?? 'POST',
         headers: init.headers,
         body: init.body === undefined ? undefined : JSON.stringify(init.body),
-        // Yönlendirme key'i başka bir sunucuya taşıyabilir; sağlayıcı API'leri yönlendirme yapmaz.
+        // A redirect could carry the key to another host; provider APIs do not redirect.
         redirect: 'error',
         signal: AbortSignal.any(signals)
       })
@@ -149,7 +149,7 @@ export async function send(
       continue
     }
     if (!res.ok) {
-      // Hata gövdesi JSON olmayabilir (ör. vekil sunucu sayfası); o durumda durum metni kullanılır.
+      // The error body may not be JSON (e.g. a proxy page); the status text is used then.
       const data: unknown = await res.json().catch(() => null)
       const message = redact(errorMessage(data) ?? res.statusText, o.key).slice(0, MAX_ERROR_MESSAGE)
       const kind = errorKind(res.status, message, errorReasons(data))
@@ -160,7 +160,7 @@ export async function send(
   throw new LlmError(msg('err.retriesExhausted', { label: o.label }))
 }
 
-/** Yanıt gövdesini şemayla ayrıştırır; beklenmeyen biçim açık bir hataya dönüşür. */
+/** Parses the response body with a schema; an unexpected shape becomes an explicit error. */
 export async function readJson<S extends z.ZodType>(res: Response, schema: S, label: string): Promise<z.infer<S>> {
   let data: unknown
   try {
@@ -174,7 +174,7 @@ export async function readJson<S extends z.ZodType>(res: Response, schema: S, la
   return parsed.data
 }
 
-/** `data:` satırlarını şemadan geçirip sırayla iletir; şemaya uymayan olay atlanır. */
+/** Passes `data:` lines through the schema and forwards them in order; events that do not match the schema are skipped. */
 export async function readSse<S extends z.ZodType>(res: Response, schema: S, onData: (data: z.infer<S>) => void, signal?: AbortSignal) {
   if (!res.body) throw new LlmError(msg('err.noBody'))
   const reader: ReadableStreamDefaultReader<Uint8Array> = res.body.getReader()
@@ -191,7 +191,7 @@ export async function readSse<S extends z.ZodType>(res: Response, schema: S, onD
       throw new LlmError(msg('err.badStreamJson'))
     }
     const parsed = schema.safeParse(json)
-    // Sağlayıcılar yeni olay türleri ekleyebilir; tanınmayan olay akışı bozmaz.
+    // Providers may add new event types; an unrecognized event does not break the stream.
     if (parsed.success) onData(parsed.data)
   }
   let idle: ReturnType<typeof setTimeout> | undefined
@@ -215,11 +215,11 @@ export async function readSse<S extends z.ZodType>(res: Response, schema: S, onD
     }
     if (buffer) handle(buffer)
   } catch (e) {
-    // Hata hangi yoldan gelirse gelsin bağlantı kapatılır; sağlayıcı boşuna üretmeye (ve ücret yazmaya) devam etmesin.
-    reader.cancel().catch((err: unknown) => logWarn('llm', 'akış kapatılamadı', err))
+    // Whatever path the error takes, the connection is closed so the provider does not keep generating (and billing).
+    reader.cancel().catch((err: unknown) => logWarn('llm', 'could not close stream', err))
     if (signal?.aborted) throw new LlmError(msg('err.cancelled'))
     if (e instanceof LlmError) throw e
-    // Akış okunurken bağlantı koptu: ham DOMException/TypeError arayüze gitmez.
+    // The connection dropped while reading the stream: raw DOMException/TypeError never reach the UI.
     throw new LlmError(msg('err.streamBroken', { detail: e instanceof Error ? e.message : msg('err.unknown') }))
   } finally {
     clearTimeout(idle)

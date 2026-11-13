@@ -22,10 +22,10 @@ describe('parseCard', () => {
 
   it('flags unsourced claims, unknown and unlisted sources', () => {
     const p = parseCard(card('- bare claim\n- [s:zzz] x', 'kind: model\nverified: 2026-11-08\nsources: a, nope'), registry)
-    expect(p.issues.some((i) => i.includes('kaynaksız'))).toBe(true)
-    expect(p.issues.some((i) => i.includes('bilinmeyen kaynak: nope'))).toBe(true)
+        expect(p.issues.some((i) => i.includes('unsourced'))).toBe(true)
+    expect(p.issues.some((i) => i.includes('unknown source: nope'))).toBe(true)
     expect(p.issues.some((i) => i.includes('[s:zzz]'))).toBe(true)
-    expect(p.issues.some((i) => i.includes('kullanılmamış: a'))).toBe(true)
+        expect(p.issues.some((i) => i.includes('unused: a'))).toBe(true)
   })
 
   it('does not count table headers, separators or code blocks as claims', () => {
@@ -35,7 +35,7 @@ describe('parseCard', () => {
   })
 
   it('requires front matter and a valid date', () => {
-    expect(parseCard('# no meta', registry).issues).toContain('ön bilgi bloğu yok')
+        expect(parseCard('# no meta', registry).issues).toContain('no front matter block')
     expect(parseCard(card('x', 'kind: method\nverified: 2026-13-45\nsources:'), registry).issues.join()).toContain('verified')
   })
 

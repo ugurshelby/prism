@@ -1,5 +1,5 @@
-// İlk kurulum yardımcısı: `npm install` sonrası `npm run setup`.
-// Node sürümünü denetler, Electron ikilisi inmemişse indirir ve .env şablonunu kopyalar. Key'lere dokunmaz.
+// First-run setup helper: `npm run setup` after `npm install`.
+// Checks the Node version, downloads the Electron binary if missing and copies the .env template. Never touches keys.
 import { execFileSync } from 'node:child_process'
 import { copyFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -10,31 +10,31 @@ const ok = (msg) => console.log(`✓ ${msg}`)
 
 const major = Number(process.versions.node.split('.')[0])
 if (major < 22) {
-  console.error(`✗ Node ${process.versions.node} bulundu; Prism için Node 22 veya üstü gerekiyor.`)
+  console.error(`✗ Node ${process.versions.node} found; Prism needs Node 22 or newer.`)
   process.exit(1)
 }
 ok(`Node ${process.versions.node}`)
 
 if (!existsSync(at('node_modules/electron'))) {
-  console.error('✗ Bağımlılıklar kurulmamış. Önce `npm install` çalıştır.')
+  console.error('✗ Dependencies are not installed. Run `npm install` first.')
   process.exit(1)
 }
 
-// npm script'leri kapalıysa (ör. ignore-scripts) Electron ikilisi inmemiş olur.
+// With npm scripts disabled (e.g. ignore-scripts) the Electron binary is not downloaded.
 if (!existsSync(at('node_modules/electron/path.txt'))) {
-  console.log('… Electron ikilisi indiriliyor')
+  console.log('… Downloading the Electron binary')
   execFileSync(process.execPath, [at('node_modules/electron/install.js')], { cwd: root, stdio: 'inherit' })
 }
-ok('Electron hazır')
+ok('Electron ready')
 
-if (existsSync(at('.env'))) ok('.env zaten var (dokunulmadı)')
+if (existsSync(at('.env'))) ok('.env already exists (left untouched)')
 else {
   copyFileSync(at('.env.example'), at('.env'))
-  ok('.env.example → .env kopyalandı')
+  ok('.env.example → .env copied')
 }
 
 console.log(`
-Sıradaki adımlar:
-  1. Kullandığın sağlayıcının key'ini .env dosyasına yaz ya da uygulamayı açıp Ayarlar → Sağlayıcılar'dan ekle.
+Next steps:
+  1. Put your provider's key in the .env file, or open the app and add it under Settings → Providers.
   2. npm run dev
-  3. (İsteğe bağlı) npm run selftest -- --discover   → key'leri doğrular, erişilen modelleri listeler.`)
+  3. (Optional) npm run selftest -- --discover   → validates the keys and lists reachable models.`)

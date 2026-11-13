@@ -60,7 +60,7 @@ describe('loadSettings', () => {
     expect(r.newer).toBe(true)
     expect(r.settings.families).toHaveLength(1)
     expect(r.shadow.families).toEqual(['openai', 'gemini'])
-    // Anahtar sırası farklı ama değeri aynı iç içe alan "değişti" sayılmaz.
+        // Nested fields with a different key order but the same value do not count as "changed".
     const base = { ...r.settings, vertex: { location: 'global', project: 'p-1' } }
     const now = { ...r.settings, vertex: { project: 'p-1', location: 'global' } }
     expect(serializeSettings(now, r.extras, { shadow: r.shadow, base })).toMatchObject({ version: 500, families: ['openai', 'gemini'] })
@@ -73,7 +73,7 @@ describe('loadSettings', () => {
   })
 
   it('treats a non-object file as unreadable', () => {
-    expect(loadSettings([1, 2], spectrum).invalid).toEqual(['(dosya)'])
+    expect(loadSettings([1, 2], spectrum).invalid).toEqual(['(file)'])
   })
 })
 

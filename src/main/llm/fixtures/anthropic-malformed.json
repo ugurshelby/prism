@@ -1,5 +1,5 @@
 {
-  "_source": "https://platform.claude.com/docs/en/api/messages — belgelenmiş yanıt biçiminden elle yazıldı (2026-11-10); sayfa bu oturumda canlı okunmadı, içerik uydurmadır",
-  "content": "bu bir dizi olmalıydı",
+  "_source": "https://platform.claude.com/docs/en/api/messages — hand-written from the documented response shape (2026-11-10); the page was not read live in this session, the content is fabricated",
+  "content": "this should have been an array",
   "usage": 7
 }
