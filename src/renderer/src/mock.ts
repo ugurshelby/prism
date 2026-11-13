@@ -1,4 +1,4 @@
-// Electron dışında, tarayıcıda arayüz geliştirmek için sahte köprü. Üretimde kullanılmaz.
+// A fake bridge for developing the UI in a browser, outside Electron. Not used in production.
 import type { PrismApi } from '../../preload/api'
 import { FAMILIES, PROVIDERS, defaultEffortFor, modelsOf, type Effort, type Family, type ModelId, type Surface } from '@shared/catalog'
 import { PRODUCT, validFamilies } from '@shared/product'
@@ -17,13 +17,13 @@ Requirements:
 When the change is done, run npm run typecheck and fix any errors before reporting back. Don't add tests or refactor unrelated code; if something else looks worth changing, mention it at the end. Write your messages to me in Turkish; keep code and identifiers as they are.
 </prompt>
 <notes>
-- Hedef dosyalar ve IPC sınırı netleştirildi; key'in arayüze inmemesi gerekçesiyle yazıldı.
-- medium effort için doğrulama adımı (typecheck) açıkça eklendi.
-- Kapsam paragrafı eklendi: Sonnet istenmeyen test/refactor ekleme eğiliminde.
+- The target files and the IPC boundary were made explicit; written on the grounds that the key must not reach the UI.
+- A verification step (typecheck) was added explicitly for medium effort.
+- A scope paragraph was added: Sonnet tends to add unrequested tests/refactors.
 </notes>`
 
 const ANALYSIS: Analysis = {
-  intent: 'Ayarlar paneline Vertex bağlantısını test eden bir buton eklenmesini istiyorsun; key arayüze inmemeli.',
+  intent: 'You want a button in the settings panel that tests the Vertex connection; the key must not reach the UI.',
   taskType: 'agentic_coding',
   complexity: 'moderate',
   recommendation: {
@@ -31,21 +31,21 @@ const ANALYSIS: Analysis = {
     effort: 'medium',
     confidence: 0.82,
     reasoning:
-      'Kapsamı net, birkaç dosyaya dokunan bir özellik. Sonnet 5.5 medium bu tür iyi tanımlı işleri hızlı ve ucuza bitirir; Opus burada fazla kalır.',
-    factors: ['İyi tanımlı özellik', '2–3 dosya', 'Net doğrulama']
+      'A well-scoped feature touching a few files. Sonnet 5.5 medium finishes well-defined work like this quickly and cheaply; Opus is overkill here.',
+    factors: ['Well-defined feature', '2-3 files', 'Clear verification']
   },
   alternatives: [
-    { model: 'claude-opus-5-5', effort: 'medium', label: 'Daha güçlü', tradeoff: 'IPC tasarımında daha titiz, ama iki kat pahalı.' },
-    { model: 'claude-haiku-5-5', effort: 'medium', label: 'Daha ucuz', tradeoff: 'Çok hızlı ama çok dosyalı işte adım atlayabilir.' }
+    { model: 'claude-opus-5-5', effort: 'medium', label: 'Stronger', tradeoff: 'More careful with the IPC design, but twice the cost.' },
+    { model: 'claude-haiku-5-5', effort: 'medium', label: 'Cheaper', tradeoff: 'Very fast, but may skip steps on multi-file work.' }
   ],
   questions: [
     {
       id: 'q1',
-      question: 'Test sonucu nerede görünsün?',
-      why: 'Arayüz metni buna göre yazılacak',
-      options: ['Butonun altında', 'Bildirim olarak', 'Durum rozetinde']
+      question: 'Where should the test result appear?',
+      why: 'The UI text will be written accordingly',
+      options: ['Below the button', 'As a notification', 'In a status badge']
     },
-    { id: 'q2', question: 'Hata olursa ne olsun?', why: 'Hata akışı', options: ['Mesajı göster', 'Tekrar dene butonu'] }
+    { id: 'q2', question: 'What should happen on error?', why: 'Error flow', options: ['Show the message', 'Retry button'] }
   ],
   elapsedMs: 2400,
   pool: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-1', 'gemini-4-argon', 'gemini-3.8-flash', 'gemini-3.5-flash-lite'],
@@ -119,7 +119,7 @@ function seedHistory(): HistoryEntry[] {
       prompt: 'ayarlar paneline vertex bağlantısını test eden bir buton ekle, key arayüze inmesin, hata olursa mesajı göster',
       surface: 'agent',
       analysis: ANALYSIS,
-      answers: [{ question: ANALYSIS.questions[0]?.question ?? '', answer: 'Butonun altında' }],
+      answers: [{ question: ANALYSIS.questions[0]?.question ?? '', answer: 'Below the button' }],
       outputs: [output('claude-sonnet-5-5', 'medium', 6), output('claude-opus-5-5', 'medium', 5)]
     },
     {
@@ -148,7 +148,7 @@ function seedHistory(): HistoryEntry[] {
 
 const isFamily = (v: string): v is Family => (FAMILIES as readonly string[]).includes(v)
 
-// Öneri istenen ailelerin modellerinden seçilir: Ray'de seçili aile dışında model önerilmez (gerçek motorun havuzu gibi).
+// Suggestions are picked from the models of the requested families: in Ray no model outside the selected family is suggested (like the real engine's pool).
 function analysisFor(families: readonly Family[], surface: Surface): Analysis {
   if (families.includes('claude')) return ANALYSIS
   const pool = families.flatMap((f) => modelsOf(f))
@@ -162,13 +162,13 @@ function analysisFor(families: readonly Family[], surface: Surface): Analysis {
 }
 
 export function installMock() {
-  // Ray tek aileyle çalışır: #family=gemini gibi bir ek seçer (varsayılan claude). Spectrum dört aileyle açılır.
+  // Ray works with a single family: #family=gemini picks another one (default claude). Spectrum opens with four families.
   if (PRODUCT.familyMode === 'single') {
     const m = /family=(claude|openai|gemini|grok)/.exec(location.hash)
     const family = m?.[1] && isFamily(m[1]) ? m[1] : 'claude'
     settings = { ...settings, families: [family], defaultFamily: family }
   }
-  // #setup: hiç sağlayıcı yokken ilk kurulum ekranı.
+  // #setup: first-run setup screen when there is no provider.
   if (location.hash.includes('setup')) {
     settings = {
       ...settings,
@@ -190,8 +190,8 @@ export function installMock() {
     settings: {
       get: async () => settings,
       set: async (patch) => {
-        // Ana süreçteki ürün kuralı: Ray'de tam bir aile, Spectrum'da en az bir aile.
-        if (patch.families && !validFamilies(PRODUCT, patch.families)) throw new Error(`Bu aile seçimi ${PRODUCT.name} için geçerli değil.`)
+        // Product rule in the main process: exactly one family in Ray, at least one family in Spectrum.
+        if (patch.families && !validFamilies(PRODUCT, patch.families)) throw new Error(`This family selection is not valid for ${PRODUCT.name}.`)
         return (settings = { ...settings, ...patch, vertex: { ...settings.vertex, ...patch.vertex } })
       },
       test: async () => (await wait(900), { ok: true, ms: 900, engine: { provider: 'vertex', model: 'gemini-4-argon' } }),
@@ -267,10 +267,10 @@ export function installMock() {
       onPillState: () => () => {},
       onPinned: () => () => {}
     },
-    clipboard: { write: async (t) => navigator.clipboard.writeText(t).catch((e: unknown) => console.warn('[mock] pano yazılamadı', e)) },
+    clipboard: { write: async (t) => navigator.clipboard.writeText(t).catch((e: unknown) => console.warn('[mock] clipboard write failed', e)) },
     ui: { onOpen: () => () => {} },
-    // Sahte köprü ağa çıkmaz: güncelleme yok, silme yalnızca bellekteki geçmişi boşaltır.
-    // Görsel denemeler: #update bildirimi gösterir, #deletefail silmeyi kısmi hatayla bitirir.
+    // The fake bridge never touches the network: no updates, and deleting only clears the in-memory history.
+    // For visual checks: #update shows a notice, #deletefail ends deletion with a partial error.
     update: {
       get: async () => ({ current: '0.0.0-mock', enabled: settings.updateCheck, checkedAt: null, latest: showUpdate ? mockLatest : null }),
       check: async () => ({ current: '0.0.0-mock', enabled: settings.updateCheck, checkedAt: Date.now(), latest: showUpdate ? mockLatest : null }),

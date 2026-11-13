@@ -1,4 +1,4 @@
-/* Prism Spectrum: ayrışan renkler. Ana eylem sıcak ışındır; marka çizgisi dört ailenin renginden geçer. */
+/* Prism Spectrum: split colors. The primary action is the warm beam; the brand line runs through the four family colors. */
 :root[data-product='spectrum'] {
   --accent: var(--warm);
   --accent-2: var(--warm-2);

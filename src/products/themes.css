@@ -1,4 +1,4 @@
-/* Ürün tema katmanları: bileşenler ortak, yalnızca token seti ürüne göre değişir (prism-design SKILL → Ürün temaları).
-   Hangi ürünün derlendiğini <html data-product> söyler (main.tsx). */
+/* Product theme layers: components are shared, only the token set changes per product (prism-design SKILL -> Product themes).
+      <html data-product> says which product is built (main.tsx). */
 @import './ray/theme.css';
 @import './spectrum/theme.css';

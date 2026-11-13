@@ -7,8 +7,8 @@ import { t } from '../i18n'
 
 const DISMISSED_KEY = 'prism.update.dismissed'
 
-// Kapatılan sürüm yalnızca bu pencerede tutulur (gizli bilgi değil). Depolama kapalıysa okuma/yazma başarısız olur;
-// bu durumda bildirim yalnızca bir sonraki açılışta yeniden görünür, başka bir şey bozulmaz.
+// The dismissed version is kept only in this window (not secret). If storage is disabled, reading/writing fails;
+// in that case the notice simply reappears on the next launch, and nothing else breaks.
 function readDismissed(): string | null {
   try {
     return localStorage.getItem(DISMISSED_KEY)
@@ -20,11 +20,11 @@ function writeDismissed(version: string) {
   try {
     localStorage.setItem(DISMISSED_KEY, version)
   } catch {
-    // Depolama kullanılamıyor: yalnızca bu oturumda kapalı kalır.
+    // Storage unavailable: it stays dismissed only for this session.
   }
 }
 
-/** Ürünün daha yeni bir sürümü varsa başlığın altında sessiz, kapatılabilir bir şerit. */
+/** If a newer version of the product exists, a quiet, dismissible strip under the header. */
 export function UpdateNotice() {
   const [view, setView] = useState<UpdateView | null>(null)
   const [dismissed, setDismissed] = useState<string | null>(readDismissed)
@@ -37,7 +37,7 @@ export function UpdateNotice() {
     return window.prism.update.onChanged(load)
   }, [])
 
-  // Denetim ayarlardan kapatıldıysa eski bulgu da gösterilmez.
+  // If the check was turned off in settings, the old finding is not shown either.
   if (!view?.enabled || !view.latest || view.latest.version === dismissed) return null
   const { version } = view.latest
   const text = t('update.available', { product: PRODUCT.name, version })

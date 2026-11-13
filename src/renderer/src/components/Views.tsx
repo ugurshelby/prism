@@ -81,7 +81,7 @@ function useCtrlEnter(fn: () => void, enabled = true) {
 
 const surfaceOptions = (family: FamilyChoice) => SURFACES.map((v) => ({ value: v, label: surfaceLabel(family, v) }))
 
-/** Seçili ailelerden segment seçenekleri; birden çok aile varsa başta çapraz öneri. Tek ailede segment gösterilmez. */
+/** Segment options from the selected families; with several families, a cross-family suggestion comes first. No segment is shown for a single family. */
 const familyOptions = (families: readonly Family[]) =>
   (families.length > 1 ? (['auto', ...families] as FamilyChoice[]) : [...families]).map((f) => ({
     value: f,
@@ -91,7 +91,7 @@ const familyOptions = (families: readonly Family[]) =>
 
 const accessText = (a: TargetAccess) => t(`access.${a}`)
 
-/** Seçili ekosistemde hangi modellere nasıl erişildiğini tek satırda özetler. */
+/** Summarizes in one line which models can be reached, and how, in the selected ecosystem. */
 function PoolHint({ family, families: selected, targets }: { family: FamilyChoice; families: readonly Family[]; targets: SettingsView['targets'] }) {
   const families = selected.filter((f) => family === 'auto' || f === family)
   const parts = families
@@ -130,7 +130,7 @@ export function Compose({ flow, families, targets = {} }: { flow: Flow; families
   const pool = candidatePool(s.family, targets, families)
   useCtrlEnter(() => void start(), !!s.prompt.trim())
 
-  // Ekosistem değişince elle seçilen model yeni havuzda yoksa havuzun önerilen modeline geçer.
+  // When the ecosystem changes and the manually chosen model is not in the new pool, switch to the pool's recommended model.
   const setFamily = (family: FamilyChoice) => {
     const next = candidatePool(family, targets, families)
     const keep = next.includes(s.manual.model)
@@ -276,7 +276,7 @@ export function Review({ flow, targets }: { flow: Flow; targets?: SettingsView['
   const choose = (c: Choice) => patch({ choice: { model: c.model, effort: clampEffort(c.model, c.effort) } })
   const pickable = a.pool?.length ? a.pool : modelsOf(s.family)
   const cross = new Set(pickable.map((id) => MODELS[id].family)).size > 1
-  // Başka aileden bir modelin kısa adı ("Sol", "Argon") tek başına belirsiz; tam adı göster.
+  // The short name of a model from another family ("Sol", "Argon") is ambiguous alone; show the full name.
   const nameOf = (id: Choice['model']) => (MODELS[id].family === m.family ? MODELS[id].short : MODELS[id].name)
   useCtrlEnter(() => write())
 
@@ -460,7 +460,7 @@ function Highlighted({ text }: { text: string }) {
 }
 
 function Sparks({ burst }: { burst: number }) {
-  // Her yeni burst yeni bir kıvılcım dizisi üretir.
+  // Each new burst produces a new spark sequence.
   const sparks = useMemo(
     () =>
       Array.from({ length: burst ? 12 : 0 }, (_, i) => {

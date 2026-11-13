@@ -8,14 +8,14 @@ import { createRoot } from 'react-dom/client'
 import { PRODUCT } from '@shared/product'
 import { installMock } from './mock'
 
-// Tarayıcıda (Electron dışında) arayüz geliştirmek için sahte köprü. Kurulu sürümde köprü yoksa sessizce
-// sahte veriyle açılmaz: preload yüklenemediyse açık bir hata verilir.
+// A fake bridge for developing the UI in a browser (outside Electron). In an installed build, a missing bridge does not
+// silently open with fake data: if preload failed to load, an explicit error is thrown.
 if (!window.prism) {
-  if (!import.meta.env.DEV) throw new Error('Prism köprüsü yüklenemedi (preload).')
+  if (!import.meta.env.DEV) throw new Error('Prism bridge failed to load (preload).')
   installMock()
 }
 
-// Ana süreç pencereyi ?view=panel|pill&look=mica|vibrancy|solid ile açar. Tanınmayan değer panel ve düz görünümdür.
+// The main process opens the window with ?view=panel|pill&look=mica|vibrancy|solid. An unrecognized value means panel and solid look.
 const params = new URLSearchParams(location.search)
 const view = params.get('view') === 'pill' ? 'pill' : 'panel'
 const look = params.get('look')
@@ -28,7 +28,7 @@ const Root = view === 'pill' ? (await import('./components/Pill')).PillApp : (aw
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {/* prefers-reduced-motion açıksa bütün motion animasyonları kapanır (yalnızca anında geçiş). */}
+    {/* If prefers-reduced-motion is on, all motion animations are disabled (instant transitions only). */}
     <MotionConfig reducedMotion="user">
       <Root />
     </MotionConfig>

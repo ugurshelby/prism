@@ -3,7 +3,7 @@
 import 'react'
 
 declare module 'react' {
-  // Bileşenler renk tonunu --hue gibi CSS değişkenleriyle verir.
+  // Components pass the color hue through CSS variables such as --hue.
   interface CSSProperties {
     [variable: `--${string}`]: string | number | undefined
   }

@@ -9,8 +9,8 @@ import { Logo } from './Prism'
 const THRESHOLD = 4
 
 /**
- * Küre penceresi: sürüklenebilir; tıklayınca panel açılır. Sürükleme ile tıklama birkaç piksellik eşikle ayrılır,
- * konum güncellemesi kare hızına bağlanır (ana süreç pencereyi imlece göre taşır).
+  * Orb window: draggable; clicking opens the panel. Drag and click are told apart by a threshold of a few pixels,
+  * and position updates are tied to the frame rate (the main process moves the window relative to the cursor).
  */
 export function PillApp() {
   const [st, setSt] = useState<PillState>({ busy: false, badge: false })

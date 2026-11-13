@@ -1,6 +1,6 @@
-// İlk açılış sihirbazı (ROADMAP "Her üründe ortak kurulum"): dil → aileler → motor key'i → kısayol.
-// Her adımda geri dönülebilir, Enter ileri götürür, yarıda kapatılırsa kalınan adımdan devam edilir
-// (adım settings.setup.step'e yazılır), geçerli bir seçim varsa adım atlanabilir.
+// First-run wizard (ROADMAP "shared setup in every product"): language -> families -> engine key -> shortcut.
+// Every step can be revisited, Enter moves forward, and if it is closed midway it resumes at the step it stopped on
+// (the step is written to settings.setup.step); a step can be skipped when a valid choice exists.
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
@@ -32,7 +32,7 @@ export function Setup({ view, onChanged, onDone }: { view: SettingsView; onChang
     }
   }
 
-  // Motor adımında key yoksa ilerlenemez; diğer adımlarda geçerli bir varsayılan hep vardır.
+  // Without a key you cannot advance past the engine step; the other steps always have a valid default.
   const canNext = step !== 'engine' || !!view.engine
 
   const go = async (next: number) => {
@@ -42,7 +42,7 @@ export function Setup({ view, onChanged, onDone }: { view: SettingsView; onChang
       await apply({ setup: { done: false, step: target } })
       return
     }
-    // Son adım: kısayol değiştiyse önce kaydedilir; kayıt başarısızsa (başka uygulama kullanıyor) sihirbaz kapanmaz.
+    // Last step: if the shortcut changed, it is saved first; if saving fails (another app uses it), the wizard stays open.
     if (hotkey.trim() && hotkey.trim() !== view.hotkey && !(await apply({ hotkey: hotkey.trim() }))) return
     if (await apply({ setup: { done: true, step } })) onDone()
   }
@@ -119,7 +119,7 @@ export function Setup({ view, onChanged, onDone }: { view: SettingsView; onChang
         <button className="ghost" disabled={index === 0} onClick={() => go(index - 1)} title={t('common.back')} aria-label={t('common.back')}>
           <ArrowLeft size={15} />
         </button>
-        {/* Motor hazırsa kalan adımların hepsinin geçerli varsayılanı var: kurulum burada bitirilebilir. */}
+        {/* Once the engine is ready, all remaining steps have valid defaults: setup can be finished here. */}
         {view.engine && index < STEPS.length - 1 && (
           <button className="ghost" onClick={async () => (await apply({ setup: { done: true, step } })) && onDone()}>
             {t('setup.skip')}

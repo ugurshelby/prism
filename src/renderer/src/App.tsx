@@ -20,8 +20,8 @@ export default function App() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [view, setView] = useState<SettingsView | null>(null)
   const [setup, setSetup] = useState(false)
-  // Panel her gösterildiğinde içerik, yaslandığı köşeden kısa bir girişle gelir (Windows ve Linux'ta pencere
-  // boyutu canlandırılamaz; macOS'u ana süreç canlandırır). Azaltılmış harekette MotionConfig animasyonu kapatır.
+  // Each time the panel is shown, the content slides in from the corner it is anchored to (on Windows and Linux the window
+  // size cannot be animated; on macOS the main process animates it). With reduced motion, MotionConfig turns the animation off.
   const [shown, setShown] = useState<{ n: number; anchor: PanelAnchor }>({ n: 0, anchor: { h: 'right', v: 'top' } })
   const settingsRef = useRef(settingsOpen || historyOpen)
   settingsRef.current = settingsOpen || historyOpen
@@ -44,17 +44,17 @@ export default function App() {
       .get()
       .then((v) => {
         applySettings(v)
-        // Kurulum bitmediyse ya da motor sonradan kaybolduysa (key silindi) sihirbaz açılır.
+        // If setup is unfinished or the engine disappeared later (key deleted), the wizard opens.
         setSetup(!v.setup.done || !v.engine)
         patch({ surface: v.defaultSurface, family: v.defaultFamily })
       })
       .catch(reportError('settings'))
-    // Kısayolla açılınca imleç metin alanında olur; yazılmış taslak bellekte durduğu için kaybolmaz.
+    // When opened by the shortcut, the caret goes to the text field; the draft stays in memory, so it is not lost.
     const offShown = w.onShown((anchor) => {
       setShown((e) => ({ n: e.n + 1, anchor }))
       requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>('.composer textarea')?.focus())
     })
-    // Esc paneli gizler; açık bir sayfa (ayarlar, geçmiş) varsa önce o kapanır.
+    // Esc hides the panel; if a page (settings, history) is open, that closes first.
     const esc = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !settingsRef.current && !e.defaultPrevented) w.hide().catch(reportError('window'))
     }
@@ -76,13 +76,13 @@ export default function App() {
     }
   }, [applySettings, patch])
 
-  // Prism Ray'de vurgu, seçili tek ailenin rengidir (src/products/ray/theme.css).
+  // In Prism Ray the accent is the color of the single selected family (src/products/ray/theme.css).
   const firstFamily = view?.families[0]
   useEffect(() => {
     if (firstFamily) document.documentElement.style.setProperty('--family-hue', FAMILY_INFO[firstFamily].hue)
   }, [firstFamily])
 
-  // Aile seçimi değişirse akıştaki aile seçili ailelerin dışında kalmasın.
+  // If the family selection changes, the flow's family must not fall outside the selected families.
   useEffect(() => {
     if (!view) return
     const ok = s.family === 'auto' ? view.families.length > 1 : view.families.includes(s.family)
@@ -105,7 +105,7 @@ export default function App() {
       <div className="aura a" />
       <div className="aura b" />
 
-      {/* Başlık alanı pencereyi taşır; çift tıklayınca işletim sistemi büyütür ve eski boyuta döndürür. */}
+      {/* The header area moves the window; double-clicking lets the OS maximize and restore it. */}
       <header className="header">
         <div className="brand">
           <Logo />

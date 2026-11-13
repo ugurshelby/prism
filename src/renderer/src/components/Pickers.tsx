@@ -36,7 +36,7 @@ export function Segment<T extends string>({
   )
 }
 
-// Claude kartları v1'deki sırayla (en sık kullanılan önce); diğer aileler katalog sırasıyla.
+// Claude cards in the v1 order (most used first); other families in catalog order.
 const CLAUDE_ORDER: ModelId[] = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-1']
 
 function ordered(models: ModelId[]) {

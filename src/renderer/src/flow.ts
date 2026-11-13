@@ -10,7 +10,7 @@ export interface FlowState {
   stage: Stage
   prompt: string
   surface: Surface
-  /** Hedef ekosistem; 'auto' aileler arası öneri. */
+  /** Target ecosystem; 'auto' is a cross-family suggestion. */
   family: FamilyChoice
   selectMode: 'auto' | 'manual'
   manual: Choice
@@ -65,11 +65,11 @@ export function useFlow() {
     []
   )
 
-  // base: state henüz React'e işlenmeden yazım başlatmak için (geçmişten "yeniden yaz").
+  // base: to start a rewrite before state has reached React ("rewrite" from history).
   const write = useCallback((override?: Choice, base?: FlowState) => {
     const cur = base ?? ref.current
     const choice = override ?? cur.choice ?? cur.manual
-    // Önceki yazım hâlâ sürüyorsa (çift tıklama, Enter + tık) önce o durdurulur; iki ücretli istek birden koşmasın.
+    // If a previous rewrite is still running (double click, Enter + click), it is stopped first; two paid requests must not run at once.
     if (genId.current) window.prism.engine.cancel(genId.current).catch(reportError('engine'))
     const id = crypto.randomUUID()
     genId.current = id
@@ -97,7 +97,7 @@ export function useFlow() {
     })
   }, [])
 
-  // Arayüzdeki iptal ana süreçteki analizi de durdurur: ücret işlemeye devam etmesin, sonuç geçmişe yazılmasın.
+  // Cancelling in the UI also stops the analysis in the main process: it must not keep incurring cost, and the result must not be written to history.
   const cancelAnalysis = () => {
     analyzeSeq.current++
     if (analyzeId.current) window.prism.engine.cancel(analyzeId.current).catch(reportError('engine'))
@@ -118,7 +118,7 @@ export function useFlow() {
       if (seq !== analyzeSeq.current) return
       const choice = manual ?? { model: analysis.recommendation.model, effort: analysis.recommendation.effort }
       setS((prev) => ({ ...prev, analysis, choice }))
-      // Analiz henüz React durumuna işlenmedi; yazım analizi ve geçmiş kimliğini taşısın diye doğrudan verilir.
+      // The analysis has not reached React state yet; it is passed directly so the rewrite carries the analysis and history id.
       if (manual && analysis.questions.length === 0) write(manual, { ...ref.current, analysis, choice: manual })
       else setS((prev) => ({ ...prev, stage: 'review' }))
     } catch (e) {
@@ -158,13 +158,13 @@ export function useFlow() {
     setS((prev) => ({ ...initial, surface: prev.surface, family: prev.family, selectMode: prev.selectMode, manual: prev.manual }))
   }, [])
 
-  /** Geçmişteki bir girdiyi açar: yazımı varsa sonuç ekranına, yoksa öneri ekranına. */
+  /** Opens a history entry: the result screen if it has a rewrite, otherwise the suggestion screen. */
   const load = useCallback((entry: HistoryEntry) => {
     stopRunning()
     setS(fromEntry(entry, ref.current))
   }, [])
 
-  /** Geçmişteki girdiyi son kullanılan model ve effort ile yeniden yazar. */
+  /** Rewrites the history entry with the last used model and effort. */
   const rewrite = useCallback(
     (entry: HistoryEntry) => {
       stopRunning()
@@ -182,7 +182,7 @@ function fromEntry(entry: HistoryEntry, prev: FlowState): FlowState {
   const last = entry.outputs.at(-1)
   const rec = entry.analysis.recommendation
   const model = last?.model ?? rec.model
-  // Kaydedilen cevaplar "seçenek — serbest metin" biçiminde; soru kimliklerine geri dağıt.
+  // Saved answers are in "option - free text" form; distribute them back to the question ids.
   const answers: FlowState['answers'] = {}
   for (const q of entry.analysis.questions) {
     const a = entry.answers.find((x) => x.question === q.question)?.answer
@@ -195,7 +195,7 @@ function fromEntry(entry: HistoryEntry, prev: FlowState): FlowState {
     stage: last ? 'result' : 'review',
     prompt: entry.prompt,
     surface: entry.surface,
-    // v1 kayıtlarında ekosistem yok; modelin ailesi kullanılır.
+    // v1 records have no ecosystem; the model's family is used.
     family: entry.family ?? MODELS[model]?.family ?? prev.family,
     analysis: { ...entry.analysis, historyId: entry.id },
     choice: last ? { model: last.model, effort: last.effort } : { model: rec.model, effort: rec.effort },

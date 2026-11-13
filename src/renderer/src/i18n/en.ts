@@ -1,5 +1,5 @@
-// Kaynak sözlük. Yeni metin önce buraya eklenir; tr.ts aynı anahtarları taşımak zorundadır (tip denetimi).
-// {ad} biçimindeki yer tutucular t(key, { ad }) ile doldurulur.
+// Source dictionary. New text is added here first; every key must also exist in any other dictionary (type check).
+// Placeholders like {name} are filled with t(key, { name }).
 export const en = {
   'common.cancel': 'Cancel',
   'common.close': 'Close',

@@ -1,5 +1,5 @@
-/* Prism Ray: tek ışın. Vurgu, kişinin seçtiği tek ailenin rengidir (App bunu --family-hue olarak verir);
-   aile seçilmeden önce ışın beyazı kullanılır. Gradyan yok: ışık kırılmadan geçer. */
+/* Prism Ray: a single beam. The accent is the color of the one family the person picks (App passes it as --family-hue);
+      before a family is chosen the beam white is used. No gradient: the light passes through without bending. */
 :root[data-product='ray'] {
   --accent: var(--family-hue, var(--beam));
   --accent-2: color-mix(in srgb, var(--accent) 55%, var(--beam));

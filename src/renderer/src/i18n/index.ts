@@ -32,5 +32,5 @@ export const effortHint = (e: Effort) => t(`effort.hint.${e}`)
 export const effortName = (e: Effort | null) => e ?? t('effort.fixed')
 
 
-/** Modelin döndürdüğü görev türü tanınmıyorsa olduğu gibi gösterilir. */
+/** If the task type returned by the model is not recognized, it is shown as is. */
 export const taskLabel = (type: string) => tk(`task.${type}`).replace(/^task\./, '')

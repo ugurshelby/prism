@@ -1,4 +1,4 @@
-// Ayarlar ve kurulum sihirbazının ortak alanları.
+// Fields shared by settings and the setup wizard.
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { Check, ChevronDown, ExternalLink, KeyRound, RefreshCw } from 'lucide-react'
@@ -16,7 +16,7 @@ export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boo
   )
 }
 
-/** Satır metniyle birlikte anahtar: ekran okuyucu satırın metnini anahtarın adı olarak okur. */
+/** Toggle with its row text: a screen reader reads the row text as the toggle's name. */
 export function ToggleRow({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
   return (
     <div className="toggle-row">
@@ -27,7 +27,7 @@ export function ToggleRow({ label, on, onChange }: { label: string; on: boolean;
 }
 
 /**
- * Hedef aile seçimi. Tek aileli üründe (Ray) radyo düğmesi gibi davranır; çok aileli üründe en az bir aile seçili kalır.
+  * Target family selection. In a single-family product (Ray) it acts like a radio button; in a multi-family product at least one family stays selected.
  */
 export function FamilyPicker({ product, value, onChange }: { product: ProductInfo; value: readonly Family[]; onChange: (f: Family[]) => void }) {
   const single = product.familyMode === 'single'
@@ -106,7 +106,7 @@ export function ProviderCard({
       <div className="provider-head">
         <b>{info.label}</b>
         <span className="provider-family">{FAMILY_INFO[info.family].name}</span>
-        {/* Ana süreç https bağlantılarını sistem tarayıcısında açar. */}
+        {/* The main process opens https links in the system browser. */}
         {!view.key.present && (
           <a className="link" href={info.keyUrl} target="_blank" rel="noreferrer">
             {t('provider.getKey')} <ExternalLink size={11} />

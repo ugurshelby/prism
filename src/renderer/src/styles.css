@@ -8,7 +8,7 @@
   --text: #eef0f4;
   --text-2: #b6bac6;
   --muted: #7d8292;
-  /* Işın ve aile renkleri (sitedeki sembollerle aynı); vurgu ürün temasından gelir (src/products). */
+  /* Beam and family colors (same as the symbols on the site); the accent comes from the product theme (src/products). */
   --beam: #eef0f4;
   --warm: #ff8a4c;
   --warm-2: #ffd36e;
@@ -84,7 +84,7 @@ input {
   background: transparent;
 }
 
-/* ---------- Panel kabuğu ---------- */
+/* ---------- Panel shell ---------- */
 
 .shell {
   position: absolute;
@@ -101,7 +101,7 @@ input {
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
-  /* clip: odaklanan bir alan kabuğu programatik olarak kaydıramasın */
+  /* clip: a focused field must not be able to scroll the shell programmatically */
   overflow: clip;
   isolation: isolate;
 }
@@ -153,7 +153,7 @@ input {
   }
 }
 
-/* ---------- Başlık ---------- */
+/* ---------- Header ---------- */
 
 .header {
   height: 46px;
@@ -211,7 +211,7 @@ input {
   color: var(--danger);
 }
 
-/* ---------- Gövde ---------- */
+/* ---------- Body ---------- */
 
 .body {
   flex: 1;
@@ -280,7 +280,7 @@ input {
   z-index: -1;
 }
 
-/* Yazı alanı */
+/* Text field */
 .composer {
   position: relative;
   border-radius: 14px;
@@ -321,7 +321,7 @@ input {
   pointer-events: none;
 }
 
-/* Model kartları */
+/* Model cards */
 .models {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -383,7 +383,7 @@ input {
   pointer-events: none;
 }
 
-/* Effort seçici */
+/* Effort picker */
 .effort {
   display: flex;
   flex-direction: column;
@@ -424,7 +424,7 @@ input {
   color: var(--text);
 }
 .effort-step.def::after {
-  content: 'varsayılan';
+  content: 'default';
   font-size: 9.5px;
   color: var(--muted);
   margin-top: -4px;
@@ -495,7 +495,7 @@ input {
   }
 }
 
-/* Kaydırılan görünümlerde ana eylem hep görünür kalsın */
+/* In scrolled views the primary action always stays visible */
 .sticky {
   position: sticky;
   bottom: 0;
@@ -571,7 +571,7 @@ input {
   color: var(--muted);
 }
 
-/* ---------- Öneri ---------- */
+/* ---------- Suggestion ---------- */
 
 .intent {
   font-size: 13px;
@@ -786,7 +786,7 @@ input {
   border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
-/* ---------- Sonuç ---------- */
+/* ---------- Result ---------- */
 
 .target {
   display: flex;
@@ -1002,7 +1002,7 @@ input {
   user-select: text;
 }
 
-/* ---------- Güncelleme bildirimi ---------- */
+/* ---------- Update notice ---------- */
 
 .update-notice {
   flex: none;
@@ -1179,7 +1179,7 @@ input {
   color: var(--danger);
 }
 
-/* ---------- Geçmiş ---------- */
+/* ---------- History ---------- */
 
 .h-total {
   font-family: var(--mono);
@@ -1348,7 +1348,7 @@ input {
   border-top: 1px solid var(--line);
 }
 
-/* ---------- Boyutlandırma tutamacı ---------- */
+/* ---------- Resize handle ---------- */
 
 
 /* ---------- Pill ---------- */
@@ -1427,7 +1427,7 @@ input {
   }
 }
 
-/* ---------- v2: aileler ve sağlayıcılar ---------- */
+/* ---------- v2: families and providers ---------- */
 
 .models-group {
   grid-column: 1 / -1;
@@ -1526,7 +1526,7 @@ select.input option {
   color: var(--ok);
 }
 
-/* İlk kurulum */
+/* First-run setup */
 .view.setup {
   overflow-y: auto;
 }
@@ -1547,7 +1547,7 @@ select.input option {
   line-height: 1.5;
 }
 
-/* Geçmiş: aile filtresi ve motor satırı */
+/* History: family filter and engine row */
 .h-filter {
   display: flex;
   flex-wrap: wrap;
@@ -1589,9 +1589,9 @@ select.input option {
   text-overflow: ellipsis;
 }
 
-/* --- Pencere görünümü (window.ts → ?look=) ----------------------------------------
-   Panel artık işletim sisteminin kenarlığını taşıyan opak bir pencere: kabuk pencereyi doldurur, köşe ve gölge
-   sistemden gelir. Mica ve vibrancy'de yüzey yarı saydamdır, sistem malzemesi arkadan görünür. */
+/* --- Window look (window.ts -> ?look=) ----------------------------------------
+      The panel is now an opaque window that carries the OS border: the shell fills the window, and corners and shadow
+      come from the system. With mica and vibrancy the surface is semi-transparent and the system material shows through. */
 :root[data-view='panel'] .shell {
   inset: 0;
   border-radius: 0;
@@ -1608,7 +1608,7 @@ select.input option {
   background: var(--bg-0);
 }
 
-/* Panel her gösterilişte yaslandığı köşeden gelir (Windows ve Linux; macOS'ta pencereyi sistem canlandırır). */
+/* The panel comes in from its anchored corner each time it is shown (Windows and Linux; on macOS the system animates the window). */
 @keyframes panel-in {
   from {
     opacity: 0;
@@ -1631,7 +1631,7 @@ select.input option {
   transform-origin: 100% 100%;
 }
 
-/* --- Kurulum sihirbazı --------------------------------------------------------------- */
+/* --- Setup wizard --------------------------------------------------------------- */
 .steps {
   display: flex;
   gap: 6px;
@@ -1698,7 +1698,7 @@ select.input option {
   background: color-mix(in srgb, var(--accent) 12%, var(--bg-2));
 }
 
-/* --- Aile seçici ---------------------------------------------------------------------- */
+/* --- Family picker ---------------------------------------------------------------------- */
 .families {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1745,21 +1745,21 @@ select.input option {
   color: var(--hue);
 }
 
-/* --- Odak halkası: klavyeyle gezinen her öğede görünür (prism-design: focus-visible accent ring) -- */
+/* --- Focus ring: visible on every keyboard-navigated element (prism-design: focus-visible accent ring) -- */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* --- Küre penceresi ------------------------------------------------------------------- */
+/* --- Orb window ------------------------------------------------------------------- */
 :root[data-view='pill'] .orb {
   border: 0;
   padding: 0;
 }
 
-/* --- Azaltılmış hareket ----------------------------------------------------------------
-   Sistem ayarı açıkken geçişler ve arka plan animasyonları durur (motion bileşenlerini MotionConfig kapatır).
-   !important bilinçli: bu blok her bileşen kuralını ezmek zorunda (prism-design → Motion). */
+/* --- Reduced motion ----------------------------------------------------------------
+      When the system setting is on, transitions and background animations stop (MotionConfig turns off the motion components).
+      !important is deliberate: this block must override every component rule (prism-design -> Motion). */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

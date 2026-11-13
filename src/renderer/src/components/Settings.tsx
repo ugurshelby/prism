@@ -63,7 +63,7 @@ export function Settings({
     }
   }
 
-  // Onaylanırsa ana süreç uygulamayı yeniden başlatır; vazgeçilirse false döner, kısmi silme hata olarak gelir.
+  // If confirmed, the main process restarts the app; if cancelled it returns false, and a partial deletion arrives as an error.
   const deleteAll = async () => {
     setDeleting(true)
     setDeleteError(null)
@@ -326,7 +326,7 @@ export function Settings({
                   aria-labelledby="delete-title"
                   aria-describedby="delete-body"
                   onKeyDown={(e) => {
-                    // Esc önce bu onayı kapatır; ayarlar sayfası açık kalır.
+                    // Esc closes this confirmation first; the settings page stays open.
                     if (e.key === 'Escape' && !deleting) {
                       e.stopPropagation()
                       setConfirmDelete(false)

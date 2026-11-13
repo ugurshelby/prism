@@ -1,7 +1,7 @@
 import { motion } from 'motion/react'
 import { MODELS, MODEL_IDS } from '@shared/catalog'
 
-/** Küçük marka işareti: ışını kıran prizma. */
+/** Small brand mark: a prism that bends the beam. */
 export function Logo({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -21,7 +21,7 @@ export function Logo({ size = 20 }: { size?: number }) {
 
 const RAY_Y = [30, 60, 90, 120]
 
-/** Analiz sırasında: ham ışın prizmaya girer, model renklerinde dört ışına ayrılır. */
+/** During analysis: the raw beam enters the prism and splits into four beams in the model colors. */
 export function PrismLoader() {
   return (
     <svg width="270" height="150" viewBox="0 0 270 150" fill="none" style={{ overflow: 'visible' }}>
@@ -50,7 +50,7 @@ export function PrismLoader() {
         </filter>
       </defs>
 
-      {/* gelen ışın */}
+      {/* incoming beam */}
       <line x1="0" y1="82" x2="113" y2="74" stroke="url(#beam-in)" strokeWidth="2.2" strokeLinecap="round" />
       <motion.line
         x1="0"
@@ -65,7 +65,7 @@ export function PrismLoader() {
         transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
       />
 
-      {/* çıkan ışınlar */}
+      {/* outgoing beams */}
       {MODEL_IDS.map((id, i) => (
         <g key={id}>
           <line x1="152" y1="76" x2="270" y2={RAY_Y[i]} stroke={`url(#ray-${id})`} strokeWidth="2" strokeLinecap="round" />

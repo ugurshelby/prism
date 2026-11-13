@@ -6,10 +6,10 @@ import type { HistoryEntry, HistoryStorage } from '@shared/types'
 import { t } from '../i18n'
 import { Logo } from './Prism'
 
-// Göreli zaman dile göre biçimlenir; dil değişince yeni biçimleyici kurulur.
+// Relative time is formatted per language; a new formatter is built when the language changes.
 const rtf = () => new Intl.RelativeTimeFormat('en-US', { numeric: 'auto' })
 
-// Silinmiş ya da eski bir model ID'si kaydı bozmasın.
+// A deleted or old model ID must not corrupt the entry.
 const modelOf = (e: HistoryEntry) => MODELS[e.outputs.at(-1)?.model ?? e.analysis.recommendation.model] ?? MODELS['claude-opus-5-5']
 
 function ago(ts: number) {
@@ -173,7 +173,7 @@ export function History({
       >
         <div className="head">
           <span>
-            Geçmiş {items && items.length > 0 && <span className="h-total">{items.length}</span>}
+            History {items && items.length > 0 && <span className="h-total">{items.length}</span>}
           </span>
           <button className="icon-btn" onClick={onClose}>
             <X size={16} />
