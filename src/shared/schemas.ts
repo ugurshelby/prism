@@ -117,7 +117,7 @@ export const GenerateRequestSchema = z
 
 export const ClipboardTextSchema = text(LIMITS.clipboard)
 
-// --- Diskteki dosyalar --------------------------------------------------------------
+// --- Files on disk ------------------------------------------------------------------
 
 // Old records of a model removed from the catalog must not be deleted: the model ID on disk is checked for format only,
 // the UI shows an ID it does not recognize with the default model (History.tsx → modelOf).
@@ -192,7 +192,7 @@ export const WindowStateSchema = z.object({
     // Per-screen position (key: screen ID). The old version's single panel/pill field is read too.
   displays: z
     .record(z.string().regex(/^\d{1,20}$/), z.object({ panel: PanelRect.optional(), pill: PillPoint.optional() }))
-    .refine((o) => Object.keys(o).length <= 16, 'en fazla 16 ekran')
+    .refine((o) => Object.keys(o).length <= 16, 'at most 16 displays')
     .optional(),
   panel: PanelRect.optional(),
   pill: PillPoint.optional()

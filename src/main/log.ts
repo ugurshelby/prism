@@ -5,7 +5,7 @@ function describe(err: unknown): string {
   // V8's JSON.parse error includes a fragment of the input (prompt or history text): only the name is written.
   if (err instanceof SyntaxError) return err.name
   if (err instanceof Error) return `${err.name}: ${err.message}`
-  return typeof err === 'string' ? err : 'bilinmeyen hata'
+  return typeof err === 'string' ? err : 'unknown error'
 }
 
 export function logWarn(scope: string, message: string, err?: unknown) {

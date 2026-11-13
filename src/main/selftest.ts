@@ -59,7 +59,7 @@ export async function selftest(argv: string[]) {
     if (argv.includes('--discover')) {
       for (const p of providerViews().filter((v) => v.ready)) {
         const s = await verify(p.id)
-        log(`DISCOVER ${p.id} (${p.key.source} ${p.key.hint})`, s.ok ? s.models.map((m) => m.id) : `HATA: ${s.message}`)
+        log(`DISCOVER ${p.id} (${p.key.source} ${p.key.hint})`, s.ok ? s.models.map((m) => m.id) : `ERROR: ${s.message}`)
       }
       log('TARGET ACCESS', targetAccess())
       log('POOL (auto)', candidatePool('auto'))

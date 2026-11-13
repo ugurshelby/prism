@@ -463,7 +463,7 @@ function registerIpc() {
       const analysis = await limited('analyze', () => tracked(() => analyze(req, controller.signal)))
       // A cancelled analysis is not written to history; the UI no longer waits for the response even if it came from the provider.
       if (controller.signal.aborted) throw new LlmError(msg('err.cancelled'))
-      return { ...analysis, historyId: save ? keepRecord('analiz', () => recordAnalysis(req, analysis)) : undefined }
+      return { ...analysis, historyId: save ? keepRecord('analysis', () => recordAnalysis(req, analysis)) : undefined }
     } finally {
       running.delete(req.id)
     }
