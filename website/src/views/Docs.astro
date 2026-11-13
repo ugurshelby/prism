@@ -40,7 +40,7 @@ const toc = [
             Get the installer for your system from the <a href={href('download')}>download page</a>. Your system asks for confirmation once on
             first launch.
           </li>
-          <li>Prism opens a setup screen the first time. Paste a key from any provider below and press <b>Kaydet</b> (Save); it is verified right away.</li>
+          <li>Prism opens a setup screen the first time. Paste a key from any provider below and press <b>Save</b>; it is verified right away.</li>
           <li>Mark the apps you use through a subscription (for example Claude Code or ChatGPT) so cross-family recommendations include them.</li>
           <li>Write your rough prompt, press <code>Ctrl+Enter</code>, review the recommendation, answer any questions and copy the prompt.</li>
         </ol>
@@ -81,7 +81,7 @@ const toc = [
           <li><code>Ctrl+Alt+Space</code> in Ray (<code>Cmd+Alt+Space</code> on macOS) and <code>Ctrl+Shift+Space</code> in Spectrum (<code>Cmd+Shift+Space</code> on macOS) show or hide the panel. You can change it in Settings.</li>
           <li><b>Ecosystem:</b> Claude, GPT, Gemini or Grok to stay within one family, or ✦ Cross to choose among every model you can use.</li>
           <li><b>Surface:</b> coding agent, chat or API; the prompt’s structure and setup tips follow it.</li>
-          <li><b>Önerilsin / Ben seçeyim</b> (recommend / I’ll choose): take the recommendation or pick the model and level yourself.</li>
+          <li><b>Recommend / I’ll choose</b>: take the recommendation or pick the model and level yourself.</li>
           <li>Closing the window keeps Prism in the tray; history keeps your last 200 prompts on this computer.</li>
         </ul>
         <p class="muted">The interface is in Turkish today; generated prompts are written in English.</p>
@@ -134,8 +134,8 @@ const toc = [
             <tr><td><code>401</code> / “key rejected”</td><td>Wrong key or the API isn’t enabled for it. Re-enter the key and press Verify.</td></tr>
             <tr><td>Vertex <code>404</code></td><td>Location must be <code>global</code>; check the project ID and that the Vertex AI API is enabled.</td></tr>
             <tr><td><code>429</code></td><td>Rate limit or quota. Prism retries twice, then shows the error.</td></tr>
-            <tr><td>Linux: “Sistem anahtarlığı bulunamadı”</td><td>Install and unlock GNOME Keyring or KWallet, then restart Prism. Without a keyring, keys can’t be saved.</td></tr>
-            <tr><td>“key’i .env dosyasında”</td><td>An older version read keys from <code>.env</code>. Save the key in Settings → Sağlayıcılar, then delete the <code>.env</code> file.</td></tr>
+            <tr><td>Linux: “No system keyring found”</td><td>Install and unlock GNOME Keyring or KWallet, then restart Prism. Without a keyring, keys can’t be saved.</td></tr>
+            <tr><td>“The key is in a .env file”</td><td>An older version read keys from <code>.env</code>. Save the key in Settings → Providers, then delete the <code>.env</code> file.</td></tr>
             <tr><td>macOS: “can’t be opened” warning</td><td>System Settings → Privacy &amp; Security → Open Anyway.</td></tr>
           </tbody>
         </table>
