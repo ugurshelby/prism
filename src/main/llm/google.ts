@@ -14,7 +14,9 @@ const LABEL: Record<Kind, string> = { vertex: 'Vertex', gemini: 'Gemini API' }
 
 // Vertex model listing does not work with an API key; access is probed with one small request per model.
 const VERTEX_PROBE = [
+  'gemini-4-carbon',
   'gemini-4-argon',
+  'gemini-4-hydrogen',
   'gemini-3.8-flash',
   'gemini-3.6-flash',
   'gemini-3.5-flash-lite',

@@ -127,8 +127,8 @@ describe('vertex: endpoints and discovery', () => {
     })
     const found = await vertex.discover(cred)
     expect(found).toEqual([{ id: 'gemini-4-argon' }, { id: 'gemini-3.8-flash' }])
-    // 9 yoklama; 429 yoklamada yeniden denenmez (attempts: 1).
-    expect(s.seen).toHaveLength(9)
+    // 11 probes; a 429 probe is not retried (attempts: 1).
+    expect(s.seen).toHaveLength(11)
     s.seen.forEach(expectSafeRequest)
     expect(s.unexpected).toEqual([])
   })

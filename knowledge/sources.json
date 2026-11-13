@@ -51,6 +51,15 @@
     "grok-build-permissions": { "kind": "doc", "title": "Permissions (Grok Build)", "publisher": "xAI", "url": "https://docs.x.ai/build/features/permissions", "retrieved": "2026-11-10" },
     "x-ai-grok": { "kind": "doc", "title": "Grok", "publisher": "xAI", "url": "https://x.ai/grok", "retrieved": "2026-11-10" },
     "grok-faq": { "kind": "doc", "title": "FAQ - Grok Website / Apps", "publisher": "xAI", "url": "https://docs.x.ai/grok/faq", "retrieved": "2026-11-10" },
-    "grok-connectors": { "kind": "doc", "title": "Connectors", "publisher": "xAI", "url": "https://docs.x.ai/grok/connectors", "retrieved": "2026-11-10" }
+    "grok-connectors": { "kind": "doc", "title": "Connectors", "publisher": "xAI", "url": "https://docs.x.ai/grok/connectors", "retrieved": "2026-11-10" },
+    "gemini-carbon-whats-new": { "kind": "doc", "title": "What's new in Gemini 4 Carbon", "publisher": "Google", "url": "https://ai.google.dev/gemini-api/docs/whats-new-gemini-4-carbon", "retrieved": "2026-11-13" },
+    "gemini-carbon-guide": { "kind": "doc", "title": "Developer's guide to Gemini 4 Carbon", "publisher": "Google Cloud", "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/guides/gemini-4-carbon", "retrieved": "2026-11-13" },
+    "gemini-carbon-card": { "kind": "doc", "title": "Gemini 4 Carbon model card", "publisher": "Google DeepMind", "url": "https://deepmind.google/models/model-cards/gemini-4-carbon/", "retrieved": "2026-11-13" },
+    "gemini-hydrogen-docs": { "kind": "doc", "title": "Gemini 4 Hydrogen", "publisher": "Google Cloud", "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/4-hydrogen", "retrieved": "2026-11-13" },
+    "gemini-hydrogen-guide": { "kind": "doc", "title": "Developer's guide to Gemini 4 Hydrogen", "publisher": "Google Cloud", "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/guides/gemini-4-hydrogen", "retrieved": "2026-11-13" },
+    "gemini-hydrogen-card": { "kind": "doc", "title": "Gemini 4 Hydrogen model card", "publisher": "Google DeepMind", "url": "https://deepmind.google/models/model-cards/gemini-4-hydrogen/", "retrieved": "2026-11-13" },
+    "gemini-hydrogen-blog": { "kind": "doc", "title": "Introducing Gemini 4 Hydrogen", "publisher": "Google", "url": "https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-hydrogen/", "retrieved": "2026-11-13" },
+    "gemini-platform-thinking": { "kind": "doc", "title": "Thinking (Gemini Enterprise Agent Platform)", "publisher": "Google Cloud", "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/thinking", "retrieved": "2026-11-13" },
+    "gemini-ai-plans": { "kind": "doc", "title": "Google AI plans", "publisher": "Google", "url": "https://ai.google.dev/gemini-api/docs/google-ai-plans", "retrieved": "2026-11-13" }
   }
 }

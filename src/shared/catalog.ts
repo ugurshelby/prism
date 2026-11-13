@@ -97,7 +97,9 @@ export const MODEL_IDS = [
   'gpt-6.1-sol',
   'gpt-6.1-terra',
   'gpt-6-luna',
+  'gemini-4-carbon',
   'gemini-4-argon',
+  'gemini-4-hydrogen',
   'gemini-3.8-flash',
   'gemini-3.5-flash-lite',
   'grok-4.7',
@@ -213,6 +215,17 @@ export const MODELS: Record<ModelId, TargetModel> = {
     defaultEffort: { api: 'medium', agent: 'high' },
     hue: '#9fb4ff'
   },
+  'gemini-4-carbon': {
+    id: 'gemini-4-carbon',
+    family: 'gemini',
+    name: 'Gemini 4 Carbon',
+    short: 'Carbon',
+    latency: 'slow',
+    price: { input: 4, output: 20 },
+    efforts: ['low', 'medium', 'high'],
+    defaultEffort: { api: 'medium', agent: 'medium' },
+    hue: '#8a6cff'
+  },
   'gemini-4-argon': {
     id: 'gemini-4-argon',
     family: 'gemini',
@@ -223,6 +236,17 @@ export const MODELS: Record<ModelId, TargetModel> = {
     efforts: ['low', 'medium', 'high'],
     defaultEffort: { api: 'medium', agent: 'medium' },
     hue: '#6c8cff'
+  },
+  'gemini-4-hydrogen': {
+    id: 'gemini-4-hydrogen',
+    family: 'gemini',
+    name: 'Gemini 4 Hydrogen',
+    short: 'Hydrogen',
+    latency: 'fast',
+    price: { input: 1.5, output: 7.5 },
+    efforts: ['low', 'medium', 'high', 'xhigh'],
+    defaultEffort: { api: 'high', agent: 'high' },
+    hue: '#5fd0ff'
   },
   'gemini-3.8-flash': {
     id: 'gemini-3.8-flash',

@@ -38,3 +38,19 @@ describe('candidatePool: family-limited pool (Spectrum)', () => {
     expect(candidatePool('openai', {}, ['claude']).every((m) => MODELS[m].family === 'openai')).toBe(true)
   })
 })
+
+describe('Gemini 4 lineup (knowledge/gemini/models.md, 2026-11-13)', () => {
+  it('pins thinking levels, defaults and list prices of Carbon, Argon and Hydrogen', () => {
+    const pick = (id: 'gemini-4-carbon' | 'gemini-4-argon' | 'gemini-4-hydrogen') => {
+      const m = MODELS[id]
+      return { efforts: m.efforts, defaultEffort: m.defaultEffort, price: m.price }
+    }
+    expect(pick('gemini-4-carbon')).toEqual({ efforts: ['low', 'medium', 'high'], defaultEffort: { api: 'medium', agent: 'medium' }, price: { input: 4, output: 20 } })
+    expect(pick('gemini-4-argon')).toEqual({ efforts: ['low', 'medium', 'high'], defaultEffort: { api: 'medium', agent: 'medium' }, price: { input: 4, output: 20 } })
+    expect(pick('gemini-4-hydrogen')).toEqual({ efforts: ['low', 'medium', 'high', 'xhigh'], defaultEffort: { api: 'high', agent: 'high' }, price: { input: 1.5, output: 7.5 } })
+  })
+
+  it('no Gemini 4 model offers minimal (HTTP 400 on the API)', () => {
+    for (const id of modelsOf('gemini').filter((m) => m.startsWith('gemini-4-'))) expect(MODELS[id].efforts).not.toContain('minimal')
+  })
+})

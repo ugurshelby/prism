@@ -41,8 +41,8 @@ Used only when the person lets Prism pick among several families. The candidates
 
 | Tier | Claude | OpenAI | Gemini | Grok |
 |---|---|---|---|---|
-| Frontier, hardest work | Fable 5.1 ($10 / $50) | GPT-6 Astra ($10 / $50) | Gemini 4 Argon ($4 / $20; $2 / $10 until 2026-11-30) | Grok 4.7 ($2 / $6) |
-| Serious default | Opus 5.5 ($4 / $20) | GPT-6.1 Sol ($2 / $10) | Gemini 3.8 Flash ($1.50 / $7.50; half until 2026-12-31) | Grok 4.7 |
+| Frontier, hardest work | Fable 5.1 ($10 / $50) | GPT-6 Astra ($10 / $50) | Gemini 4 Carbon or Argon ($4 / $20; $2 / $10 until 2026-11-30) | Grok 4.7 ($2 / $6) |
+| Serious default | Opus 5.5 ($4 / $20) | GPT-6.1 Sol ($2 / $10) | Gemini 4 Hydrogen ($1.50 / $7.50) or 3.8 Flash ($1.50 / $7.50; half until 2026-12-31) | Grok 4.7 |
 | Fast everyday | Sonnet 5.5 ($2 / $10) | GPT-6.1 Terra ($1 / $5) | Gemini 3.8 Flash | Grok 4.3 ($1.25 / $2.50) |
 | Cheap, high volume | Haiku 5.5 ($0.10 / $0.50) | GPT-6 Luna ($0.10 / $0.50) | Gemini 3.5 Flash-Lite ($0.30 / $2.50) | Grok 4.3 |
 | Coding agent | Opus / Sonnet in Claude Code | Sol / Astra in Codex | Argon / 3.8 Flash in Antigravity | Grok Build 0.1 ($1 / $2) |
@@ -52,7 +52,7 @@ Prices alone don't decide: reasoning models bill thinking as output, and some th
 ## Documented strengths worth matching
 - **Claude (Opus 5.5 / Fable 5.1):** long-running agentic coding in a real repository, code review, analysis.
 - **OpenAI (GPT-6):** Astra and Sol for complex reasoning and coding; Terra for natural writing, visual reasoning and computer use; Luna for focused high-volume tasks. Tends toward heavily formatted answers.
-- **Gemini (4 Argon / 3.8 Flash):** very large inputs and very long outputs (Argon), Google Search grounding.
+- **Gemini (4 Carbon / Argon / Hydrogen / 3.8 Flash):** very large inputs and very long outputs (Argon, Carbon), long-horizon multi-agent engineering and science (Carbon), everyday agentic coding at a low price (Hydrogen), Google Search grounding.
 - **Grok (4.7):** capable flagship at a low price; 500k context.
 
 ## How to decide
@@ -194,13 +194,15 @@ Setting model and effort: in Chat, select GPT-6 and use the Thinking slider: Ins
 
 <family name="Gemini" vendor="Google" setting="thinking level">
 <models>
-# Target models (Gemini, lineup checked 2026-11-08)
+# Target models (Gemini, lineup checked 2026-11-13)
 
 Thinking is always on and is set with \`thinking_level\`; supported levels differ per model.
 
 | Model | ID | Positioning | Price (input / output per MTok) | Thinking levels | Default |
 |---|---|---|---|---|---|
+| Gemini 4 Carbon | \`gemini-4-carbon\` | Deepest-reasoning Gemini 4 model, built on Argon for long-horizon engineering, science and high-precision documents. Thinks much longer per turn than Argon. | $2 / $10 until 2026-11-30, then $4 / $20 (same as Argon) | \`low\` \`medium\` \`high\` | \`medium\` |
 | Gemini 4 Argon | \`gemini-4-argon\` | Flagship reasoning model for deep work: coding, finance, legal, security, science. Unified 1,048,576-token limit for input plus output. | $2 / $10 until 2026-11-30, then $4 / $20 | \`low\` \`medium\` \`high\` | \`medium\` |
+| Gemini 4 Hydrogen | \`gemini-4-hydrogen\` | Built from Carbon for fast, low-cost everyday agentic coding; reads Office files directly. | $1.50 / $7.50, flat across 1M context | \`low\` \`medium\` \`high\` \`xhigh\` | \`high\` |
 | Gemini 3.8 Flash | \`gemini-3.8-flash\` | Newest and most intelligent Flash model. | $0.75 / $3.75 until 2026-12-31, then $1.50 / $7.50 | \`low\` \`medium\` \`high\` | \`medium\` |
 | Gemini 3.5 Flash-Lite | \`gemini-3.5-flash-lite\` | Fastest and most cost-effective 3.5 model, for high-throughput work. | $0.30 / $2.50 | \`minimal\` \`low\` \`medium\` \`high\` | \`minimal\` |
 
@@ -208,6 +210,8 @@ Thinking tokens are billed as output.
 Deprecated \`gemini-2.5-pro\` and \`gemini-2.5-flash\` route to 3.8 Flash and 3.5 Flash-Lite on 2026-12-01.
 
 ## Choosing a model
+- **Gemini 4 Carbon** for the hardest long-horizon work: multi-agent engineering, science, high-precision finance or legal documents. Not for routine tasks: it thinks longer than Argon at the same token price.
+- **Gemini 4 Hydrogen** for everyday agentic coding, debugging and tool use at Flash-level prices; \`xhigh\` for hard debugging.
 - **Gemini 4 Argon** for genuinely hard reasoning, very large inputs read at once, and very long single outputs. Thinking can't be turned off.
 - **Gemini 3.8 Flash** for long-running software engineering, autonomous agents and complex enterprise workflows.
 - **Gemini 3.5 Flash-Lite** for simple, mechanical or high-volume work: classification, extraction, routing, short answers, quick transformations.
@@ -218,14 +222,15 @@ Deprecated \`gemini-2.5-pro\` and \`gemini-2.5-flash\` route to 3.8 Flash and 3.
 # Thinking level (Gemini)
 
 Gemini 3.x and 4 models think before answering; \`thinking_level\` sets how deep that internal reasoning goes. Thinking can't be switched off on these models.
-Argon and 3.8 Flash accept \`low\`, \`medium\`, \`high\`; \`minimal\` and the old numeric \`thinking_budget\` return an error on Argon.
+Argon, Carbon and 3.8 Flash accept \`low\`, \`medium\`, \`high\`; Hydrogen adds \`xhigh\` and defaults to \`high\`. \`minimal\` and the old numeric \`thinking_budget\` return an error on Gemini 4.
 
 | Level | Use it for |
 |---|---|
 | \`minimal\` | Fact lookup, classification, simple transformations (Flash-Lite default). |
 | \`low\` | Classification, summarization, metadata extraction, latency-critical work. |
 | \`medium\` | General coding, tool use, document Q&A. Default on Argon and 3.8 Flash. |
-| \`high\` | Multi-file engineering, formal proofs, architecture design, vulnerability discovery. |
+| \`high\` | Multi-file engineering, formal proofs, architecture design, vulnerability discovery. Default on Hydrogen. |
+| \`xhigh\` | Hydrogen only: hard debugging and deep reasoning; slower, more output tokens. |
 
 Notes:
 - Thought tokens are billed in full and count toward the output limit. If a response is cut off, lower the thinking level rather than shrinking the cap.
@@ -319,7 +324,9 @@ Recommend only from these models. The effort must be one the chosen model suppor
 - \`gpt-6.1-sol\` — GPT-6.1 Sol (OpenAI) · levels: low | medium | high | xhigh | max, default \`medium\` · $2 / $10 per MTok
 - \`gpt-6.1-terra\` — GPT-6.1 Terra (OpenAI) · levels: none | low | medium | high | xhigh | max, default \`medium\` · $1 / $5 per MTok
 - \`gpt-6-luna\` — GPT-6 Luna (OpenAI) · levels: none | low | medium | high | xhigh | max, default \`high\` · $0.1 / $0.5 per MTok
+- \`gemini-4-carbon\` — Gemini 4 Carbon (Google) · levels: low | medium | high, default \`medium\` · $4 / $20 per MTok
 - \`gemini-4-argon\` — Gemini 4 Argon (Google) · levels: low | medium | high, default \`medium\` · $4 / $20 per MTok
+- \`gemini-4-hydrogen\` — Gemini 4 Hydrogen (Google) · levels: low | medium | high | xhigh, default \`high\` · $1.5 / $7.5 per MTok
 - \`gemini-3.8-flash\` — Gemini 3.8 Flash (Google) · levels: low | medium | high, default \`medium\` · $1.5 / $7.5 per MTok
 - \`gemini-3.5-flash-lite\` — Gemini 3.5 Flash-Lite (Google) · levels: minimal | low | medium | high, default \`minimal\` · $0.3 / $2.5 per MTok
 - \`grok-4.7\` — Grok 4.7 (xAI) · levels: low | medium | high | xhigh, default \`high\` · $2 / $6 per MTok
@@ -1323,13 +1330,15 @@ The person decides what is good. Prism explains briefly what it changed and why,
 </vision>
 
 <models>
-# Target models (Gemini, lineup checked 2026-11-08)
+# Target models (Gemini, lineup checked 2026-11-13)
 
 Thinking is always on and is set with \`thinking_level\`; supported levels differ per model.
 
 | Model | ID | Positioning | Price (input / output per MTok) | Thinking levels | Default |
 |---|---|---|---|---|---|
+| Gemini 4 Carbon | \`gemini-4-carbon\` | Deepest-reasoning Gemini 4 model, built on Argon for long-horizon engineering, science and high-precision documents. Thinks much longer per turn than Argon. | $2 / $10 until 2026-11-30, then $4 / $20 (same as Argon) | \`low\` \`medium\` \`high\` | \`medium\` |
 | Gemini 4 Argon | \`gemini-4-argon\` | Flagship reasoning model for deep work: coding, finance, legal, security, science. Unified 1,048,576-token limit for input plus output. | $2 / $10 until 2026-11-30, then $4 / $20 | \`low\` \`medium\` \`high\` | \`medium\` |
+| Gemini 4 Hydrogen | \`gemini-4-hydrogen\` | Built from Carbon for fast, low-cost everyday agentic coding; reads Office files directly. | $1.50 / $7.50, flat across 1M context | \`low\` \`medium\` \`high\` \`xhigh\` | \`high\` |
 | Gemini 3.8 Flash | \`gemini-3.8-flash\` | Newest and most intelligent Flash model. | $0.75 / $3.75 until 2026-12-31, then $1.50 / $7.50 | \`low\` \`medium\` \`high\` | \`medium\` |
 | Gemini 3.5 Flash-Lite | \`gemini-3.5-flash-lite\` | Fastest and most cost-effective 3.5 model, for high-throughput work. | $0.30 / $2.50 | \`minimal\` \`low\` \`medium\` \`high\` | \`minimal\` |
 
@@ -1337,6 +1346,8 @@ Thinking tokens are billed as output.
 Deprecated \`gemini-2.5-pro\` and \`gemini-2.5-flash\` route to 3.8 Flash and 3.5 Flash-Lite on 2026-12-01.
 
 ## Choosing a model
+- **Gemini 4 Carbon** for the hardest long-horizon work: multi-agent engineering, science, high-precision finance or legal documents. Not for routine tasks: it thinks longer than Argon at the same token price.
+- **Gemini 4 Hydrogen** for everyday agentic coding, debugging and tool use at Flash-level prices; \`xhigh\` for hard debugging.
 - **Gemini 4 Argon** for genuinely hard reasoning, very large inputs read at once, and very long single outputs. Thinking can't be turned off.
 - **Gemini 3.8 Flash** for long-running software engineering, autonomous agents and complex enterprise workflows.
 - **Gemini 3.5 Flash-Lite** for simple, mechanical or high-volume work: classification, extraction, routing, short answers, quick transformations.
@@ -1347,14 +1358,15 @@ Deprecated \`gemini-2.5-pro\` and \`gemini-2.5-flash\` route to 3.8 Flash and 3.
 # Thinking level (Gemini)
 
 Gemini 3.x and 4 models think before answering; \`thinking_level\` sets how deep that internal reasoning goes. Thinking can't be switched off on these models.
-Argon and 3.8 Flash accept \`low\`, \`medium\`, \`high\`; \`minimal\` and the old numeric \`thinking_budget\` return an error on Argon.
+Argon, Carbon and 3.8 Flash accept \`low\`, \`medium\`, \`high\`; Hydrogen adds \`xhigh\` and defaults to \`high\`. \`minimal\` and the old numeric \`thinking_budget\` return an error on Gemini 4.
 
 | Level | Use it for |
 |---|---|
 | \`minimal\` | Fact lookup, classification, simple transformations (Flash-Lite default). |
 | \`low\` | Classification, summarization, metadata extraction, latency-critical work. |
 | \`medium\` | General coding, tool use, document Q&A. Default on Argon and 3.8 Flash. |
-| \`high\` | Multi-file engineering, formal proofs, architecture design, vulnerability discovery. |
+| \`high\` | Multi-file engineering, formal proofs, architecture design, vulnerability discovery. Default on Hydrogen. |
+| \`xhigh\` | Hydrogen only: hard debugging and deep reasoning; slower, more output tokens. |
 
 Notes:
 - Thought tokens are billed in full and count toward the output limit. If a response is cut off, lower the thinking level rather than shrinking the cap.
@@ -1386,7 +1398,9 @@ Setting model and thinking: pick the model in the selector under the prompt box 
 
 <candidates>
 Recommend only from these models. The effort must be one the chosen model supports, in that model's own scale.
+- \`gemini-4-carbon\` — Gemini 4 Carbon (Google) · levels: low | medium | high, default \`medium\` · $4 / $20 per MTok
 - \`gemini-4-argon\` — Gemini 4 Argon (Google) · levels: low | medium | high, default \`medium\` · $4 / $20 per MTok
+- \`gemini-4-hydrogen\` — Gemini 4 Hydrogen (Google) · levels: low | medium | high | xhigh, default \`high\` · $1.5 / $7.5 per MTok
 - \`gemini-3.8-flash\` — Gemini 3.8 Flash (Google) · levels: low | medium | high, default \`medium\` · $1.5 / $7.5 per MTok
 - \`gemini-3.5-flash-lite\` — Gemini 3.5 Flash-Lite (Google) · levels: minimal | low | medium | high, default \`minimal\` · $0.3 / $2.5 per MTok
 </candidates>
@@ -1503,14 +1517,15 @@ The person decides what is good. Prism explains briefly what it changed and why,
 # Thinking level (Gemini)
 
 Gemini 3.x and 4 models think before answering; \`thinking_level\` sets how deep that internal reasoning goes. Thinking can't be switched off on these models.
-Argon and 3.8 Flash accept \`low\`, \`medium\`, \`high\`; \`minimal\` and the old numeric \`thinking_budget\` return an error on Argon.
+Argon, Carbon and 3.8 Flash accept \`low\`, \`medium\`, \`high\`; Hydrogen adds \`xhigh\` and defaults to \`high\`. \`minimal\` and the old numeric \`thinking_budget\` return an error on Gemini 4.
 
 | Level | Use it for |
 |---|---|
 | \`minimal\` | Fact lookup, classification, simple transformations (Flash-Lite default). |
 | \`low\` | Classification, summarization, metadata extraction, latency-critical work. |
 | \`medium\` | General coding, tool use, document Q&A. Default on Argon and 3.8 Flash. |
-| \`high\` | Multi-file engineering, formal proofs, architecture design, vulnerability discovery. |
+| \`high\` | Multi-file engineering, formal proofs, architecture design, vulnerability discovery. Default on Hydrogen. |
+| \`xhigh\` | Hydrogen only: hard debugging and deep reasoning; slower, more output tokens. |
 
 Notes:
 - Thought tokens are billed in full and count toward the output limit. If a response is cut off, lower the thinking level rather than shrinking the cap.
@@ -1617,13 +1632,15 @@ The person decides what is good. Prism explains briefly what it changed and why,
 </vision>
 
 <models>
-# Target models (Gemini, lineup checked 2026-11-08)
+# Target models (Gemini, lineup checked 2026-11-13)
 
 Thinking is always on and is set with \`thinking_level\`; supported levels differ per model.
 
 | Model | ID | Positioning | Price (input / output per MTok) | Thinking levels | Default |
 |---|---|---|---|---|---|
+| Gemini 4 Carbon | \`gemini-4-carbon\` | Deepest-reasoning Gemini 4 model, built on Argon for long-horizon engineering, science and high-precision documents. Thinks much longer per turn than Argon. | $2 / $10 until 2026-11-30, then $4 / $20 (same as Argon) | \`low\` \`medium\` \`high\` | \`medium\` |
 | Gemini 4 Argon | \`gemini-4-argon\` | Flagship reasoning model for deep work: coding, finance, legal, security, science. Unified 1,048,576-token limit for input plus output. | $2 / $10 until 2026-11-30, then $4 / $20 | \`low\` \`medium\` \`high\` | \`medium\` |
+| Gemini 4 Hydrogen | \`gemini-4-hydrogen\` | Built from Carbon for fast, low-cost everyday agentic coding; reads Office files directly. | $1.50 / $7.50, flat across 1M context | \`low\` \`medium\` \`high\` \`xhigh\` | \`high\` |
 | Gemini 3.8 Flash | \`gemini-3.8-flash\` | Newest and most intelligent Flash model. | $0.75 / $3.75 until 2026-12-31, then $1.50 / $7.50 | \`low\` \`medium\` \`high\` | \`medium\` |
 | Gemini 3.5 Flash-Lite | \`gemini-3.5-flash-lite\` | Fastest and most cost-effective 3.5 model, for high-throughput work. | $0.30 / $2.50 | \`minimal\` \`low\` \`medium\` \`high\` | \`minimal\` |
 
@@ -1631,6 +1648,8 @@ Thinking tokens are billed as output.
 Deprecated \`gemini-2.5-pro\` and \`gemini-2.5-flash\` route to 3.8 Flash and 3.5 Flash-Lite on 2026-12-01.
 
 ## Choosing a model
+- **Gemini 4 Carbon** for the hardest long-horizon work: multi-agent engineering, science, high-precision finance or legal documents. Not for routine tasks: it thinks longer than Argon at the same token price.
+- **Gemini 4 Hydrogen** for everyday agentic coding, debugging and tool use at Flash-level prices; \`xhigh\` for hard debugging.
 - **Gemini 4 Argon** for genuinely hard reasoning, very large inputs read at once, and very long single outputs. Thinking can't be turned off.
 - **Gemini 3.8 Flash** for long-running software engineering, autonomous agents and complex enterprise workflows.
 - **Gemini 3.5 Flash-Lite** for simple, mechanical or high-volume work: classification, extraction, routing, short answers, quick transformations.
@@ -1641,14 +1660,15 @@ Deprecated \`gemini-2.5-pro\` and \`gemini-2.5-flash\` route to 3.8 Flash and 3.
 # Thinking level (Gemini)
 
 Gemini 3.x and 4 models think before answering; \`thinking_level\` sets how deep that internal reasoning goes. Thinking can't be switched off on these models.
-Argon and 3.8 Flash accept \`low\`, \`medium\`, \`high\`; \`minimal\` and the old numeric \`thinking_budget\` return an error on Argon.
+Argon, Carbon and 3.8 Flash accept \`low\`, \`medium\`, \`high\`; Hydrogen adds \`xhigh\` and defaults to \`high\`. \`minimal\` and the old numeric \`thinking_budget\` return an error on Gemini 4.
 
 | Level | Use it for |
 |---|---|
 | \`minimal\` | Fact lookup, classification, simple transformations (Flash-Lite default). |
 | \`low\` | Classification, summarization, metadata extraction, latency-critical work. |
 | \`medium\` | General coding, tool use, document Q&A. Default on Argon and 3.8 Flash. |
-| \`high\` | Multi-file engineering, formal proofs, architecture design, vulnerability discovery. |
+| \`high\` | Multi-file engineering, formal proofs, architecture design, vulnerability discovery. Default on Hydrogen. |
+| \`xhigh\` | Hydrogen only: hard debugging and deep reasoning; slower, more output tokens. |
 
 Notes:
 - Thought tokens are billed in full and count toward the output limit. If a response is cut off, lower the thinking level rather than shrinking the cap.
@@ -1684,7 +1704,9 @@ API settings:
 
 <candidates>
 Recommend only from these models. The effort must be one the chosen model supports, in that model's own scale.
+- \`gemini-4-carbon\` — Gemini 4 Carbon (Google) · levels: low | medium | high, default \`medium\` · $4 / $20 per MTok
 - \`gemini-4-argon\` — Gemini 4 Argon (Google) · levels: low | medium | high, default \`medium\` · $4 / $20 per MTok
+- \`gemini-4-hydrogen\` — Gemini 4 Hydrogen (Google) · levels: low | medium | high | xhigh, default \`high\` · $1.5 / $7.5 per MTok
 - \`gemini-3.8-flash\` — Gemini 3.8 Flash (Google) · levels: low | medium | high, default \`medium\` · $1.5 / $7.5 per MTok
 - \`gemini-3.5-flash-lite\` — Gemini 3.5 Flash-Lite (Google) · levels: minimal | low | medium | high, default \`minimal\` · $0.3 / $2.5 per MTok
 </candidates>
@@ -1801,14 +1823,15 @@ The person decides what is good. Prism explains briefly what it changed and why,
 # Thinking level (Gemini)
 
 Gemini 3.x and 4 models think before answering; \`thinking_level\` sets how deep that internal reasoning goes. Thinking can't be switched off on these models.
-Argon and 3.8 Flash accept \`low\`, \`medium\`, \`high\`; \`minimal\` and the old numeric \`thinking_budget\` return an error on Argon.
+Argon, Carbon and 3.8 Flash accept \`low\`, \`medium\`, \`high\`; Hydrogen adds \`xhigh\` and defaults to \`high\`. \`minimal\` and the old numeric \`thinking_budget\` return an error on Gemini 4.
 
 | Level | Use it for |
 |---|---|
 | \`minimal\` | Fact lookup, classification, simple transformations (Flash-Lite default). |
 | \`low\` | Classification, summarization, metadata extraction, latency-critical work. |
 | \`medium\` | General coding, tool use, document Q&A. Default on Argon and 3.8 Flash. |
-| \`high\` | Multi-file engineering, formal proofs, architecture design, vulnerability discovery. |
+| \`high\` | Multi-file engineering, formal proofs, architecture design, vulnerability discovery. Default on Hydrogen. |
+| \`xhigh\` | Hydrogen only: hard debugging and deep reasoning; slower, more output tokens. |
 
 Notes:
 - Thought tokens are billed in full and count toward the output limit. If a response is cut off, lower the thinking level rather than shrinking the cap.
@@ -1919,13 +1942,15 @@ The person decides what is good. Prism explains briefly what it changed and why,
 </vision>
 
 <models>
-# Target models (Gemini, lineup checked 2026-11-08)
+# Target models (Gemini, lineup checked 2026-11-13)
 
 Thinking is always on and is set with \`thinking_level\`; supported levels differ per model.
 
 | Model | ID | Positioning | Price (input / output per MTok) | Thinking levels | Default |
 |---|---|---|---|---|---|
+| Gemini 4 Carbon | \`gemini-4-carbon\` | Deepest-reasoning Gemini 4 model, built on Argon for long-horizon engineering, science and high-precision documents. Thinks much longer per turn than Argon. | $2 / $10 until 2026-11-30, then $4 / $20 (same as Argon) | \`low\` \`medium\` \`high\` | \`medium\` |
 | Gemini 4 Argon | \`gemini-4-argon\` | Flagship reasoning model for deep work: coding, finance, legal, security, science. Unified 1,048,576-token limit for input plus output. | $2 / $10 until 2026-11-30, then $4 / $20 | \`low\` \`medium\` \`high\` | \`medium\` |
+| Gemini 4 Hydrogen | \`gemini-4-hydrogen\` | Built from Carbon for fast, low-cost everyday agentic coding; reads Office files directly. | $1.50 / $7.50, flat across 1M context | \`low\` \`medium\` \`high\` \`xhigh\` | \`high\` |
 | Gemini 3.8 Flash | \`gemini-3.8-flash\` | Newest and most intelligent Flash model. | $0.75 / $3.75 until 2026-12-31, then $1.50 / $7.50 | \`low\` \`medium\` \`high\` | \`medium\` |
 | Gemini 3.5 Flash-Lite | \`gemini-3.5-flash-lite\` | Fastest and most cost-effective 3.5 model, for high-throughput work. | $0.30 / $2.50 | \`minimal\` \`low\` \`medium\` \`high\` | \`minimal\` |
 
@@ -1933,6 +1958,8 @@ Thinking tokens are billed as output.
 Deprecated \`gemini-2.5-pro\` and \`gemini-2.5-flash\` route to 3.8 Flash and 3.5 Flash-Lite on 2026-12-01.
 
 ## Choosing a model
+- **Gemini 4 Carbon** for the hardest long-horizon work: multi-agent engineering, science, high-precision finance or legal documents. Not for routine tasks: it thinks longer than Argon at the same token price.
+- **Gemini 4 Hydrogen** for everyday agentic coding, debugging and tool use at Flash-level prices; \`xhigh\` for hard debugging.
 - **Gemini 4 Argon** for genuinely hard reasoning, very large inputs read at once, and very long single outputs. Thinking can't be turned off.
 - **Gemini 3.8 Flash** for long-running software engineering, autonomous agents and complex enterprise workflows.
 - **Gemini 3.5 Flash-Lite** for simple, mechanical or high-volume work: classification, extraction, routing, short answers, quick transformations.
@@ -1943,14 +1970,15 @@ Deprecated \`gemini-2.5-pro\` and \`gemini-2.5-flash\` route to 3.8 Flash and 3.
 # Thinking level (Gemini)
 
 Gemini 3.x and 4 models think before answering; \`thinking_level\` sets how deep that internal reasoning goes. Thinking can't be switched off on these models.
-Argon and 3.8 Flash accept \`low\`, \`medium\`, \`high\`; \`minimal\` and the old numeric \`thinking_budget\` return an error on Argon.
+Argon, Carbon and 3.8 Flash accept \`low\`, \`medium\`, \`high\`; Hydrogen adds \`xhigh\` and defaults to \`high\`. \`minimal\` and the old numeric \`thinking_budget\` return an error on Gemini 4.
 
 | Level | Use it for |
 |---|---|
 | \`minimal\` | Fact lookup, classification, simple transformations (Flash-Lite default). |
 | \`low\` | Classification, summarization, metadata extraction, latency-critical work. |
 | \`medium\` | General coding, tool use, document Q&A. Default on Argon and 3.8 Flash. |
-| \`high\` | Multi-file engineering, formal proofs, architecture design, vulnerability discovery. |
+| \`high\` | Multi-file engineering, formal proofs, architecture design, vulnerability discovery. Default on Hydrogen. |
+| \`xhigh\` | Hydrogen only: hard debugging and deep reasoning; slower, more output tokens. |
 
 Notes:
 - Thought tokens are billed in full and count toward the output limit. If a response is cut off, lower the thinking level rather than shrinking the cap.
@@ -1981,7 +2009,9 @@ Setting model and thinking: tap the model at the bottom of the chat box (Flash-L
 
 <candidates>
 Recommend only from these models. The effort must be one the chosen model supports, in that model's own scale.
+- \`gemini-4-carbon\` — Gemini 4 Carbon (Google) · levels: low | medium | high, default \`medium\` · $4 / $20 per MTok
 - \`gemini-4-argon\` — Gemini 4 Argon (Google) · levels: low | medium | high, default \`medium\` · $4 / $20 per MTok
+- \`gemini-4-hydrogen\` — Gemini 4 Hydrogen (Google) · levels: low | medium | high | xhigh, default \`high\` · $1.5 / $7.5 per MTok
 - \`gemini-3.8-flash\` — Gemini 3.8 Flash (Google) · levels: low | medium | high, default \`medium\` · $1.5 / $7.5 per MTok
 - \`gemini-3.5-flash-lite\` — Gemini 3.5 Flash-Lite (Google) · levels: minimal | low | medium | high, default \`minimal\` · $0.3 / $2.5 per MTok
 </candidates>
@@ -2098,14 +2128,15 @@ The person decides what is good. Prism explains briefly what it changed and why,
 # Thinking level (Gemini)
 
 Gemini 3.x and 4 models think before answering; \`thinking_level\` sets how deep that internal reasoning goes. Thinking can't be switched off on these models.
-Argon and 3.8 Flash accept \`low\`, \`medium\`, \`high\`; \`minimal\` and the old numeric \`thinking_budget\` return an error on Argon.
+Argon, Carbon and 3.8 Flash accept \`low\`, \`medium\`, \`high\`; Hydrogen adds \`xhigh\` and defaults to \`high\`. \`minimal\` and the old numeric \`thinking_budget\` return an error on Gemini 4.
 
 | Level | Use it for |
 |---|---|
 | \`minimal\` | Fact lookup, classification, simple transformations (Flash-Lite default). |
 | \`low\` | Classification, summarization, metadata extraction, latency-critical work. |
 | \`medium\` | General coding, tool use, document Q&A. Default on Argon and 3.8 Flash. |
-| \`high\` | Multi-file engineering, formal proofs, architecture design, vulnerability discovery. |
+| \`high\` | Multi-file engineering, formal proofs, architecture design, vulnerability discovery. Default on Hydrogen. |
+| \`xhigh\` | Hydrogen only: hard debugging and deep reasoning; slower, more output tokens. |
 
 Notes:
 - Thought tokens are billed in full and count toward the output limit. If a response is cut off, lower the thinking level rather than shrinking the cap.

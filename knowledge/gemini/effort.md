@@ -1,19 +1,20 @@
 ---
 kind: model
-verified: 2026-11-10
-sources: gemini-thinking, gemini-argon-guide, gemini-prompting, vertex-prompt-strategies
+verified: 2026-11-13
+sources: gemini-thinking, gemini-argon-guide, gemini-prompting, vertex-prompt-strategies, gemini-platform-thinking, gemini-hydrogen-blog
 ---
 # Thinking level (Gemini)
 
 Gemini 3.x and 4 models think before answering; `thinking_level` sets how deep that internal reasoning goes. Thinking can't be switched off on these models. [s:gemini-thinking]
-Argon and 3.8 Flash accept `low`, `medium`, `high`; `minimal` and the old numeric `thinking_budget` return an error on Argon. [s:gemini-thinking, gemini-argon-guide]
+Argon, Carbon and 3.8 Flash accept `low`, `medium`, `high`; Hydrogen adds `xhigh` and defaults to `high`. `minimal` and the old numeric `thinking_budget` return an error on Gemini 4. [s:gemini-thinking, gemini-argon-guide, gemini-platform-thinking]
 
 | Level | Use it for |
 |---|---|
 | `minimal` | Fact lookup, classification, simple transformations (Flash-Lite default). | [s:gemini-thinking]
 | `low` | Classification, summarization, metadata extraction, latency-critical work. | [s:gemini-argon-guide]
 | `medium` | General coding, tool use, document Q&A. Default on Argon and 3.8 Flash. | [s:gemini-argon-guide, gemini-thinking]
-| `high` | Multi-file engineering, formal proofs, architecture design, vulnerability discovery. | [s:gemini-argon-guide]
+| `high` | Multi-file engineering, formal proofs, architecture design, vulnerability discovery. Default on Hydrogen. | [s:gemini-argon-guide, gemini-platform-thinking]
+| `xhigh` | Hydrogen only: hard debugging and deep reasoning; slower, more output tokens. | [s:gemini-hydrogen-blog]
 
 Notes:
 - Thought tokens are billed in full and count toward the output limit. If a response is cut off, lower the thinking level rather than shrinking the cap. [s:gemini-argon-guide]
