@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { FAMILIES, SURFACES, modelsOf } from '@shared/catalog'
 import { SourcesFileSchema, parseCard } from '@shared/knowledge'
 
-// Uygulamayla dağıtılan kartların hepsi: şema, kaynaklar ve beklenen dosyalar.
+// All cards shipped with the app: schema, sources and expected files.
 describe('knowledge/ cards', () => {
   const dir = join(__dirname, '..', '..', '..', 'knowledge')
   const sources = SourcesFileSchema.parse(JSON.parse(readFileSync(join(dir, 'sources.json'), 'utf8')) as unknown)
@@ -23,7 +23,7 @@ describe('knowledge/ cards', () => {
     expect(files.toSorted()).toEqual(expected.toSorted())
   })
 
-  // routing.md bir yöntem kartıdır: kaynaksız olabilen yalnızca Prism'in kendi kuralları; satıcıya dair her satır kaynaklı.
+  // routing.md is a method card: only Prism's own rules may lack sources; every line about a vendor is sourced.
   it('routing.md leaves only its own policy lines unsourced', () => {
     const lines = readFileSync(join(dir, 'routing.md'), 'utf8').split(/\r?\n/)
     const body = lines.slice(lines.indexOf('---', 1) + 1)

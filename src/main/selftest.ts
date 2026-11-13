@@ -1,7 +1,7 @@
-// `npm run selftest -- "prompt"`: arayüz açmadan analiz + yazım zincirini gerçek sağlayıcıya karşı çalıştırır.
-// Seçenekler: --surface=agent|chat|api  --family=auto|claude|openai|gemini|grok  --engine=<sağlayıcı>
-//             --discover (yalnızca key'leri doğrulayıp erişilen modelleri listeler)
-//             --smoke (ağ ve key olmadan paketin bütünlüğünü dener; CI'da her platformda paketlenmiş uygulamayla çalışır)
+// `npm run selftest -- "prompt"`: runs the analyze + write chain against a real provider without opening the UI.
+// Options: --surface=agent|chat|api  --family=auto|claude|openai|gemini|grok  --engine=<provider>
+//             --discover (only verifies keys and lists the reachable models)
+//             --smoke (checks package integrity without network or keys; runs in CI on every platform with the packaged app)
 import { app } from 'electron'
 import { PRODUCT } from '@shared/product'
 import { FamilyChoiceSchema, ProviderIdSchema, SurfaceSchema } from '@shared/schemas'
@@ -28,11 +28,11 @@ export async function selftest(argv: string[]) {
     if (engineFlag !== undefined) overrideEngine(ProviderIdSchema.parse(engineFlag))
 
     if (argv.includes('--smoke')) {
-      // Her kart şemadan geçer (ön bilgi, kaynaklar); geçmeyen ilk kart açık bir hatayla durdurur.
+      // Every card passes the schema (front matter, sources); the first card that fails stops it with an explicit error.
       const paths = cardPaths()
       const empty = paths.filter((p) => !card(p))
-      if (empty.length) throw new Error(`Boş bilgi kartı: ${empty.join(', ')}`)
-      // Paketli uygulamada da güvenlik sınırları yerinde mi: key yalnızca sağlayıcılara gider, IPC yalnızca kendi arayüzünden.
+      if (empty.length) throw new Error(`Empty knowledge cards: ${empty.join(', ')}`)
+      // Whether the security boundaries are in place in the packaged app too: keys go only to providers, IPC only from its own UI.
       const leaks = [
         ['https://evil.example/v1', 'https://aiplatform.googleapis.com.evil.example/', 'http://api.openai.com/v1'].some((u) => {
           try {
@@ -41,11 +41,11 @@ export async function selftest(argv: string[]) {
           } catch {
             return false
           }
-        }) && 'sağlayıcı adres listesi',
-        ['https://evil.example/', 'file:///etc/passwd'].some(isAppUrl) && 'IPC gönderen denetimi',
-        ProviderIdSchema.safeParse('../../x').success && 'sağlayıcı kimliği şeması'
+        }) && 'provider address allowlist',
+        ['https://evil.example/', 'file:///etc/passwd'].some(isAppUrl) && 'IPC sender check',
+        ProviderIdSchema.safeParse('../../x').success && 'provider id schema'
       ].filter(Boolean)
-      if (leaks.length) throw new Error(`Güvenlik denetimi başarısız: ${leaks.join(', ')}`)
+      if (leaks.length) throw new Error(`Security check failed: ${leaks.join(', ')}`)
       log('SMOKE', {
         product: PRODUCT.id,
         version: app.getVersion(),

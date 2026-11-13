@@ -1,6 +1,6 @@
-// "Tüm verilerimi sil": Prism'in kendi dosyaları (shared/userdata.ts) verilen klasörlerden silinir. Key ve geçmiş
-// gibi içerikler silinmeden önce sıfırlarla ezilir (vault.ts wipeFile). Kısmi silme sessiz geçmez: silinemeyen ya da
-// silindikten sonra hâlâ duran her dosyanın adı döner (adlar sabittir; içerik ya da key asla dönmez).
+// "Delete all my data": Prism's own files (shared/userdata.ts) are deleted from the given folders. Contents such as keys and history
+// are overwritten with zeros before deletion (vault.ts wipeFile). A partial wipe is never silent: the name of every file that could not be deleted or
+// is still present after deletion is returned (names are fixed; contents or keys are never returned).
 import { existsSync, lstatSync, readdirSync, rmSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { isOwnDataFile } from '@shared/userdata'
@@ -11,7 +11,7 @@ function ownFiles(dir: string): string[] {
   return readdirSync(dir).filter(isOwnDataFile)
 }
 
-/** Silinemeyen dosyaların adlarını döndürür; boş dizi her şeyin silindiği anlamına gelir. */
+/** Returns the names of files that could not be deleted; an empty array means everything was deleted. */
 export function wipeOwnData(dirs: readonly string[]): string[] {
   const failed = new Set<string>()
   for (const dir of new Set(dirs)) {
@@ -20,7 +20,7 @@ export function wipeOwnData(dirs: readonly string[]): string[] {
     try {
       names = ownFiles(dir)
     } catch (e) {
-      logWarn('wipe', 'veri klasörü okunamadı', e)
+      logWarn('wipe', 'could not read data folder', e)
       failed.add(basename(dir))
       continue
     }
@@ -28,8 +28,8 @@ export function wipeOwnData(dirs: readonly string[]): string[] {
       const path = join(dir, name)
       try {
         const st = lstatSync(path)
-        // Bağlantının hedefi ezilmez (klasör dışındaki bir dosyayı sıfırlamasın); yalnızca bağlantı kaldırılır.
-        // Birden çok bağlantısı olan dosya da ezilmez: ezmek klasör dışındaki aynı dosyayı da sıfırlar.
+        // The link's target is not overwritten (so a file outside the folder is not zeroed); only the link is removed.
+        // A file with several links is not overwritten either: that would zero the same file outside the folder too.
         if (st.isSymbolicLink() || (st.isFile() && st.nlink > 1)) rmSync(path, { force: true })
         else if (st.isFile()) wipeFile(path)
         else failed.add(name)
@@ -38,11 +38,11 @@ export function wipeOwnData(dirs: readonly string[]): string[] {
         failed.add(name)
       }
     }
-    // Silme sırasında yeniden yazılmış ya da hiç gitmemiş dosya kalmadığını doğrula.
+    // Verify that no file was rewritten during deletion or never went away.
     try {
       for (const name of ownFiles(dir)) failed.add(name)
     } catch (e) {
-      logWarn('wipe', 'veri klasörü doğrulanamadı', e)
+      logWarn('wipe', 'could not verify data folder', e)
       failed.add(basename(dir))
     }
   }

@@ -29,7 +29,7 @@ describe('migrateLegacyData', () => {
     expect(JSON.parse(readFileSync(join(target, MIGRATION_MARKER), 'utf8'))).toMatchObject({ from: 'Prism' })
     expect(readdirSync(join(root, 'Prism')).length).toBe(7)
     expect(readdirSync(root).some((n) => n.includes('.migrating-'))).toBe(false)
-    // İkinci açılışta yeniden kopyalanmaz.
+    // It is not copied again on the second launch.
     expect(migrateLegacyData(root, PRODUCT_INFO.spectrum)).toBeNull()
   })
 

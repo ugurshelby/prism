@@ -69,7 +69,7 @@ export function generateUserPrompt(req: GenerateRequest) {
   const clarifications = answers.length
     ? `\n${fence('clarifications', answers.map((a) => `Q: ${a.question}\nA: ${a.answer}`).join('\n\n'))}\n`
     : ''
-  // Niyet metni modelin çıktısıdır ama kullanıcı metninden türer; o da sınırlanır.
+  // The intent text is model output but derives from the user's text; it is bounded too.
   const analysis = req.analysis
     ? `\n${fence('analysis', `Intent: ${req.analysis.intent}\nTask type: ${req.analysis.taskType}\nComplexity: ${req.analysis.complexity}`)}\n`
     : ''
@@ -80,7 +80,7 @@ ${fence('raw_prompt', req.prompt)}
 ${clarifications}`
 }
 
-// Argon nadiren çıktıya başka alfabeden harf karıştırıyor; girdide olmayanları işaretle.
+// Argon occasionally mixes letters from another alphabet into its output; flag those that are not in the input.
 function foreignScript(output: string, input: string): string[] {
   const re = /[^\p{Script=Latin}\p{Script=Common}\p{Script=Inherited}]/gu
   const allowed = new Set(input.match(re) ?? [])

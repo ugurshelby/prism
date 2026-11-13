@@ -1,5 +1,5 @@
-// Sağlayıcı key'leri, model keşfi, hedef erişimi ve Prism'in motor seçimi.
-// Key'ler ana süreçten çıkmaz: arayüze yalnızca maskeli hâli gider.
+// Provider keys, model discovery, target access and Prism's engine selection.
+// Keys never leave the main process: only the masked form goes to the UI.
 
 import { existsSync, readFileSync } from 'node:fs'
 import { timingSafeEqual } from 'node:crypto'
@@ -26,17 +26,17 @@ import { rendererMessage } from './ipc'
 import { seal, unseal, vaultState, wipeFile } from './vault'
 
 // --- Key saklama ------------------------------------------------------------------
-// Arayüzden girilen key işletim sisteminin anahtarlığıyla şifrelenip userData/<sağlayıcı>.key'e yazılır (vault.ts).
-// Sıra: kayıtlı key → (yalnızca geliştirmede) ortam değişkeni → .env. Kayıtlı key okunamıyorsa sessizce .env'e
-// düşülmez; açık hata verilir. Kurulu sürüm .env'i okumaz, eski bir .env kalmışsa kullanıcıya söyler.
+// A key entered in the UI is encrypted with the operating system's keyring and written to userData/<provider>.key (vault.ts).
+// Order: saved key → (development only) environment variable → .env. If the saved key cannot be read, it does not silently
+// fall back to .env; an explicit error is raised. An installed build does not read .env, and tells the user if an old .env is left.
 
 const keyFile = (p: ProviderId) => userFile(`${p}.key`)
 
-/** unreadable: kayıtlı key var ama çözülemiyor; otomatik motor seçimi bu durumda durur. */
+/** unreadable: a saved key exists but cannot be decrypted; automatic engine selection stops in that case. */
 type KeyState = { key: string; source: 'saved' | 'env' } | { key: null; source: 'none'; problem?: string; unreadable?: boolean }
 
-// Çözülmüş kayıtlı key bellekte tutulur: her ayar görünümünde anahtarlığa tekrar tekrar gidilmez (macOS ve Linux'ta
-// her çözme bir kilit açma isteğine dönüşebilir). Key kaydedilince ya da silinince geçersiz kılınır (forget).
+// The decrypted saved key is held in memory: the keyring is not hit again and again on every settings view (on macOS and Linux
+// every decrypt can turn into an unlock prompt). Invalidated when the key is saved or deleted (forget).
 const savedCache = new Map<ProviderId, KeyState | null>()
 
 function savedKey(p: ProviderId): KeyState | null {
@@ -47,11 +47,11 @@ function savedKey(p: ProviderId): KeyState | null {
     try {
       state = { key: unseal(readFileSync(path)), source: 'saved' }
     } catch (e) {
-      logWarn('providers', `${p} için kayıtlı key çözülemedi`, e)
+      logWarn('providers', `could not decrypt the saved key for ${p}`, e)
       state = { key: null, source: 'none', unreadable: true, problem: msg('err.keyUnreadable', { label: PROVIDER_INFO[p].label }) }
     }
   }
-  // Okunamayan key önbelleğe alınmaz: anahtarlık açılışta kilitliyse sonraki istekte yeniden denenir.
+  // An unreadable key is not cached: if the keyring is locked at launch, the next request retries.
   if (!(state?.key === null && state.unreadable)) savedCache.set(p, state)
   return state
 }
@@ -61,7 +61,7 @@ function envKey(p: ProviderId): string | undefined {
   return env[PROVIDER_INFO[p].env] || (p === 'gemini' ? env.GOOGLE_API_KEY : undefined) || undefined
 }
 
-/** Kurulu sürümde kullanıcı klasöründeki .env'de bu sağlayıcının key'i kalmış mı (yalnızca ad). */
+/** Whether an installed build's .env in the user folder still holds this provider's key (name only). */
 const leftoverKey = (p: ProviderId) =>
   leftoverEnvNames().some((n) => n === PROVIDER_INFO[p].env || (p === 'gemini' && n === 'GOOGLE_API_KEY'))
 
@@ -94,13 +94,13 @@ export function credentials(p: ProviderId): Credentials {
   if (state.key === null) {
     throw new LlmError(state.problem ?? msg('err.keyMissing', { label }))
   }
-  // .env'den gelen key de aynı biçim kuralından geçer; bozuk key sağlayıcıya hiç gönderilmez.
+  // A key from .env goes through the same format rule; a malformed key is never sent to the provider.
   const format = ApiKeySchema.safeParse(state.key)
   if (!format.success) throw new LlmError(msg('err.keyInvalid', { label, source: state.source === 'env' ? PROVIDER_INFO[p].env : msg('err.savedKey'), detail: describeIssues(format.error) }))
   if (p !== 'vertex') return { key: state.key }
   const t = vertexTarget()
   if (!t.project) throw new LlmError(msg('err.vertexProjectMissing'))
-  // .env'deki proje ve konum da istek adresine girer; ayarlarla aynı kuraldan geçer.
+  // The project and location from .env also go into the request address; they pass the same rule as the settings.
   const project = VertexProjectSchema.safeParse(t.project)
   const location = VertexLocationSchema.safeParse(t.location)
   if (!project.success) throw new LlmError(describeIssues(project.error))
@@ -108,23 +108,23 @@ export function credentials(p: ProviderId): Credentials {
   return { key: state.key, project: project.data, location: location.data }
 }
 
-/** Key'i kaydeder; aynı key zaten kayıtlıysa dokunmaz ve false döner. */
+/** Saves the key; if the same key is already saved, does nothing and returns false. */
 export function saveKey(p: ProviderId, key: string): boolean {
   const format = ApiKeySchema.safeParse(key)
   if (!format.success) throw new UserError(describeIssues(format.error))
   const vault = vaultState()
   if (!vault.ok) throw new UserError(msg('err.keyUnsafe', { reason: vault.reason }))
-  // Aynı key yeniden kaydedilirse önbellekteki keşif sonucu korunur; ücretli keşif istekleri yinelenmez.
+  // If the same key is saved again, the cached discovery result is kept; paid discovery requests are not repeated.
   if (sameSecret(savedKey(p)?.key ?? null, format.data)) return false
   writeFileAtomic(`${p}.key`, seal(format.data))
   forget(p)
   return true
 }
 
-/** Son doğrulama yoksa ya da başarısızsa (kota, ağ) yeniden doğrulanmalı. */
+/** Must be re-verified if there is no last verification or it failed (quota, network). */
 export const needsVerify = (p: ProviderId) => !statuses()[p]?.ok
 
-/** Sabit süreli karşılaştırma; uzunluk farkı da eşit değildir. */
+/** Constant-time comparison; a length difference also means not equal. */
 function sameSecret(a: string | null, b: string) {
   if (a === null) return false
   const x = Buffer.from(a, 'utf8')
@@ -132,7 +132,7 @@ function sameSecret(a: string | null, b: string) {
   return x.length === y.length && timingSafeEqual(x, y)
 }
 
-/** "Tüm verilerimi sil": bellekteki çözülmüş key'ler ve model önbelleği atılır; kısmi silmede de kullanılmazlar. */
+/** "Delete all my data": decrypted keys in memory and the model cache are dropped; they are not used even after a partial wipe. */
 export function forgetAllKeys() {
   for (const p of PROVIDERS) forget(p)
 }
@@ -142,11 +142,11 @@ export function clearKey(p: ProviderId) {
   forget(p)
 }
 
-// --- Model keşfi (userData/models.json) -------------------------------------------
+// --- Model discovery (userData/models.json) -------------------------------------------
 
 type Cache = Partial<Record<ProviderId, ProviderStatus>>
 let cache: Cache | null = null
-// Key her değiştiğinde artar: eski key'le başlamış bir doğrulama geç biterse yeni sonucun üstüne yazmasın.
+// Increases every time the key changes: a verification started with the old key that finishes late must not overwrite the new result.
 const generation = new Map<ProviderId, number>()
 
 const statuses = (): Cache => (cache ??= readUserJson('models.json', ModelsCacheSchema, {}))
@@ -157,18 +157,18 @@ function forget(p: ProviderId) {
   inflight.delete(p)
   const all = statuses()
   delete all[p]
-  // Key kaydedildi ya da silindi; model önbelleği yazılamasa bile bu işlem başarısız sayılmaz.
+  // The key was saved or deleted; this operation is not counted as failed even if the model cache cannot be written.
   try {
     writeJson('models.json', all)
   } catch (e) {
-    logWarn('providers', 'models.json güncellenemedi', e)
+    logWarn('providers', 'could not update models.json', e)
   }
 }
 
-// Aynı sağlayıcı için süren doğrulama paylaşılır: art arda tıklama ücretli keşif isteklerini çoğaltmasın.
+// An in-progress verification for the same provider is shared: repeated clicks must not multiply paid discovery requests.
 const inflight = new Map<ProviderId, Promise<ProviderStatus>>()
 
-/** Key'i doğrular ve erişilen modelleri getirir; sonuç önbelleğe yazılır. */
+/** Verifies the key and fetches the reachable models; the result is written to the cache. */
 export function verify(p: ProviderId): Promise<ProviderStatus> {
   const running = inflight.get(p)
   if (running) return running
@@ -196,7 +196,7 @@ async function runVerify(p: ProviderId): Promise<ProviderStatus> {
   return status
 }
 
-/** Key'i olan ama hiç doğrulanmamış sağlayıcıları arka planda doğrular. */
+/** Verifies in the background the providers that have a key but were never verified. */
 export function verifyPending() {
   return Promise.all(PROVIDERS.filter((p) => isReady(p) && !statuses()[p]).map(verify))
 }
@@ -208,7 +208,7 @@ function hint(key: string | null) {
 export function providerViews(): ProviderView[] {
   return PROVIDERS.map((id) => {
     const state = keyOf(id)
-    // Key kaydedilmiş olsa da .env'de düz metin kopyası kaldıysa kullanıcıya silmesi söylenir.
+    // Even if the key was saved, if a plain-text copy is left in .env the user is told to delete it.
     const problem =
       state.key === null
         ? state.problem
@@ -224,14 +224,14 @@ export function providerViews(): ProviderView[] {
   })
 }
 
-// --- Hedef erişimi ve öneri havuzu ------------------------------------------------
+// --- Target access and the suggestion pool ------------------------------------------------
 
 const verifiedModels = (p: ProviderId) => {
   const s = statuses()[p]
   return s?.ok && keyOf(p).key ? s.models : []
 }
 
-/** Hedef model, doğrulanmış bir key ile mi yoksa key gerektirmeyen bir uygulama ile mi kullanılabilir. */
+/** Whether the target model can be used with a verified key or with an app that needs no key. */
 export function targetAccess(): Partial<Record<ModelId, TargetAccess>> {
   const apps = getSettings().appFamilies
   const verified = PROVIDERS.map((p) => ({ family: PROVIDER_INFO[p].family, models: verifiedModels(p) }))
@@ -252,20 +252,20 @@ export const candidatePool = (family: FamilyChoice): ModelId[] => poolFor(family
 
 let override: ProviderId | null = null
 
-/** selftest için: ayarlardan bağımsız motor sağlayıcısı. */
+/** For selftest: the engine provider independent of settings. */
 export function overrideEngine(p: ProviderId) {
   override = p
 }
 
 function pickModel(p: ProviderId, role: 'analysis' | 'generation'): string {
   const prefs = PROVIDER_INFO[p].engine[role]
-  // Katalogda her sağlayıcının en az bir tercih modeli tanımlı.
+  // Every provider has at least one preferred model defined in the catalog.
   const first = prefs[0] ?? ''
   const ids = verifiedModels(p).map((m) => m.id)
   return prefs.find((m) => ids.includes(m)) ?? prefs.find((m) => ids.some((id) => id.startsWith(m))) ?? ids[0] ?? first
 }
 
-/** Otomatik seçim: doğrulanmış sağlayıcılar önce (aralarında Vertex başta), sonra hazır olan ilk sağlayıcı. */
+/** Automatic selection: verified providers first (Vertex first among them), then the first provider that is ready. */
 function autoProvider(): ProviderId | undefined {
   const ready = PROVIDERS.filter(isReady)
   const verified = ready.filter((p) => statuses()[p]?.ok)
@@ -273,7 +273,7 @@ function autoProvider(): ProviderId | undefined {
   return pick(verified) ?? pick(ready)
 }
 
-/** Kayıtlı ama okunamayan ilk key'in sorunu (anahtarlık kilitli, başka hesaptan taşınmış dosya). */
+/** The problem of the first key that is saved but unreadable (keyring locked, file moved from another account). */
 function savedKeyProblem(): string | undefined {
   for (const p of PROVIDERS) {
     const k = keyOf(p)
@@ -283,8 +283,8 @@ function savedKeyProblem(): string | undefined {
 }
 
 /**
- * Kullanıcı bir sağlayıcı seçtiyse motor odur; key'i yoksa ya da okunamıyorsa çağrı açık bir hatayla durur.
- * Başka bir sağlayıcıya geçilmez: prompt, kullanıcının seçmediği bir sunucuya başka bir key'le gitmesin.
+ * If the user chose a provider, the engine is that one; if it has no key or cannot be read, the call stops with an explicit error.
+ * It never switches to another provider: the prompt must not go to a server the user did not choose, with another key.
  */
 export function resolveEngine(): SettingsView['engine'] {
   const s = getSettings()
@@ -301,8 +301,8 @@ export function resolveEngine(): SettingsView['engine'] {
 
 function engineFor(role: 'analysis' | 'generation'): EngineRef & { cred: Credentials } {
   const auto = !override && getSettings().engineProvider === 'auto'
-  // Otomatik seçimde okunamayan bir key varken başka sağlayıcıya geçilmez: kullanıcı o sağlayıcıyı kullandığını
-  // sanırken prompt başka bir firmaya gitmesin. Önce key yeniden kaydedilmeli.
+  // In automatic selection, while an unreadable key exists, it does not switch to another provider: the prompt must not go to
+  // another company while the user thinks they are using that provider. The key must be re-saved first.
   const problem = auto ? savedKeyProblem() : undefined
   if (problem) throw new LlmError(problem)
   const e = resolveEngine()
@@ -330,7 +330,7 @@ export async function engineStream(
 }
 
 let hotkeyOk = true
-/** index.ts kısayolu her kaydettiğinde sonucu bildirir; arayüz kayıt başarısızsa uyarı ve alternatif gösterir. */
+/** Reports the result each time index.ts registers the shortcut; the UI shows a warning and an alternative if registration failed. */
 export function setHotkeyOk(ok: boolean) {
   hotkeyOk = ok
 }

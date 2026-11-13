@@ -50,15 +50,15 @@ import {
   toggleVisible
 } from './window'
 
-// Ürün kimliği hiçbir yol okunmadan önce kurulur: ad, userData ve (aşağıda) tek kopya kilidi ürüne özeldir,
-// böylece Ray ve Spectrum yan yana çalışır. Her ürün yalnızca kendi klasörünü kullanır. Spectrum ilk açılışta eski
-// adlarla (Prism 2.x, Prompter) kurulmuş veriyi bir kez kendi klasörüne kopyalar (migrate.ts); eski klasöre yazılmaz.
+// The product identity is set before any path is read: name, userData and (below) the single-instance lock are
+// per product, so Ray and Spectrum run side by side. Each product uses only its own folder. On first launch Spectrum
+// copies data created under the old names (Prism 2.x, Prompter) into its own folder once (migrate.ts); the old folder is never written.
 app.setName(PRODUCT.name)
 const appData = app.getPath('appData')
 app.setPath('userData', join(appData, PRODUCT.dataDir))
 
-// Geliştirme ve testte gerçek ayar/geçmiş klasörüne dokunmamak için ayrı bir userData klasörü kullanılabilir.
-// Kurulu sürümde bu ve diğer PRISM_* değişkenleri yok sayılır (env.ts). Geliştirmede gerçek klasörlere göç yapılmaz.
+// A separate userData folder can be used in development and tests so the real settings and history stay untouched.
+// In an installed build this and the other PRISM_* variables are ignored (env.ts). No migration runs in development.
 const DEV = devEnv()
 if (DEV.userData) {
   const dir = resolve(DEV.userData)
@@ -66,34 +66,34 @@ if (DEV.userData) {
   app.setPath('userData', dir)
 }
 
-// Kurulu sürüm uzaktan hata ayıklama anahtarlarıyla açılmaz: bu anahtarlarla arayüze bağlanan biri key'lerle istek
-// başlatabilir, geçmişi okuyabilir.
+// An installed build does not start with remote-debugging switches: anyone attaching to the UI through them could
+// send requests with the keys and read the history.
 const UNSAFE_SWITCHES = ['remote-debugging-port', 'remote-debugging-pipe', 'remote-debugging-address', 'inspect', 'inspect-brk']
 if (app.isPackaged && UNSAFE_SWITCHES.some((s) => app.commandLine.hasSwitch(s) || process.argv.some((a) => a === `--${s}` || a.startsWith(`--${s}=`)))) {
-  logError('app', 'kurulu sürüm güvenli olmayan bir komut satırı anahtarıyla açılmak istendi; çıkılıyor')
+  logError('app', 'installed build was launched with an unsafe command-line switch; exiting')
   app.exit(1)
 }
 
-// Kurulu sürümde yalnızca çevrimdışı --smoke denetimi çalışır; kayıtlı key'lerle ağa çıkan selftest yolları geliştirmeye özeldir.
+// An installed build runs only the offline --smoke check; selftest paths that go online with saved keys are development-only.
 const SELFTEST = process.argv.includes('--selftest') && (!app.isPackaged || process.argv.includes('--smoke'))
-// İkinci kopya hiçbir şey başlatmadan hemen çıkar; ilk kopya pencereyi öne getirir (second-instance).
+// A second instance exits immediately without starting anything; the first one brings its window to the front (second-instance).
 const PRIMARY = SELFTEST || app.requestSingleInstanceLock()
 if (!PRIMARY) app.exit(0)
 
-// Eski sürüm verisinin bir kerelik göçü yalnızca kilidi alan kopyada ve gerçek kurulumda yapılır (iki eşzamanlı ilk
-// açılış birbirinin göçünü bozmasın; geliştirme ve smoke gerçek klasörlere dokunmasın).
+// The one-time migration of old-version data runs only in the instance that holds the lock and only in a real install (so two
+// concurrent first launches cannot corrupt each other's migration, and development and smoke never touch real folders).
 if (PRIMARY && !SELFTEST && !DEV.userData) {
   const from = migrateLegacyData(appData, PRODUCT)
-  if (from) logWarn('migrate', `${from} klasöründeki veriler ${PRODUCT.dataDir} klasörüne kopyalandı`)
+  if (from) logWarn('migrate', `data in the ${from} folder was copied to the ${PRODUCT.dataDir} folder`)
 }
 
-// Ekran görüntüleri retina ekranlarda da net görünsün diye 1,5x çizilir (2x'te panel çoğu ekrana sığmaz).
+// Screenshots are rendered at 1.5x so they look sharp on retina displays too (at 2x the panel does not fit most screens).
 if (DEV.captureDir) app.commandLine.appendSwitch('force-device-scale-factor', '1.5')
 
-// Linux'ta saydam pencere (kompozitör varsa) bu anahtarla çalışır.
+// On Linux a transparent window (with a compositor) works with this switch.
 if (process.platform === 'linux') app.commandLine.appendSwitch('enable-transparent-visuals')
 
-// Arayüzün açabileceği tek dış bağlantılar sağlayıcıların key sayfalarıdır (köken ve yol öneki birlikte).
+// The only external links the UI may open are the providers' key pages (origin and path prefix together).
 const EXTERNAL_PAGES = PROVIDERS.map((p) => new URL(PROVIDER_INFO[p].keyUrl))
 const isKeyPage = (url: URL) =>
   EXTERNAL_PAGES.some((k) => url.origin === k.origin && (k.pathname === '/' || url.pathname === k.pathname || url.pathname.startsWith(`${k.pathname}/`)))
@@ -103,18 +103,18 @@ function openExternal(raw: string) {
   try {
     url = new URL(raw)
   } catch {
-    logWarn('shell', 'geçersiz dış bağlantı reddedildi')
+    logWarn('shell', 'invalid external link rejected')
     return
   }
   if (url.protocol !== 'https:' || !isKeyPage(url)) {
-    logWarn('shell', `izin verilmeyen dış bağlantı reddedildi: ${url.origin}`)
+    logWarn('shell', `disallowed external link rejected: ${url.origin}`)
     return
   }
-  shell.openExternal(url.href).catch((e: unknown) => logWarn('shell', 'dış bağlantı açılamadı', e))
+  shell.openExternal(url.href).catch((e: unknown) => logWarn('shell', 'could not open external link', e))
 }
 
-// Uygulama yalnızca kendi arayüzünü yükler: yeni pencere, başka sayfaya geçiş, yönlendirme ve webview kapalı.
-// Dış bağlantılar (key alma sayfaları) yalnızca izinli https adresleriyse sistem tarayıcısında açılır.
+// The app loads only its own UI: new windows, navigating elsewhere, redirects and webviews are all blocked.
+// External links (key pages) open in the system browser only if they are allowed https addresses.
 app.on('web-contents-created', (_e, contents) => {
   contents.setWindowOpenHandler(({ url }) => {
     openExternal(url)
@@ -132,19 +132,19 @@ const running = new Map<string, AbortController>()
 let active = 0
 
 /**
- * Geçmişe yazılamaması (anahtarlık hatası, dosya kilidi) ücreti ödenmiş sonucu kaybettirmez:
- * hata günlüğe düşer, sonuç arayüze yine gider. Kimlik dönmezse arayüz o girdiyi geçmişte bulamaz, o kadar.
+ * A failed history write (keyring error, file lock) must not lose a result that was already paid for:
+ * the error is logged and the result still goes to the UI. If no id comes back, the UI cannot find that entry in history, that is all.
  */
 function keepRecord<T>(what: string, write: () => T): T | undefined {
   try {
     return write()
   } catch (e) {
-    logWarn('history', `${what} geçmişe yazılamadı`, e)
+    logWarn('history', `${what} could not be written to history`, e)
     return undefined
   }
 }
 
-// Oturum açılışında başlatıldıysa pencere gösterilmez, tray'de bekler.
+// If launched at login, the window is not shown; it waits in the tray.
 const START_HIDDEN =
   process.argv.includes('--hidden') || (process.platform === 'darwin' && app.getLoginItemSettings().wasOpenedAtLogin)
 
@@ -157,15 +157,15 @@ function registerHotkey(accelerator: string) {
   let ok = false
   try {
     ok = globalShortcut.register(accelerator, toggleVisible)
-    if (!ok) logWarn('hotkey', `kısayol kaydedilemedi (başka uygulama ya da Wayland): ${accelerator}`)
+    if (!ok) logWarn('hotkey', `shortcut could not be registered (another app or Wayland): ${accelerator}`)
   } catch (e) {
-    logWarn('hotkey', `kısayol tanınmadı: ${accelerator}`, e)
+    logWarn('hotkey', `shortcut not recognized: ${accelerator}`, e)
   }
   setHotkeyOk(ok)
   return ok
 }
 
-/** Pencereyi panel olarak öne getirir; istenirse arayüzde geçmişi ya da ayarları açar. */
+/** Brings the window to the front as a panel; optionally opens history or settings in the UI. */
 function showPanel(open?: 'settings' | 'history') {
   const win = getWindow() ?? createWindow()
   revealPanel()
@@ -196,7 +196,7 @@ function buildTrayMenu() {
         try {
           applySettings({ alwaysOnTop: item.checked })
         } catch (e) {
-          logError('tray', 'ayar uygulanamadı', e)
+          logError('tray', 'could not apply setting', e)
         }
       }
     },
@@ -210,13 +210,13 @@ function refreshTray() {
   tray?.setToolTip(active > 0 ? msg('tray.tooltipBusy', { product: PRODUCT.name }) : PRODUCT.name)
 }
 
-/** Uzun süren analiz/yazım sırasında tray ipucunu günceller. */
-/** Tray yenilenemezse (ör. okunamayan bir dosya) yürüyen ya da biten iş bundan etkilenmez. */
+/** Updates the tray tooltip during a long analysis/write. */
+/** If the tray cannot be refreshed (e.g. an unreadable file), the running or finished job is not affected. */
 function safeRefreshTray() {
   try {
     refreshTray()
   } catch (e) {
-    logWarn('tray', 'tray menüsü yenilenemedi', e)
+    logWarn('tray', 'could not refresh tray menu', e)
   }
 }
 
@@ -233,15 +233,15 @@ async function tracked<T>(work: () => Promise<T>): Promise<T> {
   }
 }
 
-/** Ürün kuralı ana süreçte de geçerli: seçili olmayan aile için motor çalışmaz; çapraz öneri yalnızca çok aileli üründe. */
+/** The product rule also holds in the main process: the engine does not run for an unselected family; cross-suggestion only in a multi-family product. */
 function assertFamily(family: FamilyChoice) {
   const { families } = getSettings()
   const ok = family === 'auto' ? PRODUCT.familyMode === 'multi' : families.includes(family)
   if (!ok) throw new UserError(msg('err.familyNotSelected'))
 }
 
-// Aynı türden en fazla iki iş aynı anda çalışır: arayüz hatası ya da tekrarlanan tıklama sağlayıcıya yığın
-// istek göndermesin (key'in kotası ve owner'ın bütçesi).
+// At most two jobs of the same kind run at once: a UI bug or repeated clicks must not flood the provider
+// with requests (the key's quota and the owner's budget).
 const MAX_PER_KIND = 2
 const kinds = { analyze: 0, generate: 0 }
 async function limited<T>(kind: keyof typeof kinds, work: () => Promise<T>): Promise<T> {
@@ -254,11 +254,11 @@ async function limited<T>(kind: keyof typeof kinds, work: () => Promise<T>): Pro
   }
 }
 
-// Panel gizliyken ya da arkadayken bitmiş yazımı bildir; küre modunda rozet yeterli.
-// Bildirimde prompt içeriği yer almaz, yalnızca model ve yüzey adı.
+// Notify about a finished write when the panel is hidden or in the background; in orb mode the badge is enough.
+// The notification never contains prompt content, only the model and surface name.
 function notifyDone(req: GenerateRequest) {
   const win = getWindow()
-  // Panel görünmüyorsa (küre ya da tray) kürede rozet yanar; panel açılınca söner.
+  // If the panel is not visible (orb or tray), the badge on the orb lights up; it clears when the panel opens.
   if (!win?.isVisible()) setPillState({ badge: true })
   if (!getSettings().notifyWhenHidden || !Notification.isSupported() || !win) return
   if (win.isVisible() && !win.isMinimized() && (win.isFocused() || getMode() === 'pill')) return
@@ -280,8 +280,8 @@ function createTray() {
   tray.on('click', toggleVisible)
 }
 
-// Kurulu sürümde uygulamanın kendisi, geliştirmede electron.exe + proje klasörü açılışta başlatılır.
-// Windows'ta kayıt adı ürünün appId'sidir: ikisi aynı kaydı günceller, iki ürün birbirinin kaydına dokunmaz.
+// In an installed build the app itself is started at login; in development, electron.exe + the project folder.
+// On Windows the registration name is the product's appId: both update the same entry, and two products never touch each other's entry.
 function setLaunchAtLogin(enabled: boolean) {
   if (process.platform === 'linux') return linuxAutostart(enabled)
   const name = PRODUCT.appId
@@ -292,22 +292,22 @@ function setLaunchAtLogin(enabled: boolean) {
   )
 }
 
-// Ürünün verisi: kullanılan userData ve (Spectrum'da) eski adlarla kurulmuş klasörler. Geliştirmede ayrı bir
-// userData verildiyse yalnızca o klasör silinir; gerçek kurulumların klasörlerine dokunulmaz.
+// The product's data: the userData in use and (in Spectrum) folders created under the old names. If a separate
+// userData was given in development, only that folder is deleted; folders of real installs are never touched.
 function dataDirs(): string[] {
   const dirs = [app.getPath('userData')]
   if (DEV.userData) return dirs
   dirs.push(join(appData, PRODUCT.dataDir))
-  // Eski klasörlere yalnızca Prism imzası taşıyorlarsa dokunulur: aynı adlı başka bir uygulamanın klasörü silinmez.
+  // Old folders are touched only if they carry the Prism signature: another app's folder with the same name is never deleted.
   for (const d of PRODUCT.legacyDataDirs) if (inspectDir(join(appData, d)).hasSignature) dirs.push(join(appData, d))
   return dirs
 }
 
 /**
- * "Tüm verilerimi sil". Arayüz güvenilmez sayıldığı için onay ana süreçteki sistem penceresinden alınır (varsayılan
- * Vazgeç). Sonra süren istekler durdurulur ve diske yazım kapatılır: bellekteki geçmiş, ayar ya da model önbelleği
- * silinen dosyaları geri yazamaz. Açılış kaydı kaldırılır, dosyalar silinir. Bir parça başarısız olursa kalan dosyalar
- * hata olarak döner ve uygulama yazımsız açık kalır; her şey silindiyse uygulama boş verilerle yeniden başlar.
+ * "Delete all my data". Since the UI is untrusted, confirmation comes from a system dialog in the main process (default
+ * Cancel). Then in-flight requests are stopped and disk writes are shut off: in-memory history, settings or model cache
+ * cannot write the deleted files back. The login entry is removed, the files are deleted. If a part fails, the remaining files
+ * come back as an error and the app stays open with writes disabled; if everything was deleted, the app restarts with empty data.
  */
 async function deleteAllData(): Promise<boolean> {
   const win = getWindow()
@@ -327,41 +327,41 @@ async function deleteAllData(): Promise<boolean> {
   blockWrites()
   forgetAllKeys()
   const failed: string[] = []
-  // Geliştirmede ayrı userData ile çalışılıyorsa gerçek kurulumun açılış kaydına dokunulmaz.
+  // With a separate userData in development, the real install's login entry is not touched.
   if (!DEV.userData) {
     try {
       setLaunchAtLogin(false)
     } catch (e) {
-      logWarn('wipe', 'açılış kaydı kaldırılamadı', e)
+      logWarn('wipe', 'could not remove login entry', e)
       failed.push('autostart')
     }
   }
   failed.push(...wipeOwnData(dataDirs()))
-  // Göç işareti silinmiş olsa da göç bir daha çalışmasın: eski klasörde kalan bir dosya silinen verileri geri getirmesin.
+  // Even if the migration marker was deleted, migration must not run again: a leftover file in an old folder must not bring the deleted data back.
   if (!DEV.userData && PRODUCT.legacyDataDirs.length) {
     try {
       markMigrationDone(join(appData, PRODUCT.dataDir), 'wiped')
     } catch (e) {
-      logWarn('wipe', 'göç işareti yazılamadı', e)
+      logWarn('wipe', 'could not write migration marker', e)
       failed.push(MIGRATION_MARKER)
     }
   }
   if (failed.length) throw new UserError(msg('err.deleteData', { files: failed.join(', ') }))
   setImmediate(() => {
-    // AppImage'da process.execPath geçici bağlama noktasıdır; yeniden başlatma gerçek dosyadan yapılır.
-    // --hidden atılır: açılışta başlamış bir kopya silmeden sonra görünmez dönmesin.
+    // In an AppImage process.execPath is a temporary mount point; the restart uses the real file.
+    // --hidden is dropped: a copy started at login must not come back invisible after the wipe.
     app.relaunch({ execPath: appImagePath() ?? process.execPath, args: process.argv.slice(1).filter((a) => a !== '--hidden') })
     app.exit(0)
   })
   return true
 }
 
-// Exec satırında çift tırnak içindeki yolda ", ters bölü, $, ters tırnak, % ya da satır sonu komut enjeksiyonuna
-// yol açar; böyle bir yol kabul edilmez. Tek tırnak (ör. O'Neil) çift tırnak içinde zararsızdır.
+// In a double-quoted Exec path, ", backslash, $, backtick, % or a newline allows command injection;
+// such a path is rejected. A single quote (e.g. O'Neil) is harmless inside double quotes.
 const SAFE_EXEC_PATH = /^[^"`$\\\r\n%]+$/
 
-// Electron'un Linux'ta açılış kaydı yok; XDG autostart girdisi yazılır. AppImage'ın gerçek yolu APPIMAGE'dadır.
-// Dosya adı ürüne özeldir: iki ürün birbirinin girdisini ezmez ya da silmez.
+// Electron has no login entry on Linux; an XDG autostart entry is written. The AppImage's real path is in APPIMAGE.
+// The file name is per product: two products never overwrite or delete each other's entry.
 function linuxAutostart(enabled: boolean) {
   const file = join(app.getPath('appData'), 'autostart', `prism-${PRODUCT.id}.desktop`)
   if (!enabled) return rmSync(file, { force: true })
@@ -374,7 +374,7 @@ function linuxAutostart(enabled: boolean) {
 
 function applySettings(patch: z.infer<typeof SettingsPatchSchema>) {
   const before = getSettings()
-  // İşletim sistemi tarafındaki adımlar önce denenir; biri başarısız olursa yamanın hiçbir parçası kaydedilmez.
+  // OS-side steps are tried first; if one fails, no part of the patch is saved.
   const hotkeyChanged = !!patch.hotkey && patch.hotkey !== before.hotkey
   if (patch.hotkey && hotkeyChanged && !registerHotkey(patch.hotkey)) {
     registerHotkey(before.hotkey)
@@ -392,13 +392,13 @@ function applySettings(patch: z.infer<typeof SettingsPatchSchema>) {
   try {
     next = updateSettings(patch)
   } catch (e) {
-    // Ayar kaydedilemediyse işletim sistemi tarafında yapılanlar da geri alınır.
+    // If the setting could not be saved, what was done on the OS side is rolled back too.
     if (hotkeyChanged) registerHotkey(before.hotkey)
     if (patch.launchAtLogin !== undefined && patch.launchAtLogin !== before.launchAtLogin) {
       try {
         setLaunchAtLogin(before.launchAtLogin)
       } catch (undo) {
-        logWarn('autostart', 'açılışta başlatma ayarı geri alınamadı', undo)
+        logWarn('autostart', 'could not roll back the launch-at-login setting', undo)
       }
     }
     throw e
@@ -412,10 +412,10 @@ function applySettings(patch: z.infer<typeof SettingsPatchSchema>) {
 const none = z.tuple([])
 
 function registerIpc() {
-  // Küre de dili okumak için ayarları alır; başka hiçbir kanala erişemez.
+  // The orb also gets settings to read the language; it can reach no other channel.
   handle('settings:get', none, () => settingsView(), 'any')
   handle('settings:set', z.tuple([SettingsPatchSchema]), (_e, patch) => applySettings(patch))
-  // Test de ücretli bir çağrıdır: analizle aynı eşzamanlılık sınırına tabi.
+  // A test is also a paid call: it is subject to the same concurrency limit as analysis.
   handle('settings:test', none, async () => {
     const started = Date.now()
     try {
@@ -432,10 +432,10 @@ function registerIpc() {
   })
   handle('settings:openKnowledge', none, () => shell.openPath(knowledgeDir()))
 
-  // Key arayüzden yalnızca kaydetmek için gelir; geri gönderilmez. Kaydedilince bağlantı ve modeller doğrulanır.
-  // Biçim denetimi saveKey'de: hata mesajı alan adını değil key'in sorununu anlatsın.
+  // The key comes from the UI only to be saved; it is never sent back. When saved, the connection and models are verified.
+  // The format check is in saveKey: the error message should describe the key's problem, not the field name.
   handle('providers:saveKey', z.tuple([ProviderIdSchema, z.string().max(LIMITS.keyMax * 2)]), async (_e, id, key) => {
-    // Aynı key yeniden kaydedilirse başarılı son doğrulama korunur; ücretli keşif yinelenmez.
+    // If the same key is saved again, the last successful verification is kept; the paid discovery is not repeated.
     if (saveKey(id, key) || needsVerify(id)) await verify(id)
     refreshTray()
     return settingsView()
@@ -457,11 +457,11 @@ function registerIpc() {
     if (running.has(req.id)) throw new UserError(msg('err.running'))
     const controller = new AbortController()
     running.set(req.id, controller)
-    // Geçmiş ayarı istek başladığı anki değeriyle uygulanır: kapalıyken başlatılan prompt sonradan açılsa da kaydedilmez.
+    // The history setting is applied with its value at the moment the request started: a prompt started while it was off is not saved even if it is turned on later.
     const save = getSettings().saveHistory
     try {
       const analysis = await limited('analyze', () => tracked(() => analyze(req, controller.signal)))
-      // İptal edilmiş analiz geçmişe yazılmaz; yanıt sağlayıcıdan gelmiş olsa bile arayüz onu artık beklemiyor.
+      // A cancelled analysis is not written to history; the UI no longer waits for the response even if it came from the provider.
       if (controller.signal.aborted) throw new LlmError(msg('err.cancelled'))
       return { ...analysis, historyId: save ? keepRecord('analiz', () => recordAnalysis(req, analysis)) : undefined }
     } finally {
@@ -470,7 +470,7 @@ function registerIpc() {
   })
   handle('engine:generate', z.tuple([GenerateRequestSchema]), async (e, req) => {
     assertFamily(MODELS[req.model].family)
-    // Aynı kimlikle ikinci bir yazım, öncekinin iptal denetimini ezmesin.
+    // A second write with the same id must not overwrite the earlier one's cancel check.
     if (running.has(req.id)) throw new UserError(msg('err.running'))
     const controller = new AbortController()
     running.set(req.id, controller)
@@ -482,8 +482,8 @@ function registerIpc() {
       const result = await limited('generate', () =>
         tracked(() => generatePrompt(req, (text) => send({ id: req.id, type: 'chunk', text }), controller.signal))
       )
-      // Bittikten hemen sonra iptal edilmiş yazım geçmişe yazılmaz; kullanıcı onu artık istemiyor.
-      if (save && !controller.signal.aborted) keepRecord('yazım', () => recordOutput(req, result))
+      // A write cancelled right after finishing is not saved to history; the user no longer wants it.
+      if (save && !controller.signal.aborted) keepRecord('write', () => recordOutput(req, result))
       if (controller.signal.aborted) {
         send({ id: req.id, type: 'error', message: msg('err.cancelled') })
         return
@@ -510,7 +510,7 @@ function registerIpc() {
   handle('window:togglePin', none, () => applySettings({ alwaysOnTop: !getSettings().alwaysOnTop }).alwaysOnTop)
   handle('window:hide', none, () => hidePanel())
   handle('window:quit', none, () => app.quit())
-  // Sürükleme yalnızca küre penceresinde; panel yerel olarak taşınır ve boyutlandırılır.
+  // Dragging happens only in the orb window; the panel is moved and resized natively.
   on('window:dragStart', none, () => dragStart(), 'pill')
   on('window:dragMove', none, () => dragMove(), 'pill')
   on('window:dragEnd', z.tuple([z.boolean()]), (_e, animate) => dragEnd(animate), 'pill')
@@ -525,17 +525,17 @@ function registerIpc() {
 }
 
 // --- Oturum kilidi ------------------------------------------------------------------
-// Arayüz ağa hiç çıkmaz; sağlayıcı istekleri yalnızca ana süreçten gider (llm/http.ts). Arayüzde bir hata
-// olsa bile prompt ya da geçmiş arayüz üzerinden dışarı gönderilemez.
+// The UI never goes online; provider requests go only from the main process (llm/http.ts). Even if the UI has a bug,
+// prompts or history cannot be sent out through it.
 
 function isInsideApp(fileUrl: string): boolean {
   try {
-    // Yalnızca derlenmiş arayüz klasörü: geliştirmede uygulama kökü proje klasörüdür (.env orada).
+    // Only the built UI folder: in development the app root is the project folder (.env is there).
     const root = resolve(app.getAppPath(), 'out', 'renderer')
     const path = resolve(fileURLToPath(fileUrl))
     return path === root || path.startsWith(root + sep)
   } catch (e) {
-    logWarn('session', 'dosya adresi çözülemedi', e)
+    logWarn('session', 'could not resolve file URL', e)
     return false
   }
 }
@@ -545,19 +545,19 @@ function isLocalRequest(url: string): boolean {
   if (url.startsWith('file:')) return isInsideApp(url)
   const dev = DEV.rendererUrl
   if (!dev) return false
-  // Geliştirmede electron-vite sunucusu ve HMR soketi.
+  // In development: the electron-vite server and the HMR socket.
   const devSocket = new URL(dev).origin.replace(/^http/, 'ws')
   return isAppUrl(url) || (URL.canParse(url) && new URL(url).origin === devSocket)
 }
 
 function lockDownSession() {
   const ses = session.defaultSession
-  // Arayüz kamera, mikrofon, konum vb. hiçbir tarayıcı iznine ihtiyaç duymaz.
+  // The UI needs no browser permission such as camera, microphone or location.
   ses.setPermissionRequestHandler((_wc, _permission, callback) => callback(false))
   ses.setPermissionCheckHandler(() => false)
   ses.webRequest.onBeforeRequest((details, callback) => {
     const local = isLocalRequest(details.url)
-    if (!local) logWarn('session', 'arayüzden dışarı istek engellendi')
+    if (!local) logWarn('session', 'request from the UI to the outside was blocked')
     callback({ cancel: !local })
   })
 }
@@ -574,38 +574,38 @@ app
     if (process.platform === 'win32') app.setAppUserModelId(PRODUCT.appId)
     if (process.platform === 'darwin') app.dock?.hide()
     registerIpc()
-    // Ayar açıksa kaydı bu kopyanın yoluna göre tazele (ör. geliştirmeden kurulu sürüme geçince).
+    // If the setting is on, refresh the entry for this copy's path (e.g. when switching from development to an installed build).
     if (getSettings().launchAtLogin) {
-      // Kayıt tazelenemezse uygulama yine açılır; kullanıcı ayarı ayarlar ekranından değiştirebilir.
+      // If the entry cannot be refreshed the app still opens; the user can change the setting from the settings screen.
       try {
         setLaunchAtLogin(true)
       } catch (e) {
-        logWarn('autostart', 'açılışta başlatma kaydı tazelenemedi', e)
+        logWarn('autostart', 'could not refresh the launch-at-login entry', e)
       }
     }
     const win = createWindow({ hidden: START_HIDDEN && !DEV.captureDir })
     createTray()
     registerHotkey(getSettings().hotkey)
-    // Key'i olup hiç doğrulanmamış sağlayıcıların modellerini arka planda getir.
+    // Fetch models in the background for providers that have a key but were never verified.
     verifyPending()
       .then(() => {
         refreshTray()
         win.webContents.send('settings:changed')
       })
-      .catch((e: unknown) => logWarn('providers', 'açılıştaki key doğrulaması tamamlanamadı', e))
+      .catch((e: unknown) => logWarn('providers', 'startup key verification did not complete', e))
     startUpdateChecks(() => {
       if (!win.isDestroyed()) win.webContents.send('update:changed')
     })
     if (DEV.captureDir) captureStates(win, DEV.captureDir, DEV.capturePrompt)
   })
   .catch((e: unknown) => {
-    logError('app', 'açılış başarısız', e)
+    logError('app', 'launch failed', e)
     app.exit(1)
   })
 
 /**
- * Geliştirme: panel ve pill hâllerinin ekran görüntüsünü alıp çıkar.
- * PRISM_CAPTURE_PROMPT verilirse arayüz üzerinden gerçek bir analiz → yazım akışı da çalıştırılır.
+ * Development: takes screenshots of the panel and pill states and exits.
+ * If PRISM_CAPTURE_PROMPT is given, a real analysis → write flow is also run through the UI.
  */
 function captureStates(win: Electron.BrowserWindow, dir: string, prompt: string | undefined) {
   const js = (code: string): Promise<unknown> => win.webContents.executeJavaScript(code)
@@ -653,7 +653,7 @@ function captureStates(win: Electron.BrowserWindow, dir: string, prompt: string 
         const done = await until('.cta.copy')
         await wait(1500)
         await shot(done ? 'result' : 'error')
-        await js(`document.querySelector('.icon-btn[title="Geçmiş"]').click()`)
+        await js(`document.querySelector('.icon-btn[title="History"]').click()`)
         await wait(1200)
         await shot('history')
       }
@@ -661,12 +661,12 @@ function captureStates(win: Electron.BrowserWindow, dir: string, prompt: string 
   }
   win.webContents.once('did-finish-load', () => {
     run()
-      .catch((e: unknown) => logError('capture', 'ekran görüntüsü akışı yarıda kaldı', e))
+      .catch((e: unknown) => logError('capture', 'screenshot flow was cut short', e))
       .finally(() => app.exit(0))
   })
 }
 
-// Pencere kapatılınca tray'de yaşamaya devam eder; çıkış tray menüsünden.
+// The window keeps living in the tray when closed; quitting is from the tray menu.
 app.on('window-all-closed', () => {})
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()

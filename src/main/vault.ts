@@ -1,5 +1,5 @@
-// İşletim sisteminin anahtarlığıyla şifreleme (Windows DPAPI, macOS Keychain, Linux Secret Service / KWallet).
-// API key'leri ve prompt geçmişi diske yalnızca bu yoldan yazılır. Güvenli depolama yoksa düz metne düşülmez.
+// Encryption with the operating system's keyring (Windows DPAPI, macOS Keychain, Linux Secret Service / KWallet).
+// API keys and prompt history are written to disk only this way. If secure storage is missing, it never falls back to plain text.
 
 import { safeStorage } from 'electron'
 import { closeSync, existsSync, fstatSync, fsyncSync, lstatSync, openSync, rmSync, writeSync } from 'node:fs'
@@ -8,8 +8,8 @@ import { msg } from '@shared/messages'
 
 export type VaultState = { ok: true } | { ok: false; reason: string }
 
-// Linux'ta anahtarlık yoksa Electron sabit bir parolayla yazar; bu gerçek koruma değil. Yalnızca bilinen anahtarlık
-// arka uçları kabul edilir, 'basic_text' ve 'unknown' reddedilir.
+// On Linux without a keyring Electron writes with a fixed password; that is not real protection. Only known keyring
+// backends are accepted; 'basic_text' and 'unknown' are rejected.
 const LINUX_KEYRINGS: ReadonlySet<string> = new Set(['gnome_libsecret', 'kwallet', 'kwallet5', 'kwallet6'])
 
 export function vaultState(): VaultState {
@@ -33,13 +33,13 @@ export function unseal(data: Buffer): string {
 }
 
 /**
- * Anahtarlık şu an şifreleyip çözebiliyor mu. Kayıtlı bir dosya çözülemiyorsa bu ayrımı yapar: anahtarlık çalışıyorsa dosya
- * bu sistemde artık geçerli olmayan bir anahtarla yazılmıştır (ör. uygulamanın adı değişince macOS Keychain kaydı da
- * değişir); çalışmıyorsa anahtarlık geçici olarak kilitli ya da yoktur ve dosyaya dokunulmamalıdır.
+ * Whether the keyring can currently encrypt and decrypt. This tells apart the case where a saved file cannot be decrypted: if the keyring works, the file
+ * was written with a key that is no longer valid on this system (e.g. when the app is renamed the macOS Keychain entry
+ * changes too); if it does not work, the keyring is temporarily locked or missing and the file must not be touched.
  */
 export function vaultRoundTrips(): boolean {
   if (!vaultState().ok) return false
-  // Hata beklenen bir sonuçtur (kilitli anahtarlık): false döner, çağıran dosyayı yerinde bırakır.
+  // The error is an expected outcome (locked keyring): returns false and the caller leaves the file in place.
   try {
     return safeStorage.decryptString(safeStorage.encryptString('prism-check')) === 'prism-check'
   } catch {
@@ -48,18 +48,18 @@ export function vaultRoundTrips(): boolean {
 }
 
 /**
- * Dosyanın içeriğini silmeden önce sıfırlarla ezer. SSD ve kopyala-yaz dosya sistemlerinde eski bloklar
- * yine kalabilir; bu, düz metin dosyanın olağan yollarla geri okunmasını önlemek içindir.
+ * Overwrites the file's contents with zeros before deleting. On SSDs and copy-on-write file systems old blocks
+ * may still remain; this is to stop a plain-text file from being read back by ordinary means.
  */
 export function wipeFile(path: string) {
   if (!existsSync(path)) return
-  // Sembolik ya da çoklu bağlantılı dosya ezilmez (klasör dışındaki aynı dosyayı sıfırlamasın); yalnızca bağlantı kaldırılır.
+  // A symlinked or multiply-linked file is not overwritten (so it does not zero the same file outside the folder); only the link is removed.
   const link = lstatSync(path)
   if (link.isSymbolicLink() || !link.isFile() || link.nlink > 1) return rmSync(path, { force: true })
   const fd = openSync(path, 'r+')
   try {
     const st = fstatSync(fd)
-    // lstat ile open arasında dosya değiştirildiyse ezilmez.
+    // If the file was swapped between lstat and open, it is not overwritten.
     if (st.ino !== link.ino || st.nlink > 1) {
       closeSync(fd)
       return rmSync(path, { force: true })
@@ -67,7 +67,7 @@ export function wipeFile(path: string) {
     const size = st.size
     const zeros = Buffer.alloc(Math.min(size, 1 << 20))
     for (let pos = 0; pos < size; pos += zeros.length) writeSync(fd, zeros, 0, Math.min(zeros.length, size - pos), pos)
-    // Sıfırlar silmeden önce diske işlensin; yoksa üzerine yazma hiç diske inmeyebilir.
+    // Flush the zeros to disk before deleting; otherwise the overwrite may never reach the disk.
     fsyncSync(fd)
   } finally {
     closeSync(fd)

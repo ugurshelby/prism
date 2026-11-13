@@ -1,6 +1,6 @@
-// Prism'in okuduğu ortam değişkenlerinin tek kaynağı. Başka modül process.env'e doğrudan bakmaz.
-// Geliştirme anahtarları (PRISM_*, ELECTRON_RENDERER_URL) kurulu sürümde yok sayılır: paketli uygulamanın
-// davranışını ortamı değiştiren biri yönlendiremesin.
+// The single source of the environment variables Prism reads. No other module looks at process.env directly.
+// Development switches (PRISM_*, ELECTRON_RENDERER_URL) are ignored in an installed build: someone who can change the
+// environment must not be able to steer the packaged app's behavior.
 
 import { app } from 'electron'
 import { existsSync, readFileSync, statSync } from 'node:fs'
@@ -30,12 +30,12 @@ export interface DevEnv {
 
 let dev: DevEnv | null = null
 
-/** Yalnızca geliştirmede dolu; kurulu sürümde her zaman boş nesne. */
+/** Populated only in development; always an empty object in an installed build. */
 export function devEnv(): DevEnv {
   if (dev) return dev
   if (app.isPackaged) return (dev = {})
   const parsed = DevSchema.safeParse(process.env)
-  if (!parsed.success) throw new Error(`[env] geliştirme ortam değişkenleri geçersiz: ${parsed.error.issues.map((i) => i.path.join('.')).join(', ')}`)
+  if (!parsed.success) throw new Error(`[env] invalid development environment variables: ${parsed.error.issues.map((i) => i.path.join('.')).join(', ')}`)
   const e = parsed.data
   return (dev = {
     userData: e.PRISM_USER_DATA,
@@ -45,29 +45,29 @@ export function devEnv(): DevEnv {
   })
 }
 
-/** AppImage'ın gerçek yolu (yalnızca Linux AppImage içinden çalışırken). */
+/** The AppImage's real path (only when running from inside a Linux AppImage). */
 export function appImagePath(): string | undefined {
   if (process.platform !== 'linux' || !app.isPackaged) return undefined
   const path = process.env.APPIMAGE
-  // Başka bir kurulumdan kalmış değer açılış kaydına yanlış dosya yazdırmasın: dosya gerçekten var olmalı (ad değişmiş olabilir).
+  // A value left over from another install must not make the login entry point at the wrong file: the file must really exist (the name may have changed).
   return path && existsSync(path) && statSync(path).isFile() ? path : undefined
 }
 
-// --- Sağlayıcı key'leri ve Vertex hedefi (yalnızca geliştirme) ----------------------
-// Kurulu sürüm key'leri yalnızca şifreli kasadan okur: ortam değişkeni ve .env dosyaları düz metindir.
-// Geliştirmede sıra: süreç ortamı → kullanıcı klasöründeki .env → proje kökündeki .env.
-// Değerler belgelenen tırnak temizliği dışında değiştirilmez; key biçimi kullanılırken doğrulanır.
+// --- Provider keys and the Vertex target (development only) ----------------------
+// An installed build reads keys only from the encrypted vault: environment variables and .env files are plain text.
+// In development the order is: process environment → .env in the user folder → .env at the project root.
+// Values are not altered except for the documented quote stripping; the key format is validated when used.
 
 /**
- * Kurulu sürümde kullanıcı klasöründe eski bir .env kalmışsa içindeki key adları (değerleri değil).
- * Arayüz "key'i Ayarlar'dan yeniden kaydet" diyebilsin diye; değerler hiçbir zaman okunup kullanılmaz.
+ * If an old .env is left in the user folder of an installed build, the key names in it (not the values).
+ * So the UI can say "re-save the key from Settings"; the values are never read or used.
  */
 let leftover: { stamp: string; names: string[] } | null = null
 
 export function leftoverEnvNames(): string[] {
   if (!app.isPackaged) return []
   const path = join(app.getPath('userData'), '.env')
-  // Dosya değişmedikçe yeniden okunmaz: ayar görünümü sağlayıcı başına birkaç kez sorar.
+  // The file is not re-read until it changes: the settings view asks several times per provider.
   let stamp = 'none'
   try {
     if (existsSync(path)) {
@@ -75,7 +75,7 @@ export function leftoverEnvNames(): string[] {
       stamp = `${st.mtimeMs}:${st.size}`
     }
   } catch (e) {
-    logWarn('env', '.env bilgisi alınamadı', e)
+    logWarn('env', 'could not get .env info', e)
   }
   if (leftover?.stamp === stamp) return leftover.names
   const names = Object.entries(parseEnvFile(path))
@@ -88,7 +88,7 @@ export function leftoverEnvNames(): string[] {
 export const ENV_NAMES = [...PROVIDERS.map((p) => PROVIDER_INFO[p].env), 'GOOGLE_API_KEY', 'VERTEX_PROJECT_ID', 'VERTEX_LOCATION'] as const
 const isEnvName = (k: string) => (ENV_NAMES as readonly string[]).includes(k)
 
-/** Yalnızca ENV_NAMES içindeki adlar bulunur. */
+/** Only names in ENV_NAMES are found. */
 export type EnvMap = Record<string, string>
 
 function parseEnvFile(path: string): EnvMap {
@@ -97,8 +97,8 @@ function parseEnvFile(path: string): EnvMap {
   try {
     text = readFileSync(path, 'utf8')
   } catch (e) {
-    // Okunamayan .env (klasör, izin) uygulamayı düşürmez; key yokmuş gibi davranılır, sorun günlüğe düşer.
-    logWarn('env', '.env okunamadı, yok sayıldı', e)
+    // An unreadable .env (folder, permission) does not crash the app; it behaves as if there were no key, and the problem is logged.
+    logWarn('env', '.env could not be read, ignored', e)
     return {}
   }
   const out: EnvMap = {}
@@ -107,7 +107,7 @@ function parseEnvFile(path: string): EnvMap {
     const name = m?.[1]
     const raw = m?.[2]
     if (name === undefined || raw === undefined || !isEnvName(name)) continue
-    // Değerin çevresindeki boşluk dosya biçimine aittir; tek ya da çift tırnak varsa içi aynen alınır.
+    // Whitespace around the value belongs to the file format; if there are single or double quotes, the inside is taken as is.
     const value = raw.trim()
     const quoted = /^(['"])(.*)\1$/.exec(value)
     out[name] = quoted?.[2] ?? value
@@ -115,7 +115,7 @@ function parseEnvFile(path: string): EnvMap {
   return out
 }
 
-/** Gizli olmayan Vertex hedefi; kurulu sürümde de kullanıcı klasöründeki .env'den okunabilir. */
+/** The non-secret Vertex target; in an installed build it can also be read from the .env in the user folder. */
 const PUBLIC_ENV = ['VERTEX_PROJECT_ID', 'VERTEX_LOCATION']
 
 export function envValues(): EnvMap {

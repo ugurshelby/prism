@@ -1,11 +1,11 @@
-// Pencereler (ROADMAP "Pencere davranışı"). İki pencere vardır:
-// - panel: opak, çerçevesiz ama işletim sisteminin kendi kenarlığıyla (thickFrame). Kenar ve köşelerden yerel olarak
-//   boyutlandırılır, Windows Snap ve başlıkta çift tıklayıp büyütme kendiliğinden çalışır. Windows 11'de Mica,
-//   macOS'ta vibrancy; Linux'ta düz arka plan (kompozitör varsayılmaz).
-// - pill: saydam küçük küre. Sürükleme ana süreçte yapılır (tıklama ile sürüklemeyi ayırmak için), bırakınca ekran
-//   kenarına yaylı bir hareketle yapışır, görev çubuğuna ya da dock'a girmez.
-// Panel küreden açılır: kürenin bulunduğu köşeye yaslanır, ekrana sığmıyorsa açılma yönünü kendisi seçer;
-// kapanınca küre aynı köşeye döner. Konumlar ekran başına hatırlanır.
+// Windows (ROADMAP "Window behavior"). There are two windows:
+// - panel: opaque, frameless but with the OS's own border (thickFrame). It is resized natively from edges and corners,
+//   and Windows Snap and double-click-on-title maximize work on their own. Mica on Windows 11,
+//   vibrancy on macOS; a plain background on Linux (no compositor assumed).
+// - pill: a small transparent orb. Dragging is handled in the main process (to tell a click from a drag); on release it snaps to
+//   the screen edge with a spring motion and stays out of the taskbar and dock.
+// The panel opens from the orb: it leans into the orb's corner and picks its opening direction itself if it does not fit on screen;
+// when it closes the orb returns to the same corner. Positions are remembered per display.
 import { app, BrowserWindow, screen, type BrowserWindowConstructorOptions, type Display, type Rectangle } from 'electron'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -37,15 +37,15 @@ let mode: WindowMode = 'panel'
 let anchor: PanelAnchor = { h: 'right', v: 'top' }
 let pillState: PillState = { busy: false, badge: false }
 
-// Konum kaydı sürükleme olaylarından gelir: her hareketde diske yazmamak için yarım saniye toplanır.
-// Yazılamazsa (disk dolu, dosya kilidi) uygulama düşmez, yalnızca konum hatırlanmaz.
+// Position saves come from drag events: to avoid writing to disk on every move they are batched over half a second.
+// If the write fails (disk full, file lock) the app does not crash; the position is just not remembered.
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 const save = () => {
   clearTimeout(saveTimer)
   saveTimer = setTimeout(flushWindowState, 500)
 }
 
-/** Bekleyen konum kaydını hemen yazar; bekleyen kayıt yoksa dosyaya dokunmaz. */
+/** Writes a pending position save immediately; if nothing is pending, the file is not touched. */
 export function flushWindowState() {
   if (saveTimer === undefined) return
   clearTimeout(saveTimer)
@@ -57,8 +57,8 @@ export function flushWindowState() {
   }
 }
 
-// Çerçevesiz pencere Alt+F4 / Cmd+W ile kapatılınca yok edilmez, gizlenir; uygulama tray'de yaşar.
-// Gerçek çıkışta (tray menüsü, app.quit) kapanmasına izin verilir.
+// Closing the frameless window with Alt+F4 / Cmd+W hides it instead of destroying it; the app lives on in the tray.
+// On a real quit (tray menu, app.quit) it is allowed to close.
 let quitting = false
 app.on('before-quit', () => {
   quitting = true
@@ -68,7 +68,7 @@ const key = (d: Display) => String(d.id)
 const displayOf = (b: Rectangle) => screen.getDisplayMatching(b)
 const slot = (d: Display): DisplayState => (state.displays[key(d)] ??= {})
 
-/** Dikdörtgen, eşleştiği ekranın çalışma alanı içinde kalsın (görev çubuğu ve dock dışı). */
+/** Keeps the rectangle inside the work area of the display it matches (outside the taskbar and dock). */
 const onScreen = (b: Rectangle): Rectangle => clampToArea(b, displayOf(b).workArea)
 
 function defaultPanel(d: Display): Rectangle {
@@ -83,7 +83,7 @@ function defaultPanel(d: Display): Rectangle {
 
 export function windowLook(): WindowLook {
   if (process.platform === 'darwin') return 'vibrancy'
-  // Mica Windows 11 22H2 (yapı 22621) ve sonrasında var; öncesinde düz arka plan.
+  // Mica exists on Windows 11 22H2 (build 22621) and later; a plain background before that.
   if (process.platform === 'win32') return Number(process.getSystemVersion().split('.')[2] ?? 0) >= 22621 ? 'mica' : 'solid'
   return 'solid'
 }
@@ -96,9 +96,9 @@ function lookOptions(look: WindowLook): BrowserWindowConstructorOptions {
 
 const RENDERER_FILE = () => join(__dirname, '../renderer/index.html')
 
-/** Uygulamanın kendi arayüzü mü: paketli dosya ya da (yalnızca geliştirmede) electron-vite sunucusu. */
+/** Whether this is the app's own UI: a packaged file or (in development only) the electron-vite server. */
 export function isAppUrl(raw: string): boolean {
-  // Ayrıştırılamayan adres uygulamanın kendisi olamaz.
+  // An address that cannot be parsed cannot be the app itself.
   if (!URL.canParse(raw)) return false
   const url = new URL(raw)
   const dev = devEnv().rendererUrl
@@ -112,9 +112,9 @@ const webPreferences = (): BrowserWindowConstructorOptions['webPreferences'] => 
   sandbox: true,
   contextIsolation: true,
   nodeIntegration: false,
-  // Yazım denetimi kapalı: prompt metni hiçbir sözlük servisine gitmez.
+  // Spellcheck is off: prompt text never goes to any dictionary service.
   spellcheck: false,
-  // Kurulu sürümde geliştirici araçları açılamaz; arayüzdeki prompt ve geçmiş bu yoldan okunamasın.
+  // Developer tools cannot be opened in an installed build; the prompt and history in the UI must not be readable this way.
   devTools: !app.isPackaged
 })
 
@@ -128,7 +128,7 @@ function load(win: BrowserWindow, view: 'panel' | 'pill', look: WindowLook) {
     devUrl = u.toString()
   }
   const loaded = devUrl ? win.loadURL(devUrl) : win.loadFile(RENDERER_FILE(), { query })
-  loaded.catch((e: unknown) => logError('window', `arayüz yüklenemedi (${view})`, e))
+  loaded.catch((e: unknown) => logError('window', `could not load UI (${view})`, e))
 }
 
 function keepAlive(win: BrowserWindow) {
@@ -139,16 +139,16 @@ function keepAlive(win: BrowserWindow) {
   })
 }
 
-/** Ana pencere: geçmiş, ayarlar ve akış burada; pill'e geçince gizlenir ama yok edilmez (taslak bellekte kalır). */
+/** Main window: history, settings and the flow live here; it is hidden when switching to the pill but not destroyed (the draft stays in memory). */
 export function getWindow() {
   return panel
 }
 
-/** Küre penceresi (henüz açılmadıysa null). */
+/** Orb window (null if not opened yet). */
 export const getPill = () => pill
 
 export function createWindow(opts: { hidden?: boolean } = {}): BrowserWindow {
-  // Eski biçim (tek panel/pill alanı) birincil ekranın kaydı sayılır.
+  // The old format (a single panel/pill field) counts as the primary display's entry.
   const raw = readUserJson('window-state.json', WindowStateSchema, {})
   state = { displays: raw.displays ?? {} }
   if (raw.panel || raw.pill) state.displays[key(screen.getPrimaryDisplay())] ??= { panel: raw.panel, pill: raw.pill }
@@ -164,7 +164,7 @@ export function createWindow(opts: { hidden?: boolean } = {}): BrowserWindow {
     maxWidth: PANEL.maxWidth,
     maxHeight: PANEL.maxHeight,
     frame: false,
-    // Yerel kenarlık: kenardan boyutlandırma, Snap ve Windows 11'de köşe yuvarlama için gerekli.
+    // Native border: needed for edge resizing, Snap and corner rounding on Windows 11.
     thickFrame: true,
     resizable: true,
     maximizable: true,
@@ -238,20 +238,20 @@ export function applyPin(on: boolean) {
   panel?.webContents.send('window:pinned', on)
 }
 
-/** Pencere içeriği ekran görüntüsünde ve ekran paylaşımında görünmez (Windows, macOS; Linux'ta etkisiz). */
+/** Window content is invisible in screenshots and screen sharing (Windows, macOS; no effect on Linux). */
 export function applyContentProtection(on: boolean) {
   for (const w of [panel, pill]) w?.setContentProtection(on)
 }
 
-/** Küre durumu: çalışıyor mu, küre hâlindeyken biten iş var mı (rozet). */
+/** Orb state: is it working, did a job finish while in orb form (badge). */
 export function setPillState(next: Partial<PillState>) {
   pillState = { ...pillState, ...next }
   pill?.webContents.send('pill:state', pillState)
 }
 
-// --- Panel ↔ küre ------------------------------------------------------------------
+// --- Panel <-> orb ------------------------------------------------------------------
 
-/** Panel, kürenin köşesine yaslanır; ekranın hangi yarısındaysa öbür yöne açılır. */
+/** The panel leans into the orb's corner; it opens in the opposite direction from whichever half of the screen it is in. */
 function panelFromPill(p: Rectangle): Rectangle {
   const d = displayOf(p)
   const placed = placePanel(p, slot(d).panel ?? defaultPanel(d), d.workArea)
@@ -259,7 +259,7 @@ function panelFromPill(p: Rectangle): Rectangle {
   return placed.bounds
 }
 
-/** Küre, panelin açıldığı köşeye döner. */
+/** The orb returns to the corner the panel opened from. */
 const pillFromPanel = (b: Rectangle): Rectangle => placePill(b, anchor, PILL, displayOf(b).workArea)
 
 function showPanel() {
@@ -272,7 +272,7 @@ function showPanel() {
 
 export function setMode(next: WindowMode) {
   if (!panel || next === mode) return
-  // Süren yay animasyonu yeni konumu ezmesin.
+  // An ongoing spring animation must not overwrite the new position.
   clearInterval(spring)
   drag = null
   if (next === 'pill') {
@@ -288,7 +288,7 @@ export function setMode(next: WindowMode) {
   } else {
     const from = pill?.getBounds() ?? pillFromPanel(panel.getBounds())
     const target = panelFromPill(from)
-    // macOS pencere boyutunu kendisi canlandırır; Windows ve Linux'ta içerik tarafı canlandırır (window:shown).
+    // macOS animates the window size itself; on Windows and Linux the content side animates it (window:shown).
     panel.setBounds(target, process.platform === 'darwin')
     mode = 'panel'
     showPanel()
@@ -301,7 +301,7 @@ export function getMode() {
   return mode
 }
 
-// --- Küre sürükleme ------------------------------------------------------------------
+// --- Orb dragging ------------------------------------------------------------------
 
 let drag: { cursor: Electron.Point; bounds: Rectangle } | null = null
 let spring: ReturnType<typeof setInterval> | undefined
@@ -315,11 +315,11 @@ export function dragStart() {
 export function dragMove() {
   if (!pill || !drag) return
   const p = screen.getCursorScreenPoint()
-  // Sürüklerken de çalışma alanı dışına (görev çubuğu, dock) taşmaz; boyut sabit tutulur (DPI geçişinde kaymasın).
+  // While dragging it also stays within the work area (taskbar, dock); the size is held fixed (so it does not drift across a DPI change).
   pill.setBounds(onScreen({ x: drag.bounds.x + p.x - drag.cursor.x, y: drag.bounds.y + p.y - drag.cursor.y, width: PILL, height: PILL }))
 }
 
-/** Bırakınca yakın kenara yapışır; `animate` false ise (azaltılmış hareket) doğrudan yerine konur. */
+/** On release it snaps to the nearest edge; if `animate` is false (reduced motion) it is placed directly. */
 export function dragEnd(animate: boolean) {
   if (!pill || !drag) return
   drag = null
@@ -334,7 +334,7 @@ export function dragEnd(animate: boolean) {
     win.setBounds({ x, y, width: PILL, height: PILL })
     return done()
   }
-  // Kritik sönümlü yay: hızlı yaklaşır, aşmadan oturur. ~200 ms.
+  // Critically damped spring: approaches fast, settles without overshoot. ~200 ms.
   const start = Date.now()
   spring = setInterval(() => {
     const t = Math.min(1, (Date.now() - start) / 200)
@@ -348,10 +348,10 @@ export function dragEnd(animate: boolean) {
   }, 16)
 }
 
-// --- Ekran değişiklikleri -------------------------------------------------------------
+// --- Display changes -------------------------------------------------------------
 
 let watching = false
-/** Ekran çıkarılır ya da çözünürlük değişirse pencereler görünür bir alana taşınır. */
+/** If a display is removed or the resolution changes, the windows are moved into a visible area. */
 function watchDisplays() {
   if (watching) return
   watching = true
@@ -367,10 +367,10 @@ function watchDisplays() {
   screen.on('display-metrics-changed', rescue)
 }
 
-// --- Göster / gizle -------------------------------------------------------------------
+// --- Show / hide -------------------------------------------------------------------
 
 export function toggleVisible() {
-  // Pencere bir yoldan yok edildiyse (ör. arayüzün kendisi kapattıysa) kısayol ve tray onu yeniden açar.
+  // If a window was destroyed some way (e.g. the UI closed it itself), the shortcut and tray reopen it.
   if (!panel) {
     createWindow()
     return
@@ -380,7 +380,7 @@ export function toggleVisible() {
   else showPanel()
 }
 
-/** Paneli gizler; macOS'ta odak bir önceki uygulamaya döner (Windows ve Linux bunu kendisi yapar). */
+/** Hides the panel; on macOS focus returns to the previous app (Windows and Linux do this themselves). */
 export function hidePanel() {
   panel?.hide()
   if (process.platform === 'darwin' && mode === 'panel') app.hide()

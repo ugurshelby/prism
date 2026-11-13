@@ -1,11 +1,11 @@
-// Prism 2.x (ya da daha eski Prompter) verisinin Spectrum'a bir kerelik taşınması (PLAN D6, 3b).
+// One-time migration of Prism 2.x (or older Prompter) data to Spectrum (PLAN D6, 3b).
 //
-// Eski klasör yerinde kullanılmaz, kopyalanır: hâlâ kurulu bir 2.x ile aynı kilit ve dosyalar paylaşılmasın, kaldırıcı
-// ve "Tüm verilerimi sil" Spectrum'un kendi klasörünü bilsin. Eski klasöre hiç yazılmaz. Yalnızca Prism'in kendi
-// dosyaları (shared/userdata.ts) ve Chromium'un `Local State` dosyası kopyalanır: Windows'ta safeStorage anahtarı
-// orada DPAPI ile saklanır, böylece key'ler ve geçmiş açılmaya devam eder. macOS'ta anahtar uygulama adına bağlı Keychain
-// kaydındadır; orada kopyalanan key'ler okunamaz ve uygulama key'leri yeniden istemekle geçmişi kenara almayı açıkça söyler
-// (owner kararı, R3 yedek davranışı).
+// The old folder is copied, not used in place: so it shares no lock or files with a still-installed 2.x, and the uninstaller
+// and "Delete all my data" know Spectrum's own folder. The old folder is never written. Only Prism's own
+// files (shared/userdata.ts) and Chromium's `Local State` file are copied: on Windows the safeStorage key
+// is kept there with DPAPI, so keys and history keep opening. On macOS the key lives in a Keychain entry tied to the app name;
+// the copied keys cannot be read there, and the app says explicitly that it asks for the keys again and sets the history aside
+// (owner decision, R3 backup behavior).
 import { copyFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { ProductInfo } from '@shared/product'
@@ -16,13 +16,13 @@ import { logWarn } from './log'
 export const MIGRATION_MARKER = 'migrated.json'
 const LOCAL_STATE = 'Local State'
 
-// Geçici, yedek ve kenara alınmış dosyalar taşınmaz; yalnızca kullanılan veri. Düz metin `.env` (eski sürümlerin key'leri)
-// ikinci bir yere çoğaltılmaz.
+// Temporary, backup and set-aside files are not migrated; only data in use. The plain-text `.env` (keys from old versions)
+// is not duplicated to a second place.
 const isMigratable = (name: string) =>
   isOwnDataFile(name) && name !== '.env' && name !== MIGRATION_MARKER && !/\.(tmp|bak)$|\.bozuk-\d+$|\.unreadable-\d+$/.test(name)
 
-// Prism'in settings.json'ı: sürüm numarası, kısayol ve aile/motor alanlarından biri. Aynı adlı başka bir uygulamanın
-// ayar dosyası bu şekli taşımaz.
+// Prism's settings.json: a version number, a shortcut and one of the family/engine fields. Another app with the same name
+// does not have this shape in its settings file.
 function looksLikePrismSettings(raw: unknown): boolean {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return false
   const has = (k: string) => Object.hasOwn(raw, k)
@@ -43,13 +43,13 @@ function regularFiles(dir: string): string[] {
   })
 }
 
-/** Klasörü salt okur: Prism verisi var mı, Prism'e özgü imza (key, şifreli geçmiş, sürümlü settings.json) var mı. */
+/** Reads the folder read-only: is there Prism data, is there a Prism-specific signature (key, encrypted history, versioned settings.json). */
 export function inspectDir(dir: string): { hasOwnData: boolean; hasSignature: boolean; migrated: boolean } {
   const files = regularFiles(dir)
   const own = files.filter(isMigratable)
   let settingsLooksOurs = false
   if (own.includes('settings.json')) {
-    // Okunamayan ya da başka biçimde bir settings.json imza sayılmaz; klasör başka bir uygulamanın olabilir.
+    // A settings.json that is unreadable or in another format does not count as a signature; the folder may belong to another app.
     try {
       settingsLooksOurs = looksLikePrismSettings(JSON.parse(readFileSync(join(dir, 'settings.json'), 'utf8')))
     } catch {
@@ -63,13 +63,13 @@ export function inspectDir(dir: string): { hasOwnData: boolean; hasSignature: bo
   }
 }
 
-/** Göç işaretini yazar; `wiped` ise "Tüm verilerimi sil" sonrası göçün bir daha çalışmaması içindir. */
+/** Writes the migration marker; `wiped` is so migration never runs again after "Delete all my data". */
 export function markMigrationDone(target: string, from: string) {
   mkdirSync(target, { recursive: true })
   writeFileSync(join(target, MIGRATION_MARKER), JSON.stringify({ from, at: new Date().toISOString() }))
 }
 
-// Önceki bir göç yarıda kesildiyse (çökme, güç kesilmesi) kalan geçici klasör silinir: içinde key ve geçmiş olabilir.
+// If an earlier migration was cut short (crash, power loss), the leftover temp folder is deleted: it may contain keys and history.
 function removeLeftovers(appData: string, product: ProductInfo) {
   const prefix = `${product.dataDir}.migrating-`
   for (const name of readdirSync(appData).filter((n) => n.startsWith(prefix))) {
@@ -78,10 +78,10 @@ function removeLeftovers(appData: string, product: ProductInfo) {
 }
 
 /**
- * Ürünün klasöründe veri yoksa ve Prism imzası taşıyan bir eski klasör varsa verileri bir kez kopyalar. Kopya önce geçici
- * bir klasöre yapılır, sonra dosyalar hedefe taşınır, en son işaret dosyası yazılır. Başarısızlıkta hedefe taşınan dosyalar
- * geri silinir ve uygulama boş verilerle açılır; bir sonraki açılış yeniden dener. Hiçbir hata açılışı durdurmaz.
- * Dönen değer kopyalanan eski klasörün adı ya da null.
+ * If the product's folder has no data and there is an old folder carrying the Prism signature, copies the data once. The copy is made first to a temp
+ * folder, then the files are moved to the target, and the marker file is written last. On failure the files moved to the target
+ * are deleted again and the app opens with empty data; the next launch retries. No error stops the launch.
+ * The return value is the name of the old folder that was copied, or null.
  */
 export function migrateLegacyData(appData: string, product: ProductInfo): string | null {
   if (!product.legacyDataDirs.length) return null
@@ -102,21 +102,21 @@ export function migrateLegacyData(appData: string, product: ProductInfo): string
       renameSync(join(temp, name), join(target, name))
       moved.push(name)
     }
-    // Tek seferlik: işaret zaten varsa (başka bir kopya yazdıysa) üzerine yazılmaz.
+    // One-time: if the marker already exists (another instance wrote it) it is not overwritten.
     writeFileSync(join(target, MIGRATION_MARKER), JSON.stringify({ from, at: new Date().toISOString(), files: names.length }), { flag: 'wx' })
     return from
   } catch (e) {
-    // Yarım taşınan dosyalar geri alınır: hedefte veri kalırsa bir sonraki açılış göçü yeniden denemez.
+    // Half-migrated files are rolled back: if data stayed in the target, the next launch would not retry the migration.
     for (const name of moved) if (name !== LOCAL_STATE) rmSync(join(target, name), { force: true })
-    logWarn('migrate', 'eski sürüm verisi kopyalanamadı; uygulama boş verilerle açılıyor, bir sonraki açılışta yeniden denenecek', e)
+    logWarn('migrate', 'could not copy old-version data; the app is opening with empty data, will retry on the next launch', e)
     return null
   } finally {
-    // Geçici klasör silinemezse (Windows kilidi) bir sonraki açılışta removeLeftovers yeniden dener.
+    // If the temp folder cannot be deleted (Windows lock), removeLeftovers retries on the next launch.
     if (temp) {
       try {
         rmSync(temp, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 })
       } catch (e) {
-        logWarn('migrate', 'geçici göç klasörü silinemedi; bir sonraki açılışta silinecek', e)
+        logWarn('migrate', 'could not delete temp migration folder; it will be deleted on the next launch', e)
       }
     }
   }

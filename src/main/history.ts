@@ -1,6 +1,6 @@
-// Geçmiş: her analiz bir girdi açar, o analizden yapılan her yazım girdiye eklenir. En yeni en üstte, en fazla LIMIT girdi.
-// Promptlar kişisel ya da gizli bilgi içerebilir: geçmiş userData/history.enc içinde işletim sisteminin anahtarlığıyla
-// şifreli durur. Anahtarlık yoksa diske hiç yazılmaz, yalnızca bu oturumda bellekte tutulur.
+// History: each analysis opens an entry, and every write made from that analysis is added to it. Newest first, at most LIMIT entries.
+// Prompts may contain personal or confidential information: history is kept in userData/history.enc, encrypted with the operating system's
+// keyring. If there is no keyring nothing is written to disk; it is held only in memory for this session.
 
 import { randomUUID } from 'node:crypto'
 import { copyFileSync, existsSync, readFileSync, readdirSync, renameSync } from 'node:fs'
@@ -17,15 +17,15 @@ const LIMIT = 200
 
 let entries: HistoryEntry[] | null = null
 let storage: HistoryStorage = 'memory'
-// Önceki geçmiş bu sistemde açılamadığı için kenara alındı (bu oturumda arayüz bir kez bildirir).
+// The previous history could not be opened on this system, so it was set aside (the UI reports this once per session).
 let reset = false
-// Silinen kayıtlar: o sırada süren bir yazım bitince girdiyi yeniden açmasın.
+// Deleted records: so a write still in progress at that moment does not reopen the entry when it finishes.
 const deleted = new Set<string>()
 
-/** Kayıtlar tek tek doğrulanır; bozuk bir kayıt geri kalan geçmişi düşürmesin. complete: hiçbir kayıt atlanmadı. */
+/** Records are validated one by one; a corrupt record must not take down the rest of the history. complete: no record was skipped. */
 function parseEntries(raw: unknown, source: string): { entries: HistoryEntry[]; complete: boolean } {
   if (!Array.isArray(raw)) {
-    logWarn('history', `${source} bir liste değil, yok sayıldı`)
+    logWarn('history', `${source} is not a list, ignored`)
     return { entries: [], complete: false }
   }
   const valid: HistoryEntry[] = []
@@ -35,46 +35,46 @@ function parseEntries(raw: unknown, source: string): { entries: HistoryEntry[]; 
     if (parsed.success) valid.push(parsed.data)
     else dropped++
   }
-  if (dropped) logWarn('history', `${source} içindeki ${dropped} kayıt beklenen biçimde değil, atlandı`)
+  if (dropped) logWarn('history', `${dropped} records in ${source} are not in the expected format, skipped`)
   return { entries: valid, complete: dropped === 0 }
 }
 
 type EncryptedRead = { kind: 'ok'; entries: HistoryEntry[] } | { kind: 'undecryptable' } | { kind: 'unavailable' }
 
 /**
- * Şifreli geçmişi okur. "undecryptable" yalnızca okunan dosyanın çözülemediği durumdur; okuma hatası, ayrıştırma hatası ya
- * da yedek alınamaması "unavailable" sayılır ve dosyaya dokunulmaz (anahtarlık kilitli, disk dolu, dosya kilitli olabilir).
+ * Reads the encrypted history. "undecryptable" means only that the file that was read could not be decrypted; a read error, a parse error or
+ * a failed backup counts as "unavailable" and the file is left alone (the keyring may be locked, the disk full, the file locked).
  */
 function readEncrypted(path = userFile('history.enc')): EncryptedRead {
   let sealed: Buffer
   try {
     sealed = readFileSync(path)
   } catch (e) {
-    logWarn('history', 'şifreli geçmiş okunamadı; dosya yerinde bırakıldı, bu oturumda geçmiş yalnızca bellekte', e)
+    logWarn('history', 'could not read encrypted history; file left in place, history is memory-only this session', e)
     return { kind: 'unavailable' }
   }
   let text: string
   try {
     text = unseal(sealed)
   } catch (e) {
-    logWarn('history', 'şifreli geçmiş çözülemedi', e)
+    logWarn('history', 'could not decrypt encrypted history', e)
     return { kind: 'undecryptable' }
   }
   let parsed: { entries: HistoryEntry[]; complete: boolean }
   try {
     parsed = parseEntries(JSON.parse(text) as unknown, 'history.enc')
   } catch (e) {
-    logWarn('history', 'şifreli geçmiş beklenen biçimde değil; dosya yerinde bırakıldı, bu oturumda geçmiş yalnızca bellekte', e)
+    logWarn('history', 'encrypted history is not in the expected format; file left in place, history is memory-only this session', e)
     return { kind: 'unavailable' }
   }
-  // Atlanan kayıtlar bir sonraki yazımda kaybolmasın: dosyanın şifreli hâli olduğu gibi yedeklenir.
+  // So skipped records are not lost on the next write: the file is backed up in its encrypted form as is.
   if (!parsed.complete) {
-    // Yedek alınamazsa (disk dolu, kilit) dosya yerinde kalır ve bu oturum bellek kipinde sürer; kayıt kaybolmaz.
+    // If the backup fails (disk full, lock) the file stays in place and this session continues in memory mode; no record is lost.
     try {
       copyFileSync(path, `${path}.${Date.now()}.bak`)
-      logWarn('history', 'atlanan kayıtlar için şifreli geçmişin yedeği alındı')
+      logWarn('history', 'backed up encrypted history because of skipped records')
     } catch (e) {
-      logWarn('history', 'atlanan kayıtlar için yedek alınamadı; bu oturumda geçmiş yalnızca bellekte', e)
+      logWarn('history', 'could not back up for skipped records; history is memory-only this session', e)
       return { kind: 'unavailable' }
     }
   }
@@ -82,8 +82,8 @@ function readEncrypted(path = userFile('history.enc')): EncryptedRead {
 }
 
 /**
- * Daha önce kenara alınmış bir geçmiş bu anahtarla yeniden açılabiliyorsa (ör. Linux'ta masaüstü oturumu ve anahtarlık arka
- * ucu değişip geri döndü) en yenisi geri konur. Geçerli geçmiş boşken denenir; dolu geçmişin üzerine yazılmaz.
+ * If a history set aside earlier can be opened again with this key (e.g. on Linux the desktop session and keyring backend
+ * changed and then changed back), the newest one is restored. Tried when the current history is empty; a non-empty history is never overwritten.
  */
 function restoreSetAside(): HistoryEntry[] | null {
   const path = userFile('history.enc')
@@ -97,10 +97,10 @@ function restoreSetAside(): HistoryEntry[] | null {
     if (r.kind !== 'ok') continue
     try {
       renameSync(join(dir, name), path)
-      logWarn('history', 'kenara alınmış geçmiş bu anahtarla açıldı ve geri kondu')
+      logWarn('history', 'history that was set aside opened with this key and was restored')
       return r.entries
     } catch (e) {
-      logWarn('history', 'kenara alınmış geçmiş geri konamadı', e)
+      logWarn('history', 'could not restore the history that was set aside', e)
       return null
     }
   }
@@ -110,9 +110,9 @@ function restoreSetAside(): HistoryEntry[] | null {
 const LEGACY_FILES = ['history.json', 'history.v1.json', 'history.json.tmp'] as const
 
 /**
- * Eski sürümlerin düz metin geçmişi bir kez okunur. Geçerli kayıtlar şifreli geçmişe taşınır; dosyaların ham
- * içeriği de (okunamayan ya da biçimi tutmayan kayıtlar kaybolmasın diye) şifreli bir arşive alınır. Ardından
- * düz metin kopyalar sıfırlarla ezilip silinir; diskte düz metin geçmiş kalmaz.
+ * The plain-text history of old versions is read once. Valid records move to the encrypted history; the raw
+ * contents of the files (so unreadable or malformed records are not lost) also go into an encrypted archive. Then
+ * the plain-text copies are overwritten with zeros and deleted; no plain-text history is left on disk.
  */
 function migrateLegacy(): HistoryEntry[] {
   const present = LEGACY_FILES.filter((name) => existsSync(userFile(name)))
@@ -124,7 +124,7 @@ function migrateLegacy(): HistoryEntry[] {
     try {
       migrated = parseEntries(JSON.parse(raw['history.json']) as unknown, 'history.json').entries
     } catch (e) {
-      logWarn('history', 'düz metin geçmiş ayrıştırılamadı; ham hâli şifreli arşive alınıyor', e)
+      logWarn('history', 'could not parse plain-text history; raw contents are being archived encrypted', e)
     }
   }
   archiveLegacy(raw)
@@ -132,7 +132,7 @@ function migrateLegacy(): HistoryEntry[] {
   return migrated
 }
 
-/** Eski dosyaların ham içeriği history.legacy.enc içinde şifreli durur; önceki arşiv varsa üzerine eklenir. */
+/** The raw contents of old files are kept encrypted in history.legacy.enc; if a previous archive exists, they are appended to it. */
 function archiveLegacy(raw: Record<string, string>) {
   const path = userFile('history.legacy.enc')
   const archive: Record<string, string> = {}
@@ -143,13 +143,13 @@ function archiveLegacy(raw: Record<string, string>) {
         for (const [k, v] of Object.entries(parsed)) if (typeof v === 'string') archive[k] = v
       }
     } catch (e) {
-      // Önceki arşiv açılamıyor (anahtarlık değişmiş olabilir): şifreli hâliyle kenara alınır, yeni arşiv başlar.
-      logWarn('history', 'eski geçmiş arşivi açılamadı, yedeklenip yenisi başlatıldı', e)
+      // The previous archive cannot be opened (the keyring may have changed): it is set aside in its encrypted form and a new archive starts.
+      logWarn('history', 'could not open old history archive; backed it up and started a new one', e)
       try {
         copyFileSync(path, `${path}.${Date.now()}.bak`)
       } catch (backupError) {
-        // Yedeksiz üzerine yazılmasın: hata yukarı gider, göç bir sonraki açılışta yeniden denenir.
-        logWarn('history', 'eski geçmiş arşivinin yedeği alınamadı', backupError)
+        // It must not be overwritten without a backup: the error propagates and the migration is retried on the next launch.
+        logWarn('history', 'could not back up the old history archive', backupError)
         throw backupError
       }
     }
@@ -163,22 +163,22 @@ function load(): HistoryEntry[] {
   if (entries) return entries
   const vault = vaultState()
   if (!vault.ok) {
-    logWarn('history', `${vault.reason} Geçmiş yalnızca bu oturumda tutulacak`)
+    logWarn('history', `${vault.reason} History will be kept for this session only`)
     storage = 'memory'
     return (entries = [])
   }
   const read: EncryptedRead = existsSync(userFile('history.enc')) ? readEncrypted() : { kind: 'ok', entries: [] }
   let current: HistoryEntry[] | null = read.kind === 'ok' ? read.entries : null
   if (read.kind === 'undecryptable' && vaultRoundTrips() && setAsideUnreadable()) {
-    // Anahtarlık çalışıyor ama dosya çözülmüyor: başka bir anahtarla yazılmış (ör. 2.x'ten Spectrum'a ad değişimi).
-    // Dosya silinmeden kenara alındı; geçmiş baştan başlar ve arayüz bunu söyler (owner kararı, R3 yedek davranışı).
+    // The keyring works but the file does not decrypt: it was written with another key (e.g. the rename from 2.x to Spectrum).
+    // The file was set aside rather than deleted; history starts from scratch and the UI says so (owner decision, R3 backup behavior).
     reset = true
     current = []
   } else if (current !== null && current.length === 0) {
     current = restoreSetAside() ?? current
   }
   if (current === null) {
-    // Açılamayan dosyanın üzerine yazılmasın diye bu oturum bellek kipinde sürer.
+    // This session continues in memory mode so the file that cannot be opened is not overwritten.
     storage = 'memory'
     return (entries = [])
   }
@@ -188,8 +188,8 @@ function load(): HistoryEntry[] {
   try {
     legacy = migrateLegacy()
   } catch (e) {
-    // Arşiv yazılamadıysa eski dosyalar silinmeden yerinde kalır; göç bir sonraki açılışta yeniden denenir.
-    logWarn('history', 'eski geçmiş taşınamadı, dosyalar yerinde bırakıldı', e)
+    // If the archive could not be written, the old files stay in place undeleted; the migration is retried on the next launch.
+    logWarn('history', 'could not migrate old history, files left in place', e)
   }
   if (legacy.length) {
     const known = new Set(current.map((e) => e.id))
@@ -199,15 +199,15 @@ function load(): HistoryEntry[] {
   return entries
 }
 
-/** Çözülemeyen şifreli geçmişi `history.enc.unreadable-<zaman>` adıyla kenara alır; başarılıysa true. */
+/** Sets aside the encrypted history that cannot be decrypted as `history.enc.unreadable-<time>`; true if successful. */
 function setAsideUnreadable(): boolean {
   const path = userFile('history.enc')
   try {
     renameSync(path, `${path}.unreadable-${Date.now()}`)
-    logWarn('history', 'şifreli geçmiş bu sistemde çözülemiyor; dosya kenara alındı, geçmiş yeniden başlıyor')
+    logWarn('history', 'encrypted history cannot be decrypted on this system; file set aside, history starts over')
     return true
   } catch (e) {
-    logWarn('history', 'çözülemeyen geçmiş kenara alınamadı; bu oturumda geçmiş yalnızca bellekte', e)
+    logWarn('history', 'could not set aside the undecryptable history; history is memory-only this session', e)
     return false
   }
 }
@@ -224,7 +224,7 @@ export function listHistory(): HistoryList {
   return { entries: list, storage: getSettings().saveHistory ? storage : 'off', ...(reset ? { reset: true } : {}) }
 }
 
-/** Geçmiş kaydı kapalıysa hiçbir şey yazılmaz ve kimlik dönmez. */
+/** If history recording is off, nothing is written and no id is returned. */
 export function recordAnalysis(req: AnalyzeRequest, analysis: Analysis): string | undefined {
   if (!getSettings().saveHistory) return undefined
   const now = Date.now()
@@ -248,10 +248,10 @@ export function recordOutput(req: GenerateRequest, result: GenerateResult) {
   if (!getSettings().saveHistory) return
   const now = Date.now()
   if (req.historyId && deleted.has(req.historyId)) return
-  // Arayüzün verdiği kimliğe yalnızca aynı promptun girdisiyse güvenilir; başka bir kaydın üzerine yazılmaz.
+  // An id supplied by the UI is trusted only if it belongs to the same prompt's entry; another record is never overwritten.
   let entry = req.historyId ? load().find((e) => e.id === req.historyId && e.prompt === req.prompt) : undefined
   if (!entry) {
-    // Analizi silinmiş, hiç kaydedilmemiş ya da eşleşmeyen bir yazım: kendi girdisini yeni bir kimlikle açar.
+    // A write whose analysis was deleted, never saved or does not match: it opens its own entry with a new id.
     entry = {
       id: randomUUID(),
       createdAt: now,
@@ -280,19 +280,19 @@ export function recordOutput(req: GenerateRequest, result: GenerateResult) {
 
 export function deleteHistory(id: string) {
   load()
-  // Bellek kipinde diskteki şifreli dosya güncellenemez: silinmiş sanılan kayıt sonraki oturumda geri gelmesin.
+  // In memory mode the encrypted file on disk cannot be updated: a record thought deleted must not come back in the next session.
   if (storage === 'memory' && existsSync(userFile('history.enc'))) throw new UserError(msg('err.historyLocked'))
   deleted.add(id)
   entries = load().filter((e) => e.id !== id)
   persist()
 }
 
-/** "Geçmişi temizle" eski sürümlerden taşınan arşivi ve şifreli yedekleri de siler; diskte prompt kalmaz. */
+/** "Clear history" also deletes the archive migrated from old versions and the encrypted backups; no prompt is left on disk. */
 export function clearHistory() {
   for (const e of load()) deleted.add(e.id)
   entries = []
   persist()
-  // Bellek kipinde (anahtarlık kilitli ya da dosya açılamadı) persist diske yazmaz; dosya yine de silinir.
+  // In memory mode (keyring locked or file could not be opened) persist does not write to disk; the file is still deleted.
   wipeFile(userFile('history.enc'))
   const archive = userFile('history.legacy.enc')
   wipeFile(archive)

@@ -1,5 +1,5 @@
-// Arayüzden gelen her IPC çağrısı buradan geçer: önce gönderen çerçeve uygulamanın kendi arayüzü mü,
-// sonra argümanlar şemaya uyuyor mu. Arayüz güvenilmeyen girdi sayılır; tip bildirimi doğrulama değildir.
+// Every IPC call from the UI passes through here: first, is the sending frame the app's own UI,
+// then, do the arguments match the schema. The UI counts as untrusted input; a type annotation is not validation.
 
 import { ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
 import type { z } from 'zod'
@@ -12,12 +12,12 @@ import { getPill, getWindow, isAppUrl } from './window'
 
 type Tuple = z.ZodTuple<[z.ZodType, ...z.ZodType[]] | [], null>
 
-/** Kanalı çağırabilecek pencere: panel her şeyi, küre yalnızca kendi işini (sürükleme, panel açma, ayar okuma) yapar. */
+/** The window allowed to call the channel: the panel can do everything, the orb only its own work (dragging, opening the panel, reading settings). */
 export type Caller = 'panel' | 'pill' | 'any'
 
 function trusted(e: IpcMainEvent | IpcMainInvokeEvent, caller: Caller): boolean {
   const frame = e.senderFrame
-  // Alt çerçeveler ve başka bir adrese geçmiş sayfa IPC kullanamaz.
+  // Subframes and a page that has navigated to another address cannot use IPC.
   if (!frame || frame !== e.sender.mainFrame || !isAppUrl(frame.url)) return false
   const panel = getWindow()?.webContents
   const pill = getPill()?.webContents
@@ -28,13 +28,13 @@ function trusted(e: IpcMainEvent | IpcMainInvokeEvent, caller: Caller): boolean 
 
 function parse<A extends Tuple>(channel: string, e: IpcMainEvent | IpcMainInvokeEvent, args: A, raw: unknown[], caller: Caller): z.infer<A> {
   if (!trusted(e, caller)) {
-    logWarn('ipc', `${channel}: uygulama dışı bir kaynaktan gelen çağrı reddedildi`)
+    logWarn('ipc', `${channel}: call from a source outside the app rejected`)
     throw new UserError(msg('err.unauthorized'))
   }
   const parsed = args.safeParse(raw)
   if (!parsed.success) {
-    // Değerler günlüğe yazılmaz (key ya da prompt olabilir); yalnızca alan yolları.
-    logWarn('ipc', `${channel}: geçersiz argüman (${parsed.error.issues.map((i) => i.path.join('.') || '-').join(', ')})`)
+    // Values are not logged (they could be a key or a prompt); only field paths.
+    logWarn('ipc', `${channel}: invalid argument (${parsed.error.issues.map((i) => i.path.join('.') || '-').join(', ')})`)
     throw new UserError(msg('err.invalidRequest', { detail: describeIssues(parsed.error) }))
   }
   return parsed.data
@@ -56,27 +56,27 @@ export function handle<A extends Tuple>(
 }
 
 /**
- * Arayüze yalnızca bizim yazdığımız mesajlar gider (izin listesi: UserError, LlmError). Sistem hataları (dosya yolu
- * içeren fs mesajları), şema hatalarının ham metni ve beklenmeyen her hata günlüğe düşer, arayüz genel bir mesaj görür.
+ * Only messages we wrote go to the UI (allowlist: UserError, LlmError). System errors (fs messages that contain
+ * file paths), the raw text of schema errors and every unexpected error go to the log, and the UI sees a generic message.
  */
 function forRenderer(channel: string, err: unknown): Error {
   return new Error(rendererMessage(channel, err))
 }
 
-/** IPC dışında arayüze giden hata metinleri de (akış olayı, test sonucu, doğrulama durumu) aynı izin listesinden geçer. */
+/** Error texts that go to the UI outside IPC (stream event, test result, verification status) also pass through the same allowlist. */
 export function rendererMessage(scope: string, err: unknown): string {
   if (err instanceof UserError || err instanceof LlmError) return err.message
-  logWarn('ipc', `${scope} başarısız`, err)
+  logWarn('ipc', `${scope} failed`, err)
   return msg('err.system')
 }
 
-/** Yanıt beklemeyen olaylar (sürükleme): geçersiz çağrı yalnızca günlüğe düşer. */
+/** Events that expect no reply (dragging): an invalid call goes only to the log. */
 export function on<A extends Tuple>(channel: string, args: A, fn: (e: IpcMainEvent, ...parsed: z.infer<A>) => void, caller: Caller = 'panel') {
   ipcMain.on(channel, (e, ...raw: unknown[]) => {
     try {
       fn(e, ...parse(channel, e, args, raw, caller))
     } catch (err) {
-      logWarn('ipc', `${channel} işlenemedi`, err)
+      logWarn('ipc', `${channel} could not be processed`, err)
     }
   })
 }

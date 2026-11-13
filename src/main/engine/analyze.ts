@@ -38,9 +38,9 @@ export const TASK_TYPES = [
   'other'
 ] as const
 
-/** Model ve effort enum'ları aday havuzundan üretilir; model havuz dışına çıkamaz. */
+/** Model and effort enums are generated from the candidate pool; the model cannot step outside the pool. */
 function schemaFor(pool: ModelId[]) {
-  // İnsanın okuyacağı alanlar arayüz dilinde (ayarlar → arayüz dili).
+  // Fields a human will read are in the UI language (settings → UI language).
   const L = 'English'
   const efforts = EFFORTS.filter((e) => pool.some((m) => MODELS[m].efforts.includes(e) || MODELS[m].defaultEffort.api === e))
   return {
@@ -183,8 +183,8 @@ export function analyzeUserPrompt(req: AnalyzeRequest) {
 ${fence('raw_prompt', req.prompt)}`
 }
 
-// Modelin yapılandırılmış çıktısı da dış veridir: eksik ya da bozuk alan varsayılana döner, model ve effort
-// aşağıda aday havuzuna göre ayrıca denetlenir.
+// The model's structured output is also external data: a missing or corrupt field falls back to the default, and model and effort
+// are checked separately below against the candidate pool.
 const RawAnalysisSchema = z.object({
   intent: z.string().catch(''),
   task_type: z.string().max(64).catch('other'),
@@ -253,8 +253,8 @@ export async function analyze(req: AnalyzeRequest, signal?: AbortSignal): Promis
     try {
       return { ...normalize(RawAnalysisSchema.parse(parseJson(text)), pool, req), usage, engine, elapsedMs: Date.now() - started }
     } catch (e) {
-      // Model şemaya uymayan JSON döndürdü; bir kez daha denenir, olmazsa açık bir hata verilir.
-      logWarn('analyze', `deneme ${attempt + 1}: model yanıtı beklenen biçimde değil`, e)
+      // The model returned JSON that does not match the schema; it is tried once more, and if that fails an explicit error is raised.
+      logWarn('analyze', `attempt ${attempt + 1}: model response is not in the expected format`, e)
       lastError = e
     }
   }

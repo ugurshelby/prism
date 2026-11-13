@@ -1,7 +1,7 @@
-// Güncelleme bildirimi: günde en fazla bir kez GitHub yayın listesine key'siz bakılır, bu ürünün daha yeni sürümü
-// varsa arayüze bildirilir. İndirme ve kurulum yok; kullanıcı yayın sayfasını açar.
-// Bu yol sağlayıcı istemcilerinden ayrıdır (llm/http.ts'teki key'li izin listesine eklenmez): tek izinli adres
-// api.github.com, yalnızca https, yönlendirme yok, kimlik bilgisi ya da çerez gönderilmez.
+// Update notice: at most once a day the GitHub release list is checked without a key, and if there is a newer version of this product
+// the UI is notified. No download or install; the user opens the release page.
+// This path is separate from the provider clients (it is not added to the keyed allowlist in llm/http.ts): the only allowed address is
+// api.github.com, https only, no redirects, and no credentials or cookies are sent.
 import { app, shell } from 'electron'
 import { PRODUCT } from '@shared/product'
 import type { UpdateView } from '@shared/types'
@@ -22,7 +22,7 @@ import { logWarn } from './log'
 
 const UPDATE_HOST = 'api.github.com'
 const TIMEOUT_MS = 10_000
-// Saatlik bakış yalnızca "bir gün geçti mi" sorusudur; ağa günde en fazla bir kez çıkılır.
+// The hourly check is only the question "has a day passed"; the network is hit at most once a day.
 const TICK_MS = 60 * 60 * 1000
 const FIRST_TICK_MS = 30_000
 
@@ -32,7 +32,7 @@ let onChange: (() => void) | null = null
 
 const loadState = (): UpdateState | null => (state ??= readUserJson('update-state.json', UpdateStateSchema.nullable(), null))
 
-// Kaydedilmiş "en yeni" sürüm, uygulama o sürüme güncellendikten sonra artık bildirilmez.
+// A saved "latest" version is no longer announced after the app has been updated to that version.
 function stillNewer(version: string): boolean {
   const v = parseVersion(version)
   const cur = parseVersion(app.getVersion())
@@ -48,7 +48,7 @@ export function updateView(): UpdateView {
 function assertUpdateUrl(raw: string): URL {
   const url = new URL(raw)
   if (url.protocol !== 'https:' || url.hostname !== UPDATE_HOST || url.port || url.username || url.password) {
-    throw new Error('güncelleme adresi izinli değil')
+    throw new Error('update URL is not allowed')
   }
   return url
 }
@@ -64,9 +64,9 @@ async function fetchReleases() {
   return ReleaseListSchema.parse(JSON.parse(await readCapped(res)))
 }
 
-// Gövde parça parça okunur ve sınır aşılınca kesilir; content-length olmayan (sıkıştırılmış) yanıt da sınırlıdır.
+// The body is read in chunks and cut off when the limit is exceeded; a response without content-length (compressed) is also bounded.
 async function readCapped(res: Response): Promise<string> {
-  if (!res.body) throw new Error('yanıt gövdesi yok')
+  if (!res.body) throw new Error('response has no body')
   const reader: ReadableStreamDefaultReader<Uint8Array> = res.body.getReader()
   const chunks: Uint8Array[] = []
   let size = 0
@@ -76,25 +76,25 @@ async function readCapped(res: Response): Promise<string> {
     size += value.byteLength
     if (size > MAX_RESPONSE_BYTES) {
       await reader.cancel()
-      throw new Error('yanıt çok büyük')
+      throw new Error('response too large')
     }
     chunks.push(value)
   }
   return Buffer.concat(chunks).toString('utf8')
 }
 
-/** Yayın listesini getirir ve durumu kaydeder. Ağ ya da biçim hatası kayda geçer ve atılır; eski durum korunur. */
+/** Fetches the release list and saves the state. A network or format error is logged and thrown; the old state is kept. */
 export function checkForUpdate(): Promise<UpdateView> {
   inflight ??= (async () => {
     try {
       const releases = await fetchReleases()
       const next: UpdateState = { checkedAt: Date.now(), latest: newerRelease(releases, PRODUCT.tagPrefix, app.getVersion()) }
       state = next
-      // Durum yazılamazsa bildirim yine gösterilir; bir sonraki açılışta denetim yeniden yapılır.
+      // If the state cannot be written the notice is still shown; the check is repeated on the next launch.
       try {
         writeJson('update-state.json', next)
       } catch (e) {
-        logWarn('update', 'güncelleme durumu yazılamadı', e)
+        logWarn('update', 'could not write update state', e)
       }
       onChange?.()
       return updateView()
@@ -105,27 +105,27 @@ export function checkForUpdate(): Promise<UpdateView> {
   return inflight
 }
 
-/** Bilinen en yeni yayının sayfasını sistem tarayıcısında açar; adres doğrulanmış etiketten kurulur. */
+/** Opens the page of the latest known release in the system browser; the address is built from a validated tag. */
 export function openReleasePage(): void {
   const latest = updateView().latest
   const url = latest ? releasePageUrl(latest.tag, PRODUCT.tagPrefix) : null
-  if (!url) return logWarn('update', 'açılacak yayın yok')
-  shell.openExternal(url).catch((e: unknown) => logWarn('update', 'yayın sayfası açılamadı', e))
+  if (!url) return logWarn('update', 'no release to open')
+  shell.openExternal(url).catch((e: unknown) => logWarn('update', 'could not open release page', e))
 }
 
 async function tick() {
   if (!getSettings().updateCheck || !checkDue(loadState()?.checkedAt ?? null, Date.now())) return
-  // Otomatik denetimin hatası kullanıcıya gösterilmez; kayda geçer, ertesi saatte yeniden denenir.
+  // An automatic check's error is not shown to the user; it is logged and retried in the next hour.
   try {
     await checkForUpdate()
   } catch (e) {
-    logWarn('update', 'güncelleme denetimi başarısız', e)
+    logWarn('update', 'update check failed', e)
   }
 }
 
 /**
- * Otomatik denetimi başlatır. Geliştirme sürümü kendiliğinden ağa çıkmaz (sıfır maliyet ve sessiz geliştirme);
- * orada denetim yalnızca arayüzden açıkça istenirse yapılır.
+ * Starts the automatic check. A development build does not go online on its own (zero cost and quiet development);
+ * there the check runs only if explicitly requested from the UI.
  */
 export function startUpdateChecks(changed: () => void) {
   onChange = changed

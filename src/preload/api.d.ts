@@ -17,11 +17,11 @@ import type {
 export interface PrismApi {
   settings: {
     get(): Promise<SettingsView>
-    /** Ana süreç alanları doğrular; bilinmeyen alan ya da geçersiz değer hata ile reddedilir. */
+    /** The main process validates the fields; an unknown field or an invalid value is rejected with an error. */
     set(patch: SettingsPatch): Promise<SettingsView>
     test(): Promise<{ ok: boolean; ms: number; message?: string; engine?: EngineRef }>
     openKnowledge(): Promise<string>
-    /** Ana süreç ayarları kendisi değiştirdiğinde (ör. açılışta key doğrulaması bitince). */
+    /** When the main process changes settings itself (e.g. when key verification finishes at launch). */
     onChanged(cb: () => void): () => void
   }
   providers: {
@@ -46,14 +46,14 @@ export interface PrismApi {
     togglePin(): Promise<boolean>
     hide(): Promise<void>
     quit(): Promise<void>
-    /** Küre sürükleme (yalnızca küre penceresi). */
+    /** Orb dragging (orb window only). */
     dragStart(): void
     dragMove(): void
-    /** animate: false ise (azaltılmış hareket) küre kenara yaysız yerleşir. */
+    /** animate: false (reduced motion) means the orb settles on the edge without the spring. */
     dragEnd(animate: boolean): void
-    /** Panel gösterildi: imleç metin alanına, içerik animasyonu yaslandığı köşeden. */
+    /** Panel shown: the cursor goes to the text field, the content animation starts from the corner it leans into. */
     onShown(cb: (anchor: PanelAnchor) => void): () => void
-    /** Küre penceresinin durumu (çalışıyor, rozet). */
+    /** State of the orb window (working, badge). */
     onPillState(cb: (state: PillState) => void): () => void
     onPinned(cb: (on: boolean) => void): () => void
   }
@@ -61,22 +61,22 @@ export interface PrismApi {
     write(text: string): Promise<void>
   }
   ui: {
-    /** Tray menüsünden "Geçmiş…" / "Ayarlar…" seçilince. */
+    /** When "History…" / "Settings…" is chosen from the tray menu. */
     onOpen(cb: (target: 'settings' | 'history') => void): () => void
   }
   update: {
     get(): Promise<UpdateView>
-    /** Şimdi denetle (ayar kapalı olsa da); ağ ya da biçim hatası reddedilir. */
+    /** Check now (even if the setting is off); a network or format error is rejected. */
     check(): Promise<UpdateView>
-    /** Bilinen en yeni yayının sayfasını sistem tarayıcısında açar. */
+    /** Opens the page of the latest known release in the system browser. */
     openRelease(): Promise<void>
-    /** Otomatik denetim yeni bir sonuç bulduğunda. */
+    /** When the automatic check finds a new result. */
     onChanged(cb: () => void): () => void
   }
   data: {
     /**
-     * Ana süreç sistem penceresiyle onay ister; onaylanırsa key'leri, geçmişi, ayarları ve önbellekleri siler, açılış
-     * kaydını kaldırır ve uygulamayı yeniden başlatır. Vazgeçilirse false döner; kısmi silme hata ile reddedilir.
+     * The main process asks for confirmation with a system dialog; if confirmed it deletes keys, history, settings and caches, removes the login
+     * entry and restarts the app. If cancelled it returns false; a partial wipe is rejected with an error.
      */
     deleteAll(): Promise<boolean>
   }

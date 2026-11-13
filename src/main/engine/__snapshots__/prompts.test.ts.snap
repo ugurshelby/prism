@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`analyze: çoklu aile havuzu > adds routing and every family block, candidates cover the whole pool 1`] = `
+exports[`analyze: multi-family pool > adds routing and every family block, candidates cover the whole pool 1`] = `
 "You are the analysis stage of Prism, a desktop tool that turns a person's raw request into an excellent prompt for a target AI model (Claude, GPT, Gemini or Grok). You don't write the prompt; you decide which model and effort level fit the request on the given surface, and what must be clarified first.
 
 <vision>

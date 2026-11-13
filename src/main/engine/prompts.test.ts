@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { FAMILIES, MODELS, SURFACES, defaultEffortFor, modelsOf, type Family, type ModelId } from '@shared/catalog'
 import type { AnalyzeRequest, GenerateRequest } from '@shared/types'
 
-// Electron'a bağlı modüller kesilir: kartlar repodaki knowledge/ klasöründen okunur, günlük ve sağlayıcı katmanı boştur.
+// Electron-bound modules are stubbed: cards are read from the repo's knowledge/ folder; the log and provider layers are empty.
 vi.mock('../config', () => ({ knowledgeDir: () => join(__dirname, '..', '..', '..', 'knowledge'), getSettings: () => ({}) }))
 vi.mock('../log', () => ({ logWarn: () => undefined, logError: () => undefined, logInfo: () => undefined }))
 vi.mock('../providers', () => ({ candidatePool: () => [], engineGenerate: () => undefined, engineStream: () => undefined }))
@@ -12,15 +12,15 @@ const { analyzeSystemPrompt, analyzeUserPrompt } = await import('./analyze')
 const { generateSystemPrompt, generateUserPrompt } = await import('./generate')
 const { card, familyCard, surfaceCard, targetCard } = await import('./knowledge')
 
-// Her ailenin sabit bir modeli; snapshot'lar bu seçime bağlıdır.
+// A fixed model for each family; the snapshots depend on this choice.
 const MODEL: Record<Family, ModelId> = { claude: 'claude-opus-5-5', openai: 'gpt-6.1-sol', gemini: 'gemini-3.8-flash', grok: 'grok-4.7' }
 const RAW = 'bana bir login sayfası yaz'
 
-// Rastgele etiket eki (fence) snapshot'ı kararsız yapmasın diye maskelenir.
+// The random tag suffix (fence) is masked so it does not make the snapshot unstable.
 const mask = (s: string) => s.replace(/_[0-9a-f]{8}>/g, '_NONCE>')
-// RAW ile aynı metin; lint kuralı (detect-non-literal-regexp) yüzünden düz regex.
+// Same text as RAW; a plain regex because of the lint rule (detect-non-literal-regexp).
 const fenced = /<raw_prompt_([0-9a-f]{8})>\nbana bir login sayfası yaz\n<\/raw_prompt_\1>/
-// matchAll grupları string | undefined döner; sıralama ikisini de kabul eder.
+// matchAll groups return string | undefined; the sort accepts both.
 const byText = (a: string | undefined, b: string | undefined) => (a ?? '').localeCompare(b ?? '')
 const nonces = (s: string) => [...s.matchAll(/<(raw_prompt|analysis|clarifications)_([0-9a-f]{8})>/g)].map((m) => m[2])
 
@@ -46,10 +46,10 @@ describe.each(FAMILIES)('%s', (family) => {
       expect(p).toMatchSnapshot()
       expect(p).toContain(familyCard(family, 'models'))
       expect(p).toContain(surfaceCard(family, surface))
-      // Tek aileli havuzda başka ailenin kartı ve yönlendirme bölümü yok.
+      // A single-family pool has no other family's card or routing section.
       for (const other of FAMILIES.filter((f) => f !== family)) expect(p).not.toContain(familyCard(other, 'models'))
       expect(p).not.toContain('<routing>')
-      // Aday listesi yalnızca havuzdaki modelleri sayar.
+      // The candidate list counts only the models in the pool.
       const listed = [...p.matchAll(/^- `([^`]+)` — /gm)].map((m) => m[1])
       expect(listed.toSorted(byText)).toEqual(pool.toSorted(byText))
       expect(p).toContain('How to ask:')
@@ -90,7 +90,7 @@ describe.each(FAMILIES)('%s', (family) => {
   })
 })
 
-describe('analyze: çoklu aile havuzu', () => {
+describe('analyze: multi-family pool', () => {
   it('adds routing and every family block, candidates cover the whole pool', () => {
     const pool = FAMILIES.flatMap((f) => modelsOf(f))
     const p = analyzeSystemPrompt({ id: 't', prompt: RAW, surface: 'chat', family: 'auto' }, pool)
@@ -106,7 +106,7 @@ describe('analyze: çoklu aile havuzu', () => {
   })
 })
 
-// Motor değişiklikleri (.work/reports/engine-changes.md): her biri tek satırla sabitlenir, tek commit'le geri alınabilir.
+// Engine changes (.work/reports/engine-changes.md): each is pinned by a single line and can be reverted with a single commit.
 describe('engine changes', () => {
   it('C2: no questions on clear requests, never about a stated or changed-then-decided choice', () => {
     for (const family of FAMILIES) {
