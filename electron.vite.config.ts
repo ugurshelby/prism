@@ -4,12 +4,12 @@ import react from '@vitejs/plugin-react'
 
 const shared = { '@shared': resolve('src/shared'), '@products': resolve('src/products') }
 
-// Hangi ürünün derleneceği build sırasında seçilir; değer src/shared/product.ts'te doğrulanır.
-// Derlemede ürün açıkça verilmelidir (`npm run build:ray`, `build:spectrum`): unutulan değer yanlış ürünü
-// sessizce paketlemesin. Yalnızca geliştirme sunucusu (`npm run dev`) varsayılan olarak Spectrum'u açar.
+// The product is chosen at build time and validated in src/shared/product.ts.
+// A build must name the product (`npm run build:ray`, `build:spectrum`) so a missing value never packages the
+// wrong product silently. Only the dev server (`npm run dev`) defaults to Spectrum.
 export default defineConfig(({ command }) => {
   const product = process.env.PRISM_PRODUCT || (command === 'serve' ? 'spectrum' : '')
-  if (!['ray', 'spectrum'].includes(product)) throw new Error(`PRISM_PRODUCT eksik ya da bilinmiyor: "${product}" (ray | spectrum)`)
+  if (!['ray', 'spectrum'].includes(product)) throw new Error(`PRISM_PRODUCT missing or unknown: "${product}" (ray | spectrum)`)
   const define = { __PRISM_PRODUCT__: JSON.stringify(product) }
   return {
     main: {

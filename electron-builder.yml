@@ -1,5 +1,5 @@
-# Ortak taban: ürünler build/<ürün>.yml ile derlenir (build/ray.yml, build/spectrum.yml); bu dosya yalnızca paylaşılan ayarları tutar.
-# Kimlik bilerek geçersiz: tabanı doğrudan paketlemek (--config olmadan) 2.x kurulumunun üzerine yazmasın.
+# Shared base: products build with build/<product>.yml (build/ray.yml, build/spectrum.yml); this file holds shared settings only.
+# The identity is invalid on purpose: packaging the base directly (without --config) must not overwrite a 2.x install.
 appId: invalid.base-config.use-build-product-yml
 productName: Prism-base-do-not-ship
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
@@ -9,13 +9,13 @@ directories:
 files:
   - out/**
   - package.json
-# extraResources yalnızca build/<ürün>.yml'de: electron-builder dizileri birleştirir, tabanda olursa iki kez kopyalanır.
+# extraResources lives only in build/<product>.yml: electron-builder merges arrays, so a copy here would be duplicated.
 icon: resources/icon.png
-# Sürümler GitHub Actions'ta derlenip release'e iş akışı tarafından yüklenir.
+# Releases are built in GitHub Actions and uploaded to the release by the workflow.
 publish: null
 
-# Kurulu uygulamada kod çalıştırmaya açılan kapılar kapatılır (ELECTRON_RUN_AS_NODE, NODE_OPTIONS, --inspect)
-# ve uygulama yalnızca bütünlüğü doğrulanmış app.asar'dan yüklenir.
+# Close the ways to run code inside the installed app (ELECTRON_RUN_AS_NODE, NODE_OPTIONS, --inspect)
+# and load the app only from an integrity-checked app.asar.
 electronFuses:
   runAsNode: false
   enableCookieEncryption: true
@@ -30,7 +30,7 @@ win:
       arch: [x64]
 nsis:
   oneClick: false
-  # Kaldırıcı: açılış kaydını siler, isteğe bağlı (varsayılan hayır) kullanıcı verisini siler.
+  # Uninstaller: removes the login entry and, optionally (default no), the user data.
   include: build/installer.nsh
   allowToChangeInstallationDirectory: true
   artifactName: ${productName}-Setup-${version}-${arch}.${ext}
@@ -40,8 +40,8 @@ mac:
     - target: dmg
       arch: [arm64, x64]
   category: public.app-category.developer-tools
-  # Apple geliştirici sertifikası yok: ad-hoc imza. Apple Silicon'da "hasarlı" uyarısını önler,
-  # notarize edilmediği için ilk açılışta Gatekeeper onayı gerekir (README).
+  # No Apple developer certificate: ad-hoc signature. It avoids the "damaged" warning on Apple Silicon;
+  # the app is not notarized, so Gatekeeper asks for approval on first launch (README).
   identity: "-"
   hardenedRuntime: false
 

@@ -29,13 +29,13 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # Electron ikilisi inmediyse indirir; README'deki kurulum adımını da sınar.
+      # Downloads the Electron binary if it was not fetched; also exercises the install step from the README.
       - run: npm run setup
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
-      # İki ürün aynı commit'ten build/<ürün>.yml ile paketlenir (kurulum dosyası yok, yalnızca açılmış paket);
-      # her biri ağ ve key olmadan açılır, bütün bilgi kartlarını yükler ve doğru ürün olarak açıldığını söyler.
+      # Both products are packaged from the same commit with build/<product>.yml (no installer, only the unpacked package);
+      # each one starts without network or keys, loads all knowledge cards, and reports that it launched as the right product.
       - name: Package and smoke both products
         shell: bash
         run: |
@@ -61,7 +61,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
-      # Uygulamayla dağıtılan paketlerde bilinen hiçbir açık, geliştirme araçlarında yüksek önemde açık kabul edilmez.
+      # No known vulnerability is accepted in packages shipped with the app, and none of high severity in dev tooling.
       - run: npm audit --omit=dev
       - run: npm audit --audit-level=high
 

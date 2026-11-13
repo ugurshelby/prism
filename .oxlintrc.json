@@ -41,7 +41,7 @@
       {
         "object": "process",
         "property": "env",
-        "message": "Ortam değişkenleri yalnızca src/main/env.ts üzerinden okunur."
+        "message": "Environment variables are read only through src/main/env.ts."
       }
     ],
     "typescript/no-explicit-any": "error",

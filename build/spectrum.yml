@@ -1,14 +1,14 @@
-# Prism Spectrum ürün yapılandırması: ortak tabanı (electron-builder.yml) genişletir, yalnızca kimliği ve çıktı adlarını değiştirir.
+# Prism Spectrum product config: extends the shared base (electron-builder.yml), changing only the identity and output names.
 extends: electron-builder.yml
 appId: com.prism.spectrum
 productName: Prism Spectrum
 extraMetadata:
-  # deb paket adı package.json name'den gelir; ürünler yan yana kurulabilsin diye ayrı ad.
+  # deb package name comes from package.json name; a separate name so the products can be installed side by side.
   name: prism-spectrum
   version: 3.0.0
 artifactName: Prism-Spectrum-${version}-${os}-${arch}.${ext}
 icon: resources/spectrum/icon.png
-# Diziler tabanla birleşir; bu yüzden extraResources yalnızca burada (tabanda yok). Tray dosyaları ürün klasöründen.
+# Arrays merge with the base; that is why extraResources is only here (not in the base). Tray files come from the product folder.
 extraResources:
   - from: knowledge
     to: knowledge

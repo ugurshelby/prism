@@ -1,11 +1,11 @@
-; Kaldırıcı eklentisi (electron-builder nsis.include). İki ürün aynı dosyayı kullanır; ürün adı ve appId
-; electron-builder'ın tanımlarından gelir (PRODUCT_NAME = userData klasörü, APP_ID = açılış kaydının adı).
+; Uninstaller extension (electron-builder nsis.include). Both products use the same file; the product name and appId
+; come from electron-builder's definitions (PRODUCT_NAME = userData folder, APP_ID = name of the startup entry).
 ;
-; - Açılış kaydı (Run ve StartupApproved\Run) kaldırılır; güncelleme sırasında dokunulmaz.
-; - "Verilerimi de sil" sorusu varsayılan olarak Hayır'dır; sessiz kaldırmada (/S) ve güncellemede sorulmaz, veri kalır.
-;   Evet denirse yalnızca bu ürünün klasörü (%APPDATA%\<ürün>) silinir; eski adlarla kurulmuş klasörlere
-;   (Prism 2.x, Prompter) dokunulmaz (2.x hâlâ kurulu olabilir). Pencere metni bunu açıkça söyler; onlar
-;   uygulamadaki "Tüm verilerimi sil" ile silinir.
+; - The startup entry (Run and StartupApproved\Run) is removed; it is left alone during an update.
+; - The "delete my data too" question defaults to No; it is not asked on silent uninstall (/S) or update, and the data stays.
+;   If Yes is chosen, only this product's folder (%APPDATA%\<product>) is deleted; folders installed under older names
+;   (Prism 2.x, Prompter) are left alone (2.x may still be installed). The dialog text says this explicitly; those
+;   are deleted with "Delete all my data" in the app.
 
 !macro customUnInstall
   ${ifNot} ${isUpdated}

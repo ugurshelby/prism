@@ -4,7 +4,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    # Yeni sürüm bir hafta beklesin: ele geçirilmiş bir paket sürümü genelde bu sürede geri çekilir.
+    # Let a new release wait a week: a hijacked package version is usually pulled within that time.
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5

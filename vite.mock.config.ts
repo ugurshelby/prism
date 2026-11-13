@@ -1,4 +1,4 @@
-// Arayüzü Electron olmadan, sahte köprüyle tarayıcıda geliştirmek için.
+// Develops the UI in a browser without Electron, using the mock bridge.
 import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'

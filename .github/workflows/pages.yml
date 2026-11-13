@@ -1,7 +1,7 @@
 name: Website
 
-# website/ klasöründeki siteyi derleyip GitHub Pages'e yayınlar. Yeni bir sürüm yayınlandığında
-# Release iş akışı bunu elle tetikler (GITHUB_TOKEN ile oluşan yayınlar başka iş akışını başlatmaz).
+# Builds the site in the website/ folder and publishes it to GitHub Pages. When a new release is published,
+# the Release workflow triggers this by hand (releases created with GITHUB_TOKEN do not start other workflows).
 on:
   push:
     branches: [main]
@@ -31,7 +31,7 @@ jobs:
           cache-dependency-path: website/package-lock.json
       - run: npm ci
         working-directory: website
-      # Token yalnızca GitHub yayın listesini okuyan adıma verilir; site derlemesi ve bağımlılıkları onu görmez.
+      # The token is given only to the step that reads the GitHub release list; the site build and its dependencies never see it.
       - run: npm run sync
         working-directory: website
         env:
